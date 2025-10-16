@@ -1,0 +1,25 @@
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+
+# ORM e banco
+SQLAlchemy==2.0.30
+alembic==1.13.1   # migrations (opcional, mas recomendado)
+
+# Pydantic para schemas
+pydantic==2.7.1
+pydantic-settings==2.2.1
+
+# Banco SQLite já vem por padrão com Python
+# Se quiser usar PostgreSQL:
+psycopg2-binary==2.9.9
+# Ou MySQL/MariaDB:
+mysqlclient==2.2.4
+
+# Para exportar CSV futuramente
+pandas==2.2.2
+
+# Front em Streamlit
+streamlit==1.37.0
+requests==2.32.3  # para consumir a API no front
+
+bcrypt==5.0.0
