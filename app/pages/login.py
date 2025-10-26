@@ -1,6 +1,8 @@
+import logging
 import streamlit as st
 from app.core.auth import authenticate_user
 from app.core.state_manager import get_user_status, logout_user
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 user_status = get_user_status()
 
@@ -35,6 +37,8 @@ else:
         submitted = st.form_submit_button("Adentrar", type="primary")
 
         if submitted:
+            logging.info(f"Tentativa de login: username {username}, password {password}")
+            print(f"Tentativa de login: username {username}, password {password}")
             if not username or not password:
                 st.error("Golpe? Aqui não, Xandão ordenou, me dê seu usuario e senha vá")
             elif authenticate_user(username, password):
