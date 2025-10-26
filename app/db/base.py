@@ -1,6 +1,7 @@
 from sqlalchemy.orm import declarative_base, sessionmaker
-from sqlalchemy import DateTime, create_engine, Column
+from sqlalchemy import DateTime, Column
 from sqlalchemy.sql import func
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from app.config.settings import DATABASE_URL
 
 class Timestamp:
@@ -13,18 +14,26 @@ Base = declarative_base()
 if not DATABASE_URL:
     raise ValueError("DATABASE_URL não foi configurada corretamente.")
 
-engine = create_engine(
-    DATABASE_URL, 
-    pool_pre_ping=True,
+if not DATABASE_URL.startswith("mysql+aiomysql://"):
+    raise ValueError("DATABASE_URL precisa usar um driver assíncrono, ex: mysql+aiomysql://")
+
+engine = create_async_engine(
+    DATABASE_URL,
     echo=False,
+    pool_pre_ping=True,
     connect_args={"timezone": "+00:00"}
 )
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+AsyncSessionLocal = sessionmaker(
+    bind=engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autoflush=False,
+    autocommit=False,
+)
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+async def get_db():
+    async with AsyncSessionLocal() as session:
+        yield session
+        
+    await engine.dispose()
