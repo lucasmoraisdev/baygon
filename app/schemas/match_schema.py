@@ -2,23 +2,11 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 from app.core.enum.events_enum import EventTypeEnum
-
-
-class MatchEventBase(BaseModel):
-    player_id: int
-    event_type: EventTypeEnum
-
-class MatchEventCreate(MatchEventBase):
-    pass
-
-class MatchEventUpdate(MatchEventBase):
-    pass
-
-class MatchEventRead(MatchEventBase):
-    id: int
-
-    class Config:
-        orm_mode = True
+from app.schemas.match_event_schema import (
+    MatchEventCreate,
+    MatchEventUpdate,
+    MatchEventRead,
+)
 
 class MatchBase(BaseModel):
     round_id: int

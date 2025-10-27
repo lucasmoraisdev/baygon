@@ -29,7 +29,7 @@ class UserRepository:
         await self.db.refresh(user)
         return user
     
-    async def edit(self, iduser: int, updates: dict) -> Optional[User]:
+    async def update(self, iduser: int, updates: dict) -> Optional[User]:
         """
         Atualizar os campos de um usuario ativo.
         Ignora usuarios deletados.
@@ -99,5 +99,6 @@ class UserRepository:
             return False
         
         user.deleted_at = datetime.now(timezone.utc)
+        
         await self.db.commit()
         return True

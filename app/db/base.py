@@ -1,7 +1,7 @@
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.orm import declarative_base
 from sqlalchemy import DateTime, Column
 from sqlalchemy.sql import func
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from app.config.settings import DATABASE_URL
 
 class Timestamp:
@@ -24,7 +24,7 @@ engine = create_async_engine(
     connect_args={"timezone": "+00:00"}
 )
 
-AsyncSessionLocal = sessionmaker(
+AsyncSessionLocal = async_sessionmaker(
     bind=engine,
     class_=AsyncSession,
     expire_on_commit=False,
