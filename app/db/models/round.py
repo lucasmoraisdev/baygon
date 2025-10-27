@@ -3,7 +3,7 @@ from MySQLdb import Date
 from git import TYPE_CHECKING
 from sqlalchemy import ForeignKey, Mapped, mapped_column, Integer, String, DateTime, func
 from sqlalchemy.orm import relationship
-from app.db.base import Base
+from app.db.base import Base, Timestamp
 
 if TYPE_CHECKING:
     from app.db.models.team import Teams
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from app.db.models.award import Awards
     from app.db.models.player_score import PlayerScore
 
-class Round(Base):
+class Round(Base, Timestamp):
     __tablename__ = "round"
 
     id_round = Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
