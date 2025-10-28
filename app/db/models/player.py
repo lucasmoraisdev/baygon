@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 class Player(Base, Timestamp):
     __tablename__ = "players"
 
-    id_jogador: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id_player: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     nome: Mapped[str] = mapped_column(String(255), nullable=False)
     user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id_user"), nullable=True)
     is_associate: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -46,4 +46,4 @@ class Player(Base, Timestamp):
     )
 
     def __repr__(self) -> str:
-        return f"<Player(id_jogador={self.id_jogador}, nome='{self.nome}', is_associate={self.is_associate})>"
+        return f"<Player(id_player={self.id_player}, nome='{self.nome}', is_associate={self.is_associate})>"
