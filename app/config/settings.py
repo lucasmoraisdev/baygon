@@ -42,3 +42,22 @@ APP_URL = (
 )
 
 ROLES = ["ADMIN", "BOLEIRO", "RANDOM"]
+
+ENCODING=secrets.get("encryption.default_password")
+
+if ENCODING:
+    PHRASE_DECODE=ENCODING.get("phrase_decode")
+    PHRASE_ENCODE=ENCODING.get("phrase_encode")
+else:
+    PHRASE_DECODE=None
+    PHRASE_ENCODE=None
+
+EMAIL_DATA = secrets.get("email", {})
+
+EMAIL_CONFIG = {
+    "from_email": EMAIL_DATA.get("from_email", ""),
+    "smtp_server": EMAIL_DATA.get("smtp_server", ""),
+    "smtp_port": EMAIL_DATA.get("smtp_port", ""),
+    "smtp_user": EMAIL_DATA.get("smtp_user", ""),
+    "smtp_password": EMAIL_DATA.get("smtp_password", "")
+}
