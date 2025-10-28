@@ -83,7 +83,7 @@ class UserRepository:
         Busca um usuario (ativo) pelo seu id.
         """
         stmt = select(User).where(
-            User.iduser == iduser,
+            User.id_user == iduser,
             User.deleted_at.is_(None)
         )
         result = await self.db.execute(stmt)
