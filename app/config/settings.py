@@ -40,6 +40,12 @@ APP_URL = (
     else "https://baygon-fantasy.streamlit.app"
 )
 
+API_URL = (
+    "http://localhost:8000"
+    if ENVIRONMENT == "development"
+    else "https://api-baygon-fantasy.streamlit.app"
+)
+
 ROLES = ["ADMIN", "BOLEIRO", "RANDOM"]
 
 ENCODING=secrets.get("encryption.default_password")
