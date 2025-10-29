@@ -21,8 +21,14 @@ class PlayerSeasonScore(Base, Timestamp):
     total_points: Mapped[int] = mapped_column(Integer, default=0)
 
     # relacionamentos ORM
-    player: Mapped["Player"] = relationship("Player", back_populates="player_season_scores")
-    season: Mapped["Seasons"] = relationship("Seasons", back_populates="player_season_scores")
+    player: Mapped["Player"] = relationship(
+        "Player", 
+        back_populates="season_scores"
+    )
+    seasons: Mapped["Seasons"] = relationship(
+        "Seasons", 
+        back_populates="player_season_scores"
+    )
 
     def __repr__(self):
         return f"<PlayerSeasonScore(player_id={self.player_id}, season_id={self.season_id}, total_points={self.total_points})>"

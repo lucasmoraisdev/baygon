@@ -15,14 +15,19 @@ class Teams(Base, Timestamp):
 
     id_team: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    round_id: Mapped[int] = mapped_column(ForeignKey("round.id_round", nullable=False))
+    round_id: Mapped[int] = mapped_column(ForeignKey("round.id_round"), nullable=False)
 
-    round: Mapped["Round"] = relationship("Round", back_populates="teams")
+    round: Mapped["Round"] = relationship(
+        "Round", 
+        back_populates="teams"
+    )
+
     players: Mapped[list["Player"]] = relationship(
         "Player",
         secondary="team_players",
         back_populates="teams"
     )
+    
     awards: Mapped[list["Awards"]] = relationship(
         "Awards",
         secondary="award_teams",
@@ -30,4 +35,4 @@ class Teams(Base, Timestamp):
     )
 
     def __repr__(self):
-        return f"<Team(id={self.id_team}, name='{self.name}', round_id={self.id_round})>"
+        return f"<Team(id={self.id_team}, name='{self.name}', round_id={self.round_id})>"

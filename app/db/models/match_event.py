@@ -14,13 +14,20 @@ class MatchEvent(Base, Timestamp):
 
     id_event: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     match_id: Mapped[int] = mapped_column(ForeignKey("matches.id_match"), nullable=False)
-    player_id: Mapped[int] = mapped_column(ForeignKey("player.id_player"), nullable=False)
+    player_id: Mapped[int] = mapped_column(ForeignKey("players.id_player"), nullable=False)
     event_type: Mapped[EventTypeEnum] = mapped_column(Enum(EventTypeEnum), nullable=False)
 
     play_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
-    match: Mapped["Match"] = relationship("Match", back_populates="events")
-    player: Mapped["Player"] = relationship("Player", back_populates="events")
+    match: Mapped["Match"] = relationship(
+        "Match",
+        back_populates="events"
+        )
+    player: Mapped["Player"] = relationship(
+        "Player",
+        back_populates="events",
+        lazy="selectin"
+        )
 
     def __repr__(self):
         return f"<MatchEvent(id={self.id_event}, match={self.match_id}, player={self.player_id}, type={self.event_type}, play_id={self.play_id})>"

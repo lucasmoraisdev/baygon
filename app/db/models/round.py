@@ -25,15 +25,33 @@ class Round(Base, Timestamp):
     round_number: Mapped[int] = mapped_column(Integer, nullable=False)
     season_id: Mapped[int] = mapped_column(ForeignKey("seasons.id_season"), nullable=False)
 
-    teams: Mapped[list["Teams"]] = relationship("Teams", back_populates="round", cascade="all, delete-orphan")
-    season: Mapped["Seasons"] = relationship("Seasons", back_populates="round")
+    teams: Mapped[list["Teams"]] = relationship(
+        "Teams", 
+        back_populates="round", 
+        cascade="all, delete-orphan"
+    )
+    
+    seasons: Mapped["Seasons"] = relationship(
+        "Seasons", 
+        back_populates="rounds"  
+    )
 
-    matches: Mapped[list["Match"]] = relationship("Match", back_populates="round", cascade="all, delete-orphan")
+    matches: Mapped[list["Match"]] = relationship(
+        "Match", 
+        back_populates="round", 
+        cascade="all, delete-orphan"
+    )
 
-    premiacoes: Mapped[list["Awards"]] = relationship("Awards", back_populates="round", cascade="all, delete-orphan")
+    awards: Mapped[list["Awards"]] = relationship(
+        "Awards", 
+        back_populates="round", 
+        cascade="all, delete-orphan"
+    )
 
     player_scores: Mapped[list["PlayerScore"]] = relationship(
-        "PlayerScore", back_populates="round", cascade="all, delete-orphan"
+        "PlayerScore",
+        back_populates="round", 
+        cascade="all, delete-orphan"
     )
 
     @property

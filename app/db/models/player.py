@@ -21,7 +21,11 @@ class Player(Base, Timestamp):
     user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id_user"), nullable=True)
     is_associate: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    user: Mapped[Optional["User"]] = relationship("User", back_populates="players")
+    user: Mapped[Optional["User"]] = relationship(
+        "User", 
+        back_populates="players"
+    )
+    
     teams: Mapped[list["Teams"]] = relationship(
         "Teams",
         secondary="team_players",
@@ -29,20 +33,26 @@ class Player(Base, Timestamp):
     )
 
     events: Mapped[list["MatchEvent"]] = relationship(
-        "MatchEvent", back_populates="players", foreign_keys="MatchEvent.player_id"
+        "MatchEvent",
+        back_populates="player",
+        foreign_keys="MatchEvent.player_id"
     )
 
     awards: Mapped[list["Awards"]] = relationship(
         "Awards",
         secondary="award_players",
-        back_populates="players"
+        back_populates="player"
     )
 
     scores: Mapped[list["PlayerScore"]] = relationship(
-        "PlayerScore", back_populates="players", cascade="all, delete-orphan"
+        "PlayerScore", 
+        back_populates="player", 
+        cascade="all, delete-orphan"
     )
     season_scores: Mapped[list["PlayerSeasonScore"]] = relationship(
-        "PlayerSeasonScore", back_populates="players", cascade="all, delete-orphan"
+        "PlayerSeasonScore",
+        back_populates="player", 
+        cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:

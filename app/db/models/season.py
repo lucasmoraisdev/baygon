@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from app.db.models.round import Round
     from app.db.models.player_score import PlayerScore
     from app.db.models.player_season_score import PlayerSeasonScore
+    from app.db.models.event_score_rule import EventScoreRule
 
 class Seasons(Base, Timestamp):
     __tablename__ = "seasons"
@@ -17,13 +18,28 @@ class Seasons(Base, Timestamp):
     initial_date: Mapped[Date] = mapped_column(DateTime(timezone=True), nullable=False)
     end_date: Mapped[Date] = mapped_column(DateTime(timezone=True), nullable=False)
 
-    rounds: Mapped[list["Round"]] = relationship("Round", back_populates="seasons", cascade="all, delete-orphan")
+    rounds: Mapped[list["Round"]] = relationship(
+        "Round", 
+        back_populates="seasons", 
+        cascade="all, delete-orphan"
+    )
 
     player_scores: Mapped[list["PlayerScore"]] = relationship(
-        "PlayerScore", back_populates="seasons", cascade="all, delete-orphan"
+        "PlayerScore", 
+        back_populates="seasons", 
+        cascade="all, delete-orphan"
     )
+    
     player_season_scores: Mapped[list["PlayerSeasonScore"]] = relationship(
-        "PlayerSeasonScore", back_populates="seasons", cascade="all, delete-orphan"
+        "PlayerSeasonScore", 
+        back_populates="seasons",
+         cascade="all, delete-orphan"
+    )
+
+    event_score_rules: Mapped[list["EventScoreRule"]] = relationship(
+        "EventScoreRule", 
+        back_populates="season",
+         cascade="all, delete-orphan"
     )
 
     def __repr__(self):

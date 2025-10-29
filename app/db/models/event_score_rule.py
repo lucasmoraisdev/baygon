@@ -17,9 +17,11 @@ class EventScoreRule(Base, Timestamp):
     points: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     context: Mapped[EventContextEnum] = mapped_column(Enum(EventContextEnum), nullable=False)
 
-
     # relacionamento ORM
-    season: Mapped["Seasons"] = relationship("Seasons", back_populates="event_score_rules")
+    season: Mapped["Seasons"] = relationship(
+        "Seasons", 
+        back_populates="event_score_rules"
+    )
 
     def __repr__(self):
         return f"<EventScoreRule(season_id={self.season_id}, event_type={self.event_type}, points={self.points})>"

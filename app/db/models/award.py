@@ -16,12 +16,17 @@ class Awards(Base, Timestamp):
     round_id: Mapped[int] = mapped_column(ForeignKey("round.id_round"), nullable=False)
     event_type: Mapped[EventTypeEnum] = mapped_column(Enum(EventTypeEnum), nullable=False)
 
-    round: Mapped["Round"] = relationship("Round", back_populates="awards")
+    round: Mapped["Round"] = relationship(
+        "Round",
+        back_populates="awards"
+    )
+
     teams: Mapped[list["Teams"]] = relationship(
         "Teams", 
         secondary="awards_teams",
         back_populates="awards"
     )
+
     players: Mapped[list["Player"]] = relationship(
         "Player", 
         secondary="awards_players",
