@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
-from sqlalchemy import Enum, ForeignKey, Mapped, mapped_column, Integer
-from sqlalchemy.orm import relationship
+from sqlalchemy import Enum, ForeignKey, Integer
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from streamlit import context
 from app.core.enum.events_enum import EventContextEnum, EventTypeEnum
 from app.db.base import Base, Timestamp

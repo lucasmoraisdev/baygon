@@ -2,8 +2,8 @@ from typing import TYPE_CHECKING, Optional
 
 from app.core.enum.events_enum import EventTypeEnum
 from app.db.base import Base, Timestamp
-from sqlalchemy import Enum, ForeignKey, Mapped, mapped_column, Integer
-from sqlalchemy.orm import relationship
+from sqlalchemy import Enum, ForeignKey, Integer
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if TYPE_CHECKING:
     from app.db.models.match import Match

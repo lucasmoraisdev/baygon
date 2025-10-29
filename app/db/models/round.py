@@ -1,7 +1,8 @@
 from datetime import datetime
 from MySQLdb import Date
 from git import TYPE_CHECKING
-from sqlalchemy import ForeignKey, Mapped, mapped_column, Integer, String, DateTime, func
+from sqlalchemy import ForeignKey, Integer, String, DateTime, func
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.orm import relationship
 from app.db.base import Base, Timestamp
 
@@ -15,7 +16,7 @@ if TYPE_CHECKING:
 class Round(Base, Timestamp):
     __tablename__ = "round"
 
-    id_round = Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id_round: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     date: Mapped[Date] = mapped_column(DateTime(timezone=True), nullable=False)
     location: Mapped[str] = mapped_column(String(255), nullable=False)
     referee: Mapped[str] = mapped_column(String(255), nullable=False)

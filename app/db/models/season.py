@@ -1,8 +1,8 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 from app.db.base import Base, Timestamp
-from sqlalchemy import Date, DateTime, Integer, Mapped, mapped_column
-from sqlalchemy.orm import relationship
+from sqlalchemy import Date, DateTime, Integer
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if TYPE_CHECKING:
     from app.db.models.round import Round

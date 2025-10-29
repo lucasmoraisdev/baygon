@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Optional
-from sqlalchemy import ForeignKey, Mapped, mapped_column, Integer, String, Boolean, func
+from sqlalchemy import ForeignKey, Integer, String, Boolean, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base, Timestamp
-from sqlalchemy.orm import relationship
 
 from app.db.models.user import User
 

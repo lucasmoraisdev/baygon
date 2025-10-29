@@ -1,7 +1,7 @@
 from git import TYPE_CHECKING
 from app.db.base import Base, Timestamp
-from sqlalchemy import ForeignKey, Mapped, mapped_column, Integer, String, Boolean, func
-from sqlalchemy.orm import relationship
+from sqlalchemy import ForeignKey, Integer, String, Boolean, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if TYPE_CHECKING:
     from app.db.models.player import Player
