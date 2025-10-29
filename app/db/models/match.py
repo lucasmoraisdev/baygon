@@ -23,8 +23,8 @@ class Match(Base, Timestamp):
     filmed_by: Mapped[User] = mapped_column(ForeignKey("users.id_user"), nullable=False)
     event_type: Mapped[EventTypeEnum] = mapped_column(Enum(EventTypeEnum), nullable=False)
 
-    score_home: Mapped[int] = mapped_column(Integer, defaul=0)
-    score_away: Mapped[int] = mapped_column(Integer, defaul=0)
+    score_home: Mapped[int] = mapped_column(Integer, default=0)
+    score_away: Mapped[int] = mapped_column(Integer, default=0)
 
     round: Mapped["Round"] = relationship("Round", back_populates="matches")
     home_team: Mapped["Teams"] = relationship("Teams", foreign_keys=[home_team_id])
