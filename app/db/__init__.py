@@ -1,6 +1,13 @@
-from app.db.base import Base, engine
-from app.db.models.user import User
+import asyncio
+from app.db.base import Base, engine, get_db
 
 print("📦 Criando tabelas no banco...")
-Base.metadata.create_all(bind=engine)
-print("✅ Banco de dados inicializado!")
+print(f"📦 Conectando ao banco de dados... {engine.url}")
+print(f"📦 Tabelas... {Base.metadata}")
+async def init_db():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    print("✅ Banco de dados inicializado!")
+
+print("📦 Criando tabelas no banco...")
+# asyncio.run(init_db())
