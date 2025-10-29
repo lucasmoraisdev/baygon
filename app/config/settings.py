@@ -6,29 +6,28 @@ load_dotenv()
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
-secrets_path = os.path.join(os.path.dirname(__file__), "../../.streamlit/secrets.toml")
+secrets_path = os.path.join(os.path.dirname(__file__), "..", "..", ".streamlit", "secrets.toml")
+secrets_path = os.path.abspath(secrets_path)
 if os.path.exists(secrets_path):
     secrets = toml.load(secrets_path)
 else:
     secrets = {}
 
 DATABASE_CONNECTION_NAME = (
-    "connections.local_database"
+    "local_database"
     if ENVIRONMENT == "development"
-    else "connections.production_database"
+    else "production_database"
 )
 
-db_config = secrets.get(DATABASE_CONNECTION_NAME, {})
-
+db_config = secrets.get("connections", {}).get(DATABASE_CONNECTION_NAME, {})
 if db_config:
     DATABASE_URL = (
-        f"{db_config.get('dialect', 'mysql')}+pymysql://"
+        f"{db_config.get('dialect', 'mysql')}+aiomysql://"
         f"{db_config.get('username')}:{db_config.get('password')}"
         f"@{db_config.get('host')}:{db_config.get('port')}/{db_config.get('database')}"
     )
 else:
     DATABASE_URL = os.getenv("DATABASE_URL")
-
 DEFAULT_USER_PERMISSION = {
     "logged_in": True,
     "is_admin": True,
