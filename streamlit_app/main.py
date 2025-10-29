@@ -1,8 +1,7 @@
 import os
 import time
 import streamlit as st
-from app.config.settings import DATABASE_CONNECTION_NAME
-from app.core.state_manager import init_session_state, get_user_status
+from utils.session_state import init_session_state, get_user_status
 
 init_session_state()
 
@@ -15,14 +14,14 @@ def get_navigation_pages(status):
     """
 
     # Paginas acessiveis para todos
-    login_page = st.Page("app/pages/login.py", title="Login/Sair", icon="🔑")
-    matchday_page = st.Page("app/pages/matchday.py", title="Baba", icon="⚽️")
-    ranking_page = st.Page("app/pages/ranking.py", title="Ranking", icon="🏆")
-    season_page = st.Page("app/pages/season.py", title="Temporada", icon="⏳")
+    login_page = st.Page("./pages/login.py", title="Login/Sair", icon="🔑")
+    matchday_page = st.Page("./pages/matchday.py", title="Baba", icon="⚽️")
+    ranking_page = st.Page("./pages/ranking.py", title="Ranking", icon="🏆")
+    season_page = st.Page("./pages/season.py", title="Temporada", icon="⏳")
 
     # Paginas acessiveis apenas por administradores
     invite_user_page = st.Page(
-        "app/pages/invite_user.py", 
+        "./pages/invite_user.py", 
         title="Convidar Usuário", 
         icon="✉️",
     )

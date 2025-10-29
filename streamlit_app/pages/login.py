@@ -1,7 +1,7 @@
 import logging
 import streamlit as st
-from app.core.auth import authenticate_user
-from app.core.state_manager import get_user_status, logout_user
+from utils.auth import authenticate_user
+from utils.session_state import get_user_status, logout_user
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 user_status = get_user_status()
