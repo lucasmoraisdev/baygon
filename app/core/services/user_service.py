@@ -1,3 +1,4 @@
+from datetime import timedelta, datetime
 import random
 from re import S
 import uuid
@@ -6,7 +7,7 @@ from fastapi import HTTPException, status
 from app.db.models.user import User
 from app.db.repositories.user_repository import UserRepository
 from app.config.settings import PHRASE_DECODE, PHRASE_ENCODE, APP_URL, EMAIL_CONFIG
-from app.core.utils import encrypt_data, load_options, get_random_password, send_invite_email
+from app.core.utils import encrypt_data, generate_setup_token, load_options, get_random_password, send_invite_email
 
 class UserService:
     def __init__(self, repo: UserRepository):
@@ -30,9 +31,13 @@ class UserService:
         default_password = get_random_password(self.default_passwords)
 
         key = PHRASE_ENCODE if PHRASE_ENCODE else ""
+        exp = datetime.utcnow() + timedelta(hours=24)
+
         user_data.update({
             "setup_token": setup_token,
-            "password": encrypt_data(default_password, key )
+            "password": encrypt_data(default_password, key ),
+            "invite_token_expires": exp
+
         })
         print(f"Usuario cadastrado: {user_data}")
 
@@ -41,11 +46,11 @@ class UserService:
         new_user = await self.repo.create(user=user)
         print(f"Usuario cadastrado: {new_user}")
 
+        jwt_token = generate_setup_token(new_user.id_user, setup_token, exp)
+
         # enviar email 
-        invite_link = f"{APP_URL}/complete-registration?setup_token={setup_token}"
-        print(f"invite_link: {invite_link}")
+        invite_link = f"{APP_URL}/complete-registration?setup_token={jwt_token}"
         try:
-            print(f"CONFIG EMAIL: {EMAIL_CONFIG}")
             send_invite_email(
                 from_email=EMAIL_CONFIG["from_email"],
                 to_email=user_data["email"],

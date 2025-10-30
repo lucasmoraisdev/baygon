@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import Integer, String, Boolean, func
+from sqlalchemy import DateTime, Integer, String, Boolean, func
 from app.db.base import Base, Timestamp
 
 if TYPE_CHECKING:
@@ -19,6 +19,8 @@ class User(Base, Timestamp):
     is_admin: Mapped[bool] = mapped_column(Boolean,default=False)
     phone_number: Mapped[str] = mapped_column(String(100), nullable=False)
     setup_token: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    invite_token_expires: Mapped[DateTime] = mapped_column(DateTime, nullable=True)
 
     players: Mapped[list["Player"]] = relationship(
         "Player", 

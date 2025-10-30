@@ -28,6 +28,7 @@ if db_config:
     )
 else:
     DATABASE_URL = os.getenv("DATABASE_URL")
+    
 DEFAULT_USER_PERMISSION = {
     "logged_in": True,
     "is_admin": True,
@@ -66,3 +67,5 @@ EMAIL_CONFIG = {
     "smtp_user": EMAIL_DATA.get("smtp_user", ""),
     "smtp_password": EMAIL_DATA.get("smtp_password", "")
 }
+
+SECRET_KEY = secrets.get("secret_key", "").get("key", "")

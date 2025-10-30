@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from email.header import Header
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -7,6 +8,10 @@ import uuid
 from cryptography.fernet import Fernet
 import random
 import json
+import jwt
+
+from app.config.settings import SECRET_KEY
+
 
 def get_random_password(passwords: list[str]) -> str:
     """
@@ -130,3 +135,13 @@ def encrypt_data(data: str, key: str) -> str:
     cipher = Fernet(key)
     encrypted_data = cipher.encrypt(data.encode())
     return encrypted_data.decode()
+
+def generate_setup_token(user_id: int, setup_token: str, expires_delta: datetime) -> str:
+    payload = {
+        "user_id": user_id,
+        "exp": datetime.utcnow() + timedelta(hours=24),
+        "setup_token": setup_token
+    }
+
+    token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+    return token
