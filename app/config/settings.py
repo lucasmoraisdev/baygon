@@ -48,11 +48,11 @@ API_URL = (
 
 ROLES = ["ADMIN", "BOLEIRO", "RANDOM"]
 
-ENCODING=secrets.get("encryption.default_password")
+ENCODING=secrets.get("encryption", {}).get("default_password", {})
 
 if ENCODING:
-    PHRASE_DECODE=ENCODING.get("phrase_decode")
-    PHRASE_ENCODE=ENCODING.get("phrase_encode")
+    PHRASE_DECODE=ENCODING.get("decode")
+    PHRASE_ENCODE=ENCODING.get("encode")
 else:
     PHRASE_DECODE=None
     PHRASE_ENCODE=None
