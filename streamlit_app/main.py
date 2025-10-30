@@ -18,6 +18,7 @@ def get_navigation_pages(status):
     matchday_page = st.Page("./pages/matchday.py", title="Baba", icon="⚽️")
     ranking_page = st.Page("./pages/ranking.py", title="Ranking", icon="🏆")
     season_page = st.Page("./pages/season.py", title="Temporada", icon="⏳")
+    complete_registration = st.Page("./pages/complete_registration.py", title="Finalizar cadastro", icon="🔑")
 
     # Paginas acessiveis apenas por administradores
     invite_user_page = st.Page(
@@ -28,7 +29,7 @@ def get_navigation_pages(status):
 
     # Usuario nao logado pode ver a pagina de login, ranking, matchday e season
     if not status['logged_in']:
-        navigation = [login_page, matchday_page, ranking_page, season_page]
+        navigation = [login_page, matchday_page, ranking_page, season_page, complete_registration]
 
     # Usuario logado pode ver as mesmas paginas (mais pagina de confirmacao de nome para lista do baba (TODO), alterar perfil e Login q vira sair)
     else:
@@ -36,7 +37,8 @@ def get_navigation_pages(status):
             matchday_page,
             ranking_page,
             season_page,
-            login_page
+            login_page,
+            complete_registration
         ]
 
         if status["is_admin"]:
