@@ -49,7 +49,7 @@ class UserService:
         jwt_token = generate_setup_token(new_user.id_user, setup_token, exp)
 
         # enviar email 
-        invite_link = f"{APP_URL}/complete-registration?setup_token={jwt_token}"
+        invite_link = f"{APP_URL}/complete_registration?setup_token={jwt_token}"
         try:
             send_invite_email(
                 from_email=EMAIL_CONFIG["from_email"],
