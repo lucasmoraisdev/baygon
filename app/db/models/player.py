@@ -49,6 +49,7 @@ class Player(Base, Timestamp):
         back_populates="player", 
         cascade="all, delete-orphan"
     )
+    
     season_scores: Mapped[list["PlayerSeasonScore"]] = relationship(
         "PlayerSeasonScore",
         back_populates="player", 

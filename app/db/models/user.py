@@ -15,7 +15,7 @@ class User(Base, Timestamp):
     name: Mapped[str] = mapped_column(String(255), nullable=False,)
     email: Mapped[str] = mapped_column(String(100), nullable=False)
     username: Mapped[str] = mapped_column(String(100), nullable=False)
-    password: Mapped[str] = mapped_column(String(80), nullable=False)
+    password: Mapped[str] = mapped_column(String(255), nullable=False)
     is_admin: Mapped[bool] = mapped_column(Boolean,default=False)
     phone_number: Mapped[str] = mapped_column(String(100), nullable=False)
     setup_token: Mapped[str] = mapped_column(String(255), nullable=False)

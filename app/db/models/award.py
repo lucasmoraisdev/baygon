@@ -23,12 +23,12 @@ class Awards(Base, Timestamp):
 
     teams: Mapped[list["Teams"]] = relationship(
         "Teams", 
-        secondary="awards_teams",
+        secondary="award_teams",
         back_populates="awards"
     )
 
-    players: Mapped[list["Player"]] = relationship(
+    player: Mapped[list["Player"]] = relationship(
         "Player", 
-        secondary="awards_players",
+        secondary="award_players",
         back_populates="awards"
     )

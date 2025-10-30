@@ -1,5 +1,5 @@
 from typing import Optional, Sequence
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import User
@@ -15,6 +15,46 @@ class UserRepository:
         """
         stmt = select(User).where(
             User.username == username,
+            User.deleted_at.is_(None)
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_by_email(self, email: str) -> User | None:
+        """
+        Busca um usuario pelo seu email
+        """
+        stmt = select(User).where(
+            User.email == email,
+            User.deleted_at.is_(None)
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+    
+    async def validate_if_user_data_exists(self, username: str, phone_number: str, email: str) -> bool:
+        """
+        Verifica se algum dos dados unicos de
+        um usuario (ativo) ja existe
+        """
+        stmt = select(User).where(
+            or_(
+                User.email == email,
+                User.username == username,
+                User.phone_number == phone_number
+            ),
+            User.deleted_at.is_(None)
+        )
+        result = await self.db.execute(stmt)
+    
+        return result.scalar_one_or_none() is not None
+
+
+    async def get_by_phone_number(self, phone_number: str) -> User | None:
+        """
+        Busca um usuario pelo seu phone_number
+        """
+        stmt = select(User).where(
+            User.phone_number == phone_number,
             User.deleted_at.is_(None)
         )
         result = await self.db.execute(stmt)
