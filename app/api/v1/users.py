@@ -6,7 +6,7 @@ from app.core.services.user_service import UserService
 from app.db.models.user import User
 from app.db.repositories.user_repository import UserRepository
 from app.db.base import get_db
-from app.schemas.user_schema import UserCreate, UserRead, UserUpdate
+from app.schemas.user_schema import UserBase, UserInvite, UserRead, UserUpdate
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -16,8 +16,8 @@ async def list_users(db: AsyncSession = Depends(get_db)):
     users = await repo.list_all_users()
     return users
 
-@router.post("/", response_model=UserRead, status_code=status.HTTP_201_CREATED)
-async def create_user(user_create: UserCreate, db: AsyncSession = Depends(get_db)):
+@router.post("/", response_model=UserInvite, status_code=status.HTTP_201_CREATED)
+async def create_user(user_create: UserBase, db: AsyncSession = Depends(get_db)):
     repo = UserRepository(db)
     service = UserService(repo)
     return await service.create_user_with_invite(user_create.model_dump())

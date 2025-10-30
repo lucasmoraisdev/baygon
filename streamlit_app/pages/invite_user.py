@@ -45,11 +45,16 @@ with st.form("invite_user_form", clear_on_submit=True):
                 "is_admin": is_admin
             }
 
-            success, invite_link = post('users', new_user_data)
+            success, response = post('users', new_user_data)
 
             if success:
+
+                if isinstance(response, dict):
+                    invite_link = response.get("invite_link", "Link não retornado.")
+                else:
+                    invite_link = "Link não retornado."
                 st.success(f"Usuário **{username}** cadastrado com sucesso e convite gerado!")
-                st.info(f"O usuário deve usar o link abaixo para completar o cadastro:")
+                st.info("O usuário deve usar o link abaixo para completar o cadastro:")
                 st.code(invite_link)
             else:
-                st.error("Falha ao registrar o convite.")
+                st.error(response)

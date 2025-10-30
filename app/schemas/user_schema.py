@@ -34,3 +34,7 @@ class UserRead(UserBase):
 
     class Config:
         orm_mode = True
+
+
+class UserInvite(UserRead):
+    invite_link: str
