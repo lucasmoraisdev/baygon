@@ -1,5 +1,4 @@
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
 import streamlit as st
 import logging
 from cryptography.fernet import Fernet, InvalidToken
@@ -14,8 +13,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 key = str(PHRASE_ENCODE)
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
 class AuthService:
     def __init__(self, service: user_service.UserService):

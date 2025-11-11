@@ -4,9 +4,11 @@ from re import S
 import re
 from typing import Optional
 import uuid
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import bcrypt
-from fastapi import HTTPException, status
+from fastapi import Depends, HTTPException, status
+from app.db.base import get_db
 from app.db.models.user import User
 from app.db.repositories.user_repository import UserRepository
 from app.config.settings import PHRASE_DECODE, PHRASE_ENCODE, APP_URL, EMAIL_CONFIG
@@ -77,7 +79,7 @@ class UserService:
             return await self.repo.list_all_active_users()
         return await self.repo.list_all_users()
 
-    async def get_user_by_id(self, user_id: int):
+    async def get_user_by_id(self, user_id: int) -> Optional[User]:
         return await self.repo.get_by_id(user_id)
 
     async def get_user_by_username(self, username: str) -> Optional[User]:
@@ -136,3 +138,13 @@ class UserService:
                 "email": user.email
             }
         }
+    
+    async def user_is_admin(self, user_id: int) -> bool:
+        user = await self.get_user_by_id(user_id=user_id)
+        return user.is_active and user.is_admin if user is not None else False
+    
+
+
+async def get_user_service(db: AsyncSession = Depends(get_db)) -> UserService:
+    user_repo = UserRepository(db)
+    return UserService(user_repo)
