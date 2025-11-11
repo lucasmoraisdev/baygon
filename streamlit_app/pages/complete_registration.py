@@ -47,21 +47,18 @@ with st.form("complete_registration_form", clear_on_submit=False):
             success, response = post("users/complete-registration", payload)
 
             if success:
-                st.success("Senha atualizada com sucesso!")
                 if isinstance(response, dict):
                     username = response.get("username")
                     is_admin = response.get("is_admin")
+                    access_token = response.get("access_token")
 
-                    if username and is_admin is not None:
-                        st.success("Senha atualizada com sucesso!")
-                        set_logged_in_user(username, is_admin)
-                        st.session_state["access_token"] = response["access_token"]
+                    if username and access_token:
+                        set_logged_in_user(access_token)
+                        st.success("Senha atualizada e login realizado com sucesso! Redirecionando...")
                         st.rerun()
                     else:
                         st.error("Resposta inesperada da API: dados ausentes.")
                 else:
                     st.error(f"Resposta inesperada da API: {response}")
-
-                st.rerun()
             else:
                 st.error(response)

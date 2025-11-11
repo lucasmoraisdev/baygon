@@ -11,10 +11,11 @@ st.title("# Acesso ao Baygon Fantasy 🪳")
 st.markdown("---")
 
 if user_status['logged_in']:
-    st.success(f"Bem-vindo, **{user_status['username']}**!")
 
     if user_status['is_admin']:
-        st.info("Bem vindo xandao!")
+        st.success("Bem vindo xandao!")
+    else:
+        st.success(f"Bem-vindo, **{user_status['username']}**!")
     if st.button("Sair (deslogar)", key="logout_btn", on_click=logout_user):
         pass
 else:
@@ -38,7 +39,6 @@ else:
 
         if submitted:
             logging.info(f"Tentativa de login: username {username}, password {password}")
-            print(f"Tentativa de login: username {username}, password {password}")
             if not username or not password:
                 st.error("Golpe? Aqui não, Xandão ordenou, me dê seu usuario e senha vá")
             elif authenticate_user(username, password):

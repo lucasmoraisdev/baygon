@@ -26,10 +26,26 @@ def get_navigation_pages(status):
         title="Convidar Usuário", 
         icon="✉️",
     )
+    register_teams_page = st.Page("./pages/invite_user.py", title="Registrar/Editar Times", icon="✍️")
+    # manage_players_page = st.Page("./pages/invite_user.py", title="Confirmar/Remover Jogadores", icon="🛠️")
+    # draw_teams_page = st.Page("./pages/invite_user.py", title="Sortear Times", icon="🎲")
+    
+
+    # Paginas acessiveis para nao-logados e limitado para logados nao admins
+    # teams_page = st.Page("./pages/invite_user.py", title="Ver times", icon="📝")
+    # players_page = st.Page("./pages/invite_user.py", title="Confirmar presença", icon="✅")
 
     # Usuario nao logado pode ver a pagina de login, ranking, matchday e season
     if not status['logged_in']:
-        navigation = [login_page, matchday_page, ranking_page, season_page, complete_registration]
+        navigation = [
+            login_page, 
+            matchday_page, 
+            ranking_page, 
+            season_page, 
+            complete_registration,
+            # teams_page,
+            # players_page,
+        ]
 
     # Usuario logado pode ver as mesmas paginas (mais pagina de confirmacao de nome para lista do baba (TODO), alterar perfil e Login q vira sair)
     else:
@@ -38,10 +54,15 @@ def get_navigation_pages(status):
             ranking_page,
             season_page,
             login_page,
+            # teams_page,
+            # players_page,
             complete_registration
         ]
 
         if status["is_admin"]:
+            # navigation.insert(-1, draw_teams_page)
+            # navigation.insert(-1, manage_players_page)
+            navigation.insert(-1, register_teams_page)
             navigation.insert(0, invite_user_page)
     
     return navigation

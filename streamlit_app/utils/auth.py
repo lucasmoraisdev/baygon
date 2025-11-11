@@ -6,12 +6,16 @@ from utils.session_state import set_logged_in_user
 
 def authenticate_user(username: str, password: str) -> bool:
     try:
-        data = post('/login', {
+        success, data = post('login', {
             'username': username,
             'password': password
         })
-        set_logged_in_user(username=data['username'], is_admin=data['is_admin'])
-        return True
+        if success and isinstance(data, dict) and 'access_token' in data:
+            set_logged_in_user(access_token=data['access_token'])
+            return True
+        else:
+            print(data) 
+            return False
     except Exception as e:
         st.error(str(e))
         print(f"Error: {e}")
