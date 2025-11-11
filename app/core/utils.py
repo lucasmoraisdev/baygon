@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from email.header import Header
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -8,10 +8,11 @@ import uuid
 from cryptography.fernet import Fernet
 import random
 import json
+from fastapi import HTTPException, status
 import jwt
+from app.core.jwt_manager import JWTManager
 
 from app.config.settings import SECRET_KEY
-
 
 def get_random_password(passwords: list[str]) -> str:
     """
@@ -124,7 +125,6 @@ def send_invite_email(from_email: str, to_email: str, invite_link: str, smtp_ser
     except Exception as e:
         print(f"Failed to send email: {str(e)}")
 
-    
 def encrypt_data(data: str, key: str) -> str:
     """
     Encriptografa os dados.
@@ -136,6 +136,17 @@ def encrypt_data(data: str, key: str) -> str:
     encrypted_data = cipher.encrypt(data.encode())
     return encrypted_data.decode()
 
+def decrypt_data(encrypted_data: str, key: str) -> str:
+    """
+    Descriptografa os dados.
+    :param encrypted_data: Dados a serem descriptografados.
+    :param key: Chave de criptografia.
+    :return: Dados descriptografados.
+    """
+    cipher = Fernet(key)
+    decrypted_data = cipher.decrypt(encrypted_data.encode())
+    return decrypted_data.decode()
+
 def generate_setup_token(user_id: int, setup_token: str, expires_delta: datetime) -> str:
     payload = {
         "user_id": user_id,
@@ -144,4 +155,43 @@ def generate_setup_token(user_id: int, setup_token: str, expires_delta: datetime
     }
 
     token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+    return token
+
+def decode_jwt_token(token: str): 
+    """
+    Decodifica um token jwt e valida a expiração.
+    Retorna o payload (dict) se for válido, ou levanta HTTPException se inválido.
+    """
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token expirado."
+        )
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido."
+        )
+    
+def generate_jwt_token(user_id: int, is_admin: bool = False):
+    """
+    Gera um token JWT de autenticação para o usuário logado.
+    
+    Args:
+        user_id (int): ID do usuário.
+
+    Returns:
+        str: Token JWT.
+    """
+    jwt_manager = JWTManager()
+
+    payload = {
+        "sub": str(user_id),
+        "roleId": "1" if is_admin else "0"
+    }
+
+    token = jwt_manager.create_access_token(payload)
     return token

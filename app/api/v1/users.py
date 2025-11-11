@@ -6,7 +6,7 @@ from app.core.services.user_service import UserService
 from app.db.models.user import User
 from app.db.repositories.user_repository import UserRepository
 from app.db.base import get_db
-from app.schemas.user_schema import UserBase, UserInvite, UserRead, UserUpdate
+from app.schemas.user_schema import CompleteRegistrationSchema, UserBase, UserInvite, UserRead, UserUpdate
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -44,3 +44,10 @@ async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
     deleted = await repo.delete_user(user_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="User not found")
+
+@router.post("/complete-registration")
+async def complete_registration(payload: CompleteRegistrationSchema, db: AsyncSession = Depends(get_db)):
+    repo = UserRepository(db)
+    service = UserService(repo)
+    
+    return  await service.complete_user_registration(payload.setup_token, payload.temporary_password, payload.new_password)

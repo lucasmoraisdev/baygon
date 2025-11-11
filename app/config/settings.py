@@ -69,3 +69,5 @@ EMAIL_CONFIG = {
 }
 
 SECRET_KEY = secrets.get("secret_key", "").get("key", "")
+
+ACCESS_TOKEN_EXPIRE_HOURS = secrets.get("access_token_expire_hours", 24)
