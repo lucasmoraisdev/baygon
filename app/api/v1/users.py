@@ -30,7 +30,7 @@ async def create_user(
     service = UserService(repo)
     return await service.create_user_with_invite(user_create.model_dump())
 
-@router.get("/{user_id}", response_model=UserRead)
+@router.get("/{user_id}", response_model=UserRead, status_code=status.HTTP_200_OK)
 async def get_user(
     user_id: int, 
     db: AsyncSession = Depends(get_db),
@@ -42,7 +42,7 @@ async def get_user(
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
-@router.put("/{user_id}", response_model=UserRead)
+@router.put("/{user_id}", response_model=UserRead, status_code=status.HTTP_200_OK)
 async def update_user(
     user_id: int, 
     user_update: UserUpdate, 
@@ -66,9 +66,9 @@ async def delete_user(
     if not deleted:
         raise HTTPException(status_code=404, detail="User not found")
 
-@router.post("/complete-registration")
+@router.post("/complete-registration", status_code=status.HTTP_202_ACCEPTED)
 async def complete_registration(payload: CompleteRegistrationSchema, db: AsyncSession = Depends(get_db)):
     repo = UserRepository(db)
     service = UserService(repo)
     
-    return  await service.complete_user_registration(payload.setup_token, payload.temporary_password, payload.new_password)
+    return await service.complete_user_registration(payload.setup_token, payload.temporary_password, payload.new_password)

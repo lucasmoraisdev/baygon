@@ -27,7 +27,6 @@ class PlayerSeasonScoreSummary(BaseModel):
         orm_mode = True
 
 class SeasonBase(BaseModel):
-    number: int
     initial_date: datetime
     end_date: datetime
 
@@ -35,7 +34,6 @@ class SeasonCreate(SeasonBase):
     pass
 
 class SeasonUpdate(BaseModel):
-    number: Optional[int] = None
     initial_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
 
@@ -43,6 +41,7 @@ class SeasonRead(SeasonBase):
     id_season: int
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    number: int
 
     class Config:
         orm_mode = True
