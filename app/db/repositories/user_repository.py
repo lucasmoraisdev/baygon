@@ -19,6 +19,21 @@ class UserRepository:
         )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
+    
+    async def get_by_identifier(self, identifier: str) -> User | None:
+        """
+        Busca um usuario pelo seu identifier (email, telefone, username)
+        """
+        stmt = select(User).where(
+            or_(
+                User.email == identifier,
+                User.phone_number == identifier,
+                User.username == identifier
+            ),
+            User.deleted_at.is_(None)
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
 
     async def get_by_email(self, email: str) -> User | None:
         """
@@ -47,7 +62,6 @@ class UserRepository:
         result = await self.db.execute(stmt)
     
         return result.scalar_one_or_none() is not None
-
 
     async def get_by_phone_number(self, phone_number: str) -> User | None:
         """
@@ -142,3 +156,34 @@ class UserRepository:
         
         await self.db.commit()
         return True
+    
+    async def get_by_setup_token(self, setup_token: str) -> User | None:
+        """
+        Busca um usuario pelo seu token de setup.
+        """
+        stmt = select(User).where(
+            User.setup_token == setup_token,
+            User.deleted_at.is_(None)
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+    
+    async def update_password(self, iduser: int, new_password: str, is_finishing_registration: bool = False) -> Optional[User]:
+        """
+        Altera a senha de um usuario.
+        """
+        user = await self.get_by_id(iduser)
+        if not user:
+            return None
+        
+        user.password = new_password
+        user.updated_at = datetime.now(timezone.utc)
+
+        if is_finishing_registration:
+            user.setup_token = None
+            user.invite_token_expires = None
+        await self.db.commit()
+        await self.db.refresh(user)
+        return user
+
+        

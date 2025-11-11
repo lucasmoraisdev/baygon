@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List
 from datetime import datetime
 
@@ -35,6 +35,17 @@ class UserRead(UserBase):
     class Config:
         orm_mode = True
 
-
 class UserInvite(UserRead):
     invite_link: str
+
+
+class CompleteRegistrationSchema(BaseModel):
+    setup_token: str = Field(..., description="Token enviado por email para completar o cadastro")
+    temporary_password: str = Field(..., min_length=1, description="Senha temporária recebida por email")
+    new_password: str = Field(..., min_length=8, description="Nova senha do usuário")
+
+class CompleteRegistrationResponse(BaseModel):
+    user_id: int
+    username: str
+    is_admin: bool
+    message: str = "Senha atualizada com sucesso"
