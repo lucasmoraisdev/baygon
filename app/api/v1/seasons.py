@@ -31,6 +31,7 @@ async def get_current_season(
     repo = SeasonRepository(db)
     service = SeasonService(repo)
     season = await service.get_current_season()
+    print(f"Temporada atual: {season}")
     if not season:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nenhuma temporada ativa")
     return season

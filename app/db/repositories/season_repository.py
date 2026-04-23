@@ -78,13 +78,11 @@ class SeasonRepository:
     
     async def get_current_season(self) -> Optional[Seasons]:
         """
-        Busca a temporada atualmente ativa.
+        Busca a temporada atualmente ativa (is_active = True).
         """
-        now = datetime.now(timezone.utc)
         stmt = select(Seasons).where(
             Seasons.deleted_at.is_(None),
-            Seasons.initial_date <= now,
-            Seasons.end_date >= now
+            Seasons.is_active.is_(True)
         ).order_by(desc(Seasons.number))
 
         result = await self.db.execute(stmt)

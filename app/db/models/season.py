@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 from app.db.base import Base, Timestamp
-from sqlalchemy import Date, DateTime, Integer
+from sqlalchemy import Date, DateTime, Integer, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if TYPE_CHECKING:
@@ -17,6 +17,7 @@ class Seasons(Base, Timestamp):
     number: Mapped[int] = mapped_column(Integer, nullable=False)
     initial_date: Mapped[Date] = mapped_column(DateTime(timezone=True), nullable=False)
     end_date: Mapped[Date] = mapped_column(DateTime(timezone=True), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     rounds: Mapped[list["Round"]] = relationship(
         "Round", 

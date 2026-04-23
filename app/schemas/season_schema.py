@@ -29,6 +29,7 @@ class PlayerSeasonScoreSummary(BaseModel):
 class SeasonBase(BaseModel):
     initial_date: datetime
     end_date: Optional[datetime] = None
+    is_active: bool = False
 
 class SeasonCreate(SeasonBase):
     number: Optional[int] = None
@@ -36,12 +37,16 @@ class SeasonCreate(SeasonBase):
 class SeasonUpdate(BaseModel):
     initial_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
+    is_active: Optional[bool] = None
 
-class SeasonRead(SeasonBase):
+class SeasonRead(BaseModel):
     id_season: int
+    number: int
+    initial_date: datetime
+    end_date: Optional[datetime] = None
+    is_active: bool
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-    number: int
 
     class Config:
         orm_mode = True
