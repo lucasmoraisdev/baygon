@@ -1,4 +1,54 @@
-.streamlit
-__pycache__
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.env
+.env.local
+*.egg-info/
+dist/
+build/
 
-./web/node_modules/*
+# Node / Frontend
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.next/
+.nuxt/
+dist/
+out/
+build/
+.turbo/
+.cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Streamlit
+.streamlit/
+.streamlit/secrets.toml
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.nyc_output/
+coverage/
+
+# Build outputs
+*.tsbuildinfo

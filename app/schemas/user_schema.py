@@ -26,7 +26,7 @@ class UserUpdate(BaseModel):
 
 class UserRead(UserBase):
     id_user: int
-    setup_token: str
+    setup_token: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

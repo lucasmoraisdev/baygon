@@ -9,31 +9,37 @@ class SeasonService:
 
     async def create_new_season(self, season_data: dict):
         try:
-            last_season = await self.repo.get_last_season_number()
-
-            season_data.update({
-                "number": last_season + 1
-            })
+            if not season_data.get("number"):
+                last_season = await self.repo.get_last_season_number()
+                season_data["number"] = last_season + 1
 
             season = Seasons(**season_data)
-
             new_season = await self.repo.create(season=season)
 
             print(f"Temporada cadastrada: {new_season}")
-
-            return {
-                "message": "Nova temporada cadastrada!",
-                "season": {
-                    "id": season.id_season,
-                    "initial_date": season.initial_date,
-                    "end_date": season.end_date,
-                    "number": season.number,
-                    "rounds": []
-                }
-            }
+            return new_season
         except Exception as e:
             raise e
+
+    async def create_new_seasons(self, seasons_data: list[dict]):
+        created = []
+        next_number = await self.repo.get_last_season_number()
+
+        for season_data in seasons_data:
+            if not season_data.get("number"):
+                next_number += 1
+                season_data["number"] = next_number
+            else:
+                next_number = max(next_number, season_data["number"])
+
+            season = Seasons(**season_data)
+            created.append(await self.repo.create(season=season))
+
+        return created
     
+    async def get_current_season(self) -> Optional[Seasons]:
+        return await self.repo.get_current_season()
+
     async def list_all_seasons(self) -> Sequence[Seasons]:
         return await self.repo.list_all_seasons()
     

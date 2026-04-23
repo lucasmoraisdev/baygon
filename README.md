@@ -61,10 +61,21 @@ O sistema foi completamente mapeado a partir do `USE_CASES.md`, englobando endpo
    pip install -r requirements.txt
    ```
 
-4. **Configuração de Ambiente (`.env`):**
-   - Certifique-se de configurar sua conexão de banco de dados e credenciais JWT.
+4. **Configuração de Ambiente (`.env` ou `.streamlit/secrets.toml`):**
+   - Configure a string de conexão com seu banco de dados (ex: `DATABASE_URL=mysql+aiomysql://usuario:senha@localhost:3306/baygon_db`).
 
-5. **Inicie o servidor de desenvolvimento FastAPI:**
+5. **Banco de Dados (Criação, Inicialização e Migrations):**
+   - **Criar o banco:** Certifique-se de criar o banco de dados vazio diretamente no seu SGBD (ex: MySQL) com o nome informado na configuração (ex: `baygon_db`).
+   - **Inicializar as tabelas:** Execute o script de inicialização para criar o schema base (caso aplicável):
+     ```bash
+     python scripts/init_db.py
+     ```
+   - **Executar as Migrations:** Aplique as atualizações de schema do banco através do Alembic:
+     ```bash
+     alembic -c app/alembic.ini upgrade head
+     ```
+
+6. **Inicie o servidor de desenvolvimento FastAPI:**
    ```bash
    uvicorn app.main:app --reload
    ```
@@ -72,6 +83,23 @@ O sistema foi completamente mapeado a partir do `USE_CASES.md`, englobando endpo
 6. **Acesse e teste a API:**
    - Acesse em seu navegador: [http://localhost:8000/docs](http://localhost:8000/docs)
    - O *Swagger UI* trará a documentação de todos os endpoints perfeitamente estruturados e interativos!
+
+### 🖥️ Como Executar o Frontend (Next.js)
+
+1. **Acesse a pasta do frontend e instale as dependências:**
+   ```bash
+   cd web
+   npm install
+   ```
+   *(Você também pode utilizar `yarn install`, `pnpm install` ou o gerenciador de pacotes de sua preferência).*
+
+2. **Inicie o servidor de desenvolvimento:**
+   ```bash
+   npm run dev
+   ```
+
+3. **Acesse a aplicação no navegador:**
+   - O frontend estará disponível em: [http://localhost:3000](http://localhost:3000)
 
 ---
 *Desenvolvido seguindo as melhores práticas do mercado, voltado à escalabilidade, controle de performance e componentização de software.*

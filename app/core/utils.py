@@ -40,10 +40,17 @@ def load_options(key: str, encoded: str) -> list[str]:
     if encoded is None:
         raise ValueError("As senhas criptografadas não podem ser nulas.")
     
-    cipher = Fernet(key)
-    decrypted_data = cipher.decrypt(encoded.encode())
-    options = json.loads(decrypted_data.decode())
-    return options
+    try:
+        cipher = Fernet(key)
+        decrypted_data = cipher.decrypt(encoded.encode())
+        options = json.loads(decrypted_data.decode())
+        return options
+    except Exception as e:
+        import sys
+        print(f"ERROR: Failed to decrypt options. Key length: {len(key)}, Encoded length: {len(encoded)}", file=sys.stderr)
+        print(f"ERROR Details: {type(e).__name__}: {e}", file=sys.stderr)
+        # Return empty list if decryption fails instead of crashing
+        return []
 
 def send_invite_email(from_email: str, to_email: str, invite_link: str, smtp_server: str, smtp_port: int, smtp_user: str, smtp_password: str, default_password: str):
     subject = "Bem vindo a Associação Baygon! Complete seu cadastro."

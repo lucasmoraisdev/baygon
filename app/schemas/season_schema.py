@@ -28,10 +28,10 @@ class PlayerSeasonScoreSummary(BaseModel):
 
 class SeasonBase(BaseModel):
     initial_date: datetime
-    end_date: datetime
+    end_date: Optional[datetime] = None
 
 class SeasonCreate(SeasonBase):
-    pass
+    number: Optional[int] = None
 
 class SeasonUpdate(BaseModel):
     initial_date: Optional[datetime] = None

@@ -1,7 +1,6 @@
 from datetime import datetime
-from MySQLdb import Date
 from git import TYPE_CHECKING
-from sqlalchemy import ForeignKey, Integer, String, DateTime, func
+from sqlalchemy import Date, ForeignKey, Integer, String, DateTime, func
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.orm import relationship
 from app.db.base import Base, Timestamp

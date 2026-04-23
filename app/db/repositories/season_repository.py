@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Optional, Sequence
 from fastapi import HTTPException
-from sqlalchemy import desc, or_, select
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.season import Seasons
@@ -58,16 +58,14 @@ class SeasonRepository:
     
     async def get_last_season_number(self) -> int:
         """
-        Pega a ultima temporada.
+        Pega o número da última temporada cadastrada.
         """
         try:
             stmt = select(Seasons.number).where(
-                Seasons.deleted_at.is_(None),
-                Seasons.end_date.is_(None)
+                Seasons.deleted_at.is_(None)
                 ).order_by(desc(Seasons.number))
             
             result = await self.db.execute(stmt)
-
             season = result.fetchone()
 
             if season is None:
@@ -78,12 +76,26 @@ class SeasonRepository:
             print(f"Erro ao buscar última temporada: {e}")
             raise HTTPException(status_code=500, detail="Erro ao acessar o banco de dados ao buscar a última temporada.")
     
+    async def get_current_season(self) -> Optional[Seasons]:
+        """
+        Busca a temporada atualmente ativa.
+        """
+        now = datetime.now(timezone.utc)
+        stmt = select(Seasons).where(
+            Seasons.deleted_at.is_(None),
+            Seasons.initial_date <= now,
+            Seasons.end_date >= now
+        ).order_by(desc(Seasons.number))
+
+        result = await self.db.execute(stmt)
+        return result.scalars().first()
+
     async def list_all_seasons(self) -> Sequence[Seasons]:
         """
         Lista todas as temporadas.
         """
         stmt = select(Seasons).where(
-            Seasons.deleted_at.isnot(None)
+            Seasons.deleted_at.is_(None)
         ).order_by(desc(Seasons.number))
         result = await self.db.execute(stmt)
         

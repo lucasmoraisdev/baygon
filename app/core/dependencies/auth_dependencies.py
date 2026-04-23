@@ -13,6 +13,7 @@ async def get_current_user(
     Dependência global para recuperar o usuário autenticado
     a partir do token JWT.
     """
+    print(f"Token recebido para autenticação: {token}")
     return await auth_service.get_current_user(token)
 
 async def user_has_permission(

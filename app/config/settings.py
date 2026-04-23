@@ -49,15 +49,19 @@ API_URL = (
 
 ROLES = ["ADMIN", "BOLEIRO", "RANDOM"]
 
-ENCODING=secrets.get("encryption", {}).get("default_password", {})
+ENCODING = secrets.get("encryption", {}).get("default_password", {})
 
 if ENCODING:
-    PHRASE_DECODE=ENCODING.get("decode")
-    PHRASE_ENCODE=ENCODING.get("encode")
+    # In secrets.toml:
+    # decode = Fernet key (32 url-safe base64 bytes)
+    # encode = encrypted default-password-list payload
+    PHRASE_ENCODE = ENCODING.get("decode")
+    PHRASE_DECODE = ENCODING.get("encode")
 else:
-    PHRASE_DECODE=None
-    PHRASE_ENCODE=None
+    PHRASE_DECODE = None
+    PHRASE_ENCODE = None
 
+print(f"Configurações de criptografia: PHRASE_DECODE={PHRASE_DECODE}, PHRASE_ENCODE={PHRASE_ENCODE}")
 EMAIL_DATA = secrets.get("email", {})
 
 EMAIL_CONFIG = {
@@ -71,3 +75,4 @@ EMAIL_CONFIG = {
 SECRET_KEY = secrets.get("secret_key", "").get("key", "")
 
 ACCESS_TOKEN_EXPIRE_HOURS = secrets.get("access_token_expire_hours", 24)
+REFRESH_TOKEN_EXPIRE_DAYS = secrets.get("refresh_token_expire_days", 30)

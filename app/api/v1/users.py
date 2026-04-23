@@ -30,6 +30,14 @@ async def create_user(
     service = UserService(repo)
     return await service.create_user_with_invite(user_create.model_dump())
 
+@router.get("/me", response_model=UserRead, status_code=status.HTTP_200_OK)
+async def get_current_user_info(
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    return current_user
+
+
 @router.get("/{user_id}", response_model=UserRead, status_code=status.HTTP_200_OK)
 async def get_user(
     user_id: int, 

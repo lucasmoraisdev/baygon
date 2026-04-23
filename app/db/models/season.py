@@ -16,7 +16,7 @@ class Seasons(Base, Timestamp):
     id_season: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     number: Mapped[int] = mapped_column(Integer, nullable=False)
     initial_date: Mapped[Date] = mapped_column(DateTime(timezone=True), nullable=False)
-    end_date: Mapped[Date] = mapped_column(DateTime(timezone=True), nullable=False)
+    end_date: Mapped[Date] = mapped_column(DateTime(timezone=True), nullable=True)
 
     rounds: Mapped[list["Round"]] = relationship(
         "Round", 
