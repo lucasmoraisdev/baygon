@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING, Optional
 from sqlalchemy import ForeignKey, Integer, String, Boolean, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base, Timestamp
+from app.core.enum.events_enum import PosicaoEnum, PeEnum
 
 from app.db.models.user import User
 
@@ -18,8 +19,15 @@ class Player(Base, Timestamp):
 
     id_player: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     nome: Mapped[str] = mapped_column(String(255), nullable=False)
+    apelido: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    telefone: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    posicao: Mapped[Optional[PosicaoEnum]] = mapped_column(String(50), nullable=True)
+    pe: Mapped[Optional[PeEnum]] = mapped_column(String(1), nullable=True)
+    potes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id_user"), nullable=True)
     is_associate: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_guest: Mapped[bool] = mapped_column(Boolean, default=False)
 
     user: Mapped[Optional["User"]] = relationship(
         "User", 

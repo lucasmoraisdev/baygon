@@ -21,3 +21,6 @@ class TeamService:
         
     async def delete_team(self, team_id: int) -> bool:
         return await self.repo.delete(id_team=team_id)
+
+    async def list_all_teams(self) -> Sequence[Teams]:
+        return await self.repo.list_all()

@@ -65,3 +65,11 @@ class TeamRepository:
 
         return True
 
+    async def list_all(self) -> Sequence[Teams]:
+        """
+        Lista todos os times.
+        """
+        stmt = select(Teams).where(Teams.deleted_at.is_(None))
+        result = await self.db.execute(stmt)
+        return result.scalars().all()
+

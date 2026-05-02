@@ -1,4 +1,4 @@
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Dict, Any
 from app.db.models.player import Player
 from app.db.repositories.player_repository import PlayerRepository
 
@@ -7,6 +7,7 @@ class PlayerService:
         self.repo = repo
 
     async def create_player(self, player_data: dict) -> Player:
+        print(f"Creating player with data: {player_data}")
         player_obj = Player(**player_data)
         return await self.repo.create(player=player_obj)
     
@@ -21,3 +22,11 @@ class PlayerService:
         
     async def delete_player(self, player_id: int) -> bool:
         return await self.repo.delete_player(id_player=player_id)
+
+    async def get_player_stats(self, player_id: int) -> Dict[str, Any]:
+        """Obtém estatísticas gerais do jogador"""
+        return await self.repo.get_player_stats(player_id)
+
+    async def get_player_season_stats(self, player_id: int) -> Sequence[Dict[str, Any]]:
+        """Obtém estatísticas do jogador por temporada"""
+        return await self.repo.get_player_season_stats(player_id)

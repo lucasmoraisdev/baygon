@@ -28,3 +28,16 @@ class EventContextEnum(str, enum.Enum):
     MATCH = "match",
     ROUND = "round",
     SEASON = "season"
+
+
+class PosicaoEnum(str, enum.Enum):
+    GOLEIRO = "goleiro"
+    PIVO = "pivo"
+    ALA = "ala"
+    FIXO = "fixo"
+
+
+class PeEnum(str, enum.Enum):
+    DIREITO = "D"
+    ESQUERDO = "E"
+    AMBIDESTRO = "A"

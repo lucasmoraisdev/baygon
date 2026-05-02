@@ -9,6 +9,14 @@ from app.schemas.team_schema import TeamCreate, TeamRead, TeamUpdate
 
 router = APIRouter(prefix="/teams", tags=["Teams"])
 
+@router.get("/", response_model=List[TeamRead])
+async def list_all_teams(
+    db: AsyncSession = Depends(get_db)
+):
+    repo = TeamRepository(db)
+    service = TeamService(repo)
+    return await service.list_all_teams()
+
 @router.post("/", response_model=TeamRead, status_code=status.HTTP_201_CREATED)
 async def create_team(
     team_create: TeamCreate,
