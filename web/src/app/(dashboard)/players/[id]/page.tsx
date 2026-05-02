@@ -6,6 +6,7 @@ import { AuthContext } from '@/context/AuthContext';
 import { fetchAPI } from '@/lib/api';
 import Link from 'next/link';
 import SeasonChart from '@/components/SeasonChart';
+import SuspendModal from '@/components/SuspendModal';
 import styles from './player-profile.module.css';
 
 interface Stats {
@@ -71,8 +72,6 @@ export default function PlayerProfilePage() {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [adminAction, setAdminAction] = useState<string>('');
   const [showSuspendModal, setShowSuspendModal] = useState(false);
-  const [suspendType, setSuspendType] = useState('days');
-  const [suspendValue, setSuspendValue] = useState(1);
   const [fineAmount, setFineAmount] = useState(0);
   const [observations, setObservations] = useState('');
   const [adminActionsHistory, setAdminActionsHistory] = useState<any[]>([]);
@@ -111,6 +110,24 @@ export default function PlayerProfilePage() {
     }
   };
 
+  const handleConfirmSuspend = async (type: string, value: number) => {
+    try {
+      const endpoint = `/players/${playerId}/admin/suspend`;
+      const body = { suspension_type: type, value };
+      await fetchAPI(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      await loadPlayerProfile();
+      alert('Jogador suspenso com sucesso!');
+      setShowSuspendModal(false);
+    } catch (err: any) {
+      console.error('Erro ao suspender:', err);
+      alert(`Erro: ${err.message || 'Falha ao executar ação'}`);
+    }
+  };
+
   const handleAdminAction = async (action: string) => {
     if (!action) return;
 
@@ -120,10 +137,6 @@ export default function PlayerProfilePage() {
       let body = {};
 
       switch (action) {
-        case 'suspend':
-          endpoint = `/players/${playerId}/admin/suspend`;
-          body = { suspension_type: suspendType, value: suspendValue };
-          break;
         case 'unsuspend':
           endpoint = `/players/${playerId}/admin/unsuspend`;
           break;
@@ -250,6 +263,159 @@ export default function PlayerProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Painel Admin */}
+      {isAdmin && showAdminPanel && (
+        <div className={styles.adminPanel}>
+          <h2>Painel Administrativo</h2>
+
+          {/* Status do jogador */}
+          {playerStatus && (
+            <div className={styles.adminCard} style={{ marginBottom: '24px' }}>
+              <h3>Status Atual</h3>
+              <div className={styles.summaryList}>
+                <div className={styles.summaryItem}>
+                  <span className={styles.summaryItemLabel}>Bloqueado:</span>
+                  <span className={playerStatus.is_blocked ? styles.colorRed : styles.colorGreen}>
+                    {playerStatus.is_blocked ? 'SIM' : 'NÃO'}
+                  </span>
+                </div>
+                {playerStatus.suspension && (
+                  <>
+                    {playerStatus.suspension.is_indefinite ? (
+                      <div className={styles.summaryItem}>
+                        <span className={styles.summaryItemLabel}>Suspensão:</span>
+                        <span className={styles.colorRed}>Indefinida</span>
+                      </div>
+                    ) : playerStatus.suspension.suspension_matches ? (
+                      <div className={styles.summaryItem}>
+                        <span className={styles.summaryItemLabel}>Jogos restantes:</span>
+                        <span className={styles.colorYellow}>{playerStatus.suspension.suspension_matches}</span>
+                      </div>
+                    ) : (
+                      <>
+                        <div className={styles.summaryItem}>
+                          <span className={styles.summaryItemLabel}>Suspenso até:</span>
+                          <span className={styles.colorYellow}>
+                            {new Date(playerStatus.suspension.suspended_until).toLocaleDateString('pt-BR')}
+                          </span>
+                        </div>
+                        <div className={styles.summaryItem}>
+                          <span className={styles.summaryItemLabel}>Dias restantes:</span>
+                          <span className={styles.colorYellow}>{playerStatus.suspension.days_remaining}</span>
+                        </div>
+                      </>
+                    )}
+                    <button
+                      onClick={() => handleAdminAction('unsuspend')}
+                      className={`${styles.actionBtn} ${styles.btnGreen}`}
+                      style={{ marginTop: '12px' }}
+                    >
+                      Remover Suspensão Ativa
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className={styles.adminGrid}>
+            {/* Ação de suspensão */}
+            <div className={styles.adminCard}>
+              <h3>Gerenciar Suspensão</h3>
+              <p className={styles.summaryItemLabel} style={{ marginBottom: '16px' }}>Aplique penalidades de suspensão</p>
+              <button
+                onClick={() => setShowSuspendModal(true)}
+                className={`${styles.actionBtn} ${styles.btnRed}`}
+              >
+                Configurar Suspensão
+              </button>
+            </div>
+
+            {/* Ação de multa */}
+            <div className={styles.adminCard}>
+              <h3>Aplicar Multa</h3>
+              <div className={styles.inputGroup}>
+                <label>Valor da multa (R$):</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={fineAmount}
+                  onChange={(e) => setFineAmount(parseFloat(e.target.value))}
+                  className={styles.input}
+                />
+              </div>
+              <button
+                onClick={() => handleAdminAction('fine')}
+                className={`${styles.actionBtn} ${styles.btnOrange}`}
+              >
+                Aplicar Multa de R$ {fineAmount.toFixed(2)}
+              </button>
+            </div>
+
+            {/* Ação de observações */}
+            <div className={styles.adminCard}>
+              <h3>Adicionar Observações</h3>
+              <div className={styles.inputGroup}>
+                <textarea
+                  value={observations}
+                  onChange={(e) => setObservations(e.target.value)}
+                  placeholder="Digite suas observações..."
+                  className={styles.textarea}
+                />
+              </div>
+              <button
+                onClick={() => handleAdminAction('observe')}
+                className={`${styles.actionBtn} ${styles.btnBlue}`}
+              >
+                Salvar Observações
+              </button>
+            </div>
+
+            {/* Ações de bloqueio */}
+            <div className={styles.adminCard}>
+              <h3>Controle de Acesso</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
+                <button
+                  onClick={() => handleAdminAction('block')}
+                  className={`${styles.actionBtn} ${styles.btnRed}`}
+                  style={{ margin: 0 }}
+                >
+                  Bloquear Acesso
+                </button>
+                <button
+                  onClick={() => handleAdminAction('unblock')}
+                  className={`${styles.actionBtn} ${styles.btnGreen}`}
+                  style={{ margin: 0 }}
+                >
+                  Desbloquear Acesso
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Histórico de ações */}
+          {adminActionsHistory.length > 0 && (
+            <div className={styles.adminCard} style={{ marginTop: '24px' }}>
+              <h3>Histórico de Ações</h3>
+              <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
+                {adminActionsHistory.map((action, idx) => (
+                  <div key={idx} className={styles.historyItem}>
+                    <div className={styles.historyHeader}>
+                      <span className={styles.historyAction}>{action.action_type}</span>
+                      <span className={styles.historyDate}>
+                        {new Date(action.created_at).toLocaleDateString('pt-BR')}
+                      </span>
+                    </div>
+                    {action.description && <p className={styles.historyDesc}>{action.description}</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Dashboard com estatísticas */}
       <div className={styles.dashboardGrid}>
@@ -401,210 +567,11 @@ export default function PlayerProfilePage() {
         </div>
       )}
 
-      {/* Painel Admin */}
-      {isAdmin && showAdminPanel && (
-        <div className={styles.adminPanel}>
-          <h2>Painel Administrativo</h2>
-
-          {/* Status do jogador */}
-          {playerStatus && (
-            <div className={styles.adminCard} style={{ marginBottom: '24px' }}>
-              <h3>Status Atual</h3>
-              <div className={styles.summaryList}>
-                <div className={styles.summaryItem}>
-                  <span className={styles.summaryItemLabel}>Bloqueado:</span>
-                  <span className={playerStatus.is_blocked ? styles.colorRed : styles.colorGreen}>
-                    {playerStatus.is_blocked ? 'SIM' : 'NÃO'}
-                  </span>
-                </div>
-                {playerStatus.suspension && (
-                  <>
-                    {playerStatus.suspension.is_indefinite ? (
-                      <div className={styles.summaryItem}>
-                        <span className={styles.summaryItemLabel}>Suspensão:</span>
-                        <span className={styles.colorRed}>Indefinida</span>
-                      </div>
-                    ) : playerStatus.suspension.suspension_matches ? (
-                      <div className={styles.summaryItem}>
-                        <span className={styles.summaryItemLabel}>Jogos restantes:</span>
-                        <span className={styles.colorYellow}>{playerStatus.suspension.suspension_matches}</span>
-                      </div>
-                    ) : (
-                      <>
-                        <div className={styles.summaryItem}>
-                          <span className={styles.summaryItemLabel}>Suspenso até:</span>
-                          <span className={styles.colorYellow}>
-                            {new Date(playerStatus.suspension.suspended_until).toLocaleDateString('pt-BR')}
-                          </span>
-                        </div>
-                        <div className={styles.summaryItem}>
-                          <span className={styles.summaryItemLabel}>Dias restantes:</span>
-                          <span className={styles.colorYellow}>{playerStatus.suspension.days_remaining}</span>
-                        </div>
-                      </>
-                    )}
-                    <button
-                      onClick={() => handleAdminAction('unsuspend')}
-                      className={`${styles.actionBtn} ${styles.btnGreen}`}
-                      style={{ marginTop: '12px' }}
-                    >
-                      Remover Suspensão Ativa
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-
-          <div className={styles.adminGrid}>
-            {/* Ação de suspensão */}
-            <div className={styles.adminCard}>
-              <h3>Gerenciar Suspensão</h3>
-              <p className={styles.summaryItemLabel} style={{marginBottom: '16px'}}>Aplique penalidades de suspensão</p>
-              <button
-                onClick={() => setShowSuspendModal(true)}
-                className={`${styles.actionBtn} ${styles.btnRed}`}
-              >
-                Configurar Suspensão
-              </button>
-            </div>
-
-            {/* Ação de multa */}
-            <div className={styles.adminCard}>
-              <h3>Aplicar Multa</h3>
-              <div className={styles.inputGroup}>
-                <label>Valor da multa (R$):</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={fineAmount}
-                  onChange={(e) => setFineAmount(parseFloat(e.target.value))}
-                  className={styles.input}
-                />
-              </div>
-              <button
-                onClick={() => handleAdminAction('fine')}
-                className={`${styles.actionBtn} ${styles.btnOrange}`}
-              >
-                Aplicar Multa de R$ {fineAmount.toFixed(2)}
-              </button>
-            </div>
-
-            {/* Ação de observações */}
-            <div className={styles.adminCard}>
-              <h3>Adicionar Observações</h3>
-              <div className={styles.inputGroup}>
-                <textarea
-                  value={observations}
-                  onChange={(e) => setObservations(e.target.value)}
-                  placeholder="Digite suas observações..."
-                  className={styles.textarea}
-                />
-              </div>
-              <button
-                onClick={() => handleAdminAction('observe')}
-                className={`${styles.actionBtn} ${styles.btnBlue}`}
-              >
-                Salvar Observações
-              </button>
-            </div>
-
-            {/* Ações de bloqueio */}
-            <div className={styles.adminCard}>
-              <h3>Controle de Acesso</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
-                <button
-                  onClick={() => handleAdminAction('block')}
-                  className={`${styles.actionBtn} ${styles.btnRed}`}
-                  style={{ margin: 0 }}
-                >
-                  Bloquear Acesso
-                </button>
-                <button
-                  onClick={() => handleAdminAction('unblock')}
-                  className={`${styles.actionBtn} ${styles.btnGreen}`}
-                  style={{ margin: 0 }}
-                >
-                  Desbloquear Acesso
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Histórico de ações */}
-          {adminActionsHistory.length > 0 && (
-            <div className={styles.adminCard} style={{ marginTop: '24px' }}>
-              <h3>Histórico de Ações</h3>
-              <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
-                {adminActionsHistory.map((action, idx) => (
-                  <div key={idx} className={styles.historyItem}>
-                    <div className={styles.historyHeader}>
-                      <span className={styles.historyAction}>{action.action_type}</span>
-                      <span className={styles.historyDate}>
-                        {new Date(action.created_at).toLocaleDateString('pt-BR')}
-                      </span>
-                    </div>
-                    {action.description && <p className={styles.historyDesc}>{action.description}</p>}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Modal Suspensão */}
-      {showSuspendModal && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modalContent}>
-            <h2>Suspender Jogador</h2>
-            <div className={styles.inputGroup}>
-              <label>Tipo de Suspensão:</label>
-              <select 
-                value={suspendType} 
-                onChange={(e) => setSuspendType(e.target.value)}
-                className={styles.input}
-              >
-                <option value="days">Por Dias</option>
-                <option value="weeks">Por Semanas</option>
-                <option value="games">Por Jogos</option>
-                <option value="indefinite">Indefinidamente</option>
-              </select>
-            </div>
-            
-            {suspendType !== 'indefinite' && (
-              <div className={styles.inputGroup}>
-                <label>Quantidade ({suspendType === 'games' ? 'jogos' : suspendType === 'weeks' ? 'semanas' : 'dias'}):</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={suspendValue}
-                  onChange={(e) => setSuspendValue(parseInt(e.target.value))}
-                  className={styles.input}
-                />
-              </div>
-            )}
-            
-            <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-              <button
-                onClick={() => handleAdminAction('suspend')}
-                className={`${styles.actionBtn} ${styles.btnRed}`}
-                style={{ margin: 0 }}
-              >
-                Confirmar Suspensão
-              </button>
-              <button
-                onClick={() => setShowSuspendModal(false)}
-                className={`${styles.actionBtn}`}
-                style={{ background: 'var(--bg-surface)', margin: 0, border: '1px solid var(--border-color)' }}
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <SuspendModal
+        isOpen={showSuspendModal}
+        onClose={() => setShowSuspendModal(false)}
+        onConfirm={handleConfirmSuspend}
+      />
     </div>
   );
 }

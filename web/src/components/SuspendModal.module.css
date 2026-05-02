@@ -1,0 +1,65 @@
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+.modalContent {
+  background: var(--bg-surface, #1e293b);
+  padding: 32px;
+  border-radius: var(--radius, 12px);
+  border: 1px solid var(--border-color, #334155);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  width: 90%;
+  max-width: 400px;
+  animation: fadeIn 0.3s ease-out;
+  color: var(--text-main, #f8fafc);
+}
+.modalContent h2 {
+  margin-top: 0;
+  margin-bottom: 24px;
+}
+
+.inputGroup {
+  margin-bottom: 12px;
+}
+.inputGroup label {
+  display: block;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.input {
+  width: 100%;
+  padding: 10px;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid var(--border-color, #334155);
+  border-radius: 6px;
+  color: white;
+  box-sizing: border-box;
+}
+
+.actionBtn {
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  color: white;
+  transition: opacity 0.2s;
+  display: block;
+}
+.actionBtn:hover { opacity: 0.9; }
+.btnRed { background: #ef4444; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}

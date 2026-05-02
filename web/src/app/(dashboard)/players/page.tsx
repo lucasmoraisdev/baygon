@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import { fetchAPI } from "@/lib/api";
 import styles from "./players.module.css";
 import Link from "next/link";
+import { AuthContext } from "@/context/AuthContext";
+import SuspendModal from "@/components/SuspendModal";
 
 interface Player {
   id_player: number;
@@ -19,6 +21,9 @@ interface Player {
 }
 
 export default function PlayersPage() {
+  const { user } = useContext(AuthContext);
+  const isAdmin = user?.role === 'admin';
+
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
@@ -46,13 +51,34 @@ export default function PlayersPage() {
     loadPlayers();
   }, []);
 
+  const [suspendModalOpen, setSuspendModalOpen] = useState(false);
+  const [playerToSuspend, setPlayerToSuspend] = useState<number | null>(null);
+
+  const handleConfirmSuspend = async (type: string, value: number) => {
+    if (!playerToSuspend) return;
+    try {
+      await fetchAPI(`/players/${playerToSuspend}/admin/suspend`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ suspension_type: type, value }),
+      });
+      setSuspendModalOpen(false);
+      setPlayerToSuspend(null);
+      alert('Jogador suspenso com sucesso!');
+      loadPlayers();
+    } catch (err: any) {
+      console.error(err);
+      alert(`Erro: ${err.message || 'Falha ao suspender'}`);
+    }
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await fetchAPI("/players/", {
         method: "POST",
-        body: JSON.stringify({ 
-          nome, 
+        body: JSON.stringify({
+          nome,
           apelido: apelido || null,
           email: email || null,
           telefone: telefone || null,
@@ -90,8 +116,10 @@ export default function PlayersPage() {
       </div>
 
       {isCreating && (
-        <form onSubmit={handleCreate} className={styles.createForm}>
-          <h3>Adicionar Jogador</h3>
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <h2>Novo Jogador</h2>
+            <form onSubmit={handleCreate}>
           <div className={styles.inputGroup}>
             <label>Nome do Jogador *</label>
             <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} required placeholder="Ex: Lucas Morais" />
@@ -145,10 +173,12 @@ export default function PlayersPage() {
             </label>
           </div>
           <div className={styles.actions}>
-            <button type="submit" className={styles.primaryBtn}>Salvar</button>
+            <button type="submit" className={styles.primaryBtn} disabled={loading}>Salvar</button>
             <button type="button" className={styles.secondaryBtn} onClick={() => setIsCreating(false)}>Cancelar</button>
           </div>
-        </form>
+            </form>
+          </div>
+        </div>
       )}
 
       <div className={styles.list}>
@@ -170,14 +200,29 @@ export default function PlayersPage() {
                 {player.is_guest ? "Convidado" : "Mensalista"}
               </span>
             </div>
-            <div className={styles.actionsBox}>
-               <Link href={`/players/${player.id_player}`} className={styles.secondaryBtn} style={{ padding: '6px 12px', fontSize: '13px' }}>
-                 Perfil Completo
-               </Link>
+            <div className={styles.actionsBox} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {isAdmin && (
+                <button
+                  onClick={() => { setPlayerToSuspend(player.id_player); setSuspendModalOpen(true); }}
+                  className={styles.secondaryBtn}
+                  style={{ padding: '6px 12px', fontSize: '13px', background: '#ef4444', color: 'white', border: 'none' }}
+                >
+                  Suspender
+                </button>
+              )}
+              <Link href={`/players/${player.id_player}`} className={styles.secondaryBtn} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                Perfil Completo
+              </Link>
             </div>
           </div>
         ))}
       </div>
+
+      <SuspendModal
+        isOpen={suspendModalOpen}
+        onClose={() => { setSuspendModalOpen(false); setPlayerToSuspend(null); }}
+        onConfirm={handleConfirmSuspend}
+      />
     </div>
   );
 }

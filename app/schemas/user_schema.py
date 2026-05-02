@@ -29,6 +29,7 @@ class UserRead(UserBase):
     setup_token: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+    role: str
 
     players: Optional[List[PlayerRead]] = None 
 

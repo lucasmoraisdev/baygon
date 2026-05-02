@@ -33,3 +33,7 @@ class User(Base, Timestamp):
         "Match",
         back_populates="filmed_by_user"
     )
+
+    @property
+    def role(self) -> str:
+        return "admin" if self.is_admin else "user"

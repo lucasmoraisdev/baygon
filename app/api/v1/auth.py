@@ -52,7 +52,7 @@ async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
         "sub": email,
         "email": user.email,
         "username": user.username,
-        "is_admin": user.is_admin,
+        "role": user.role,
         "user_id": user.id_user    
         }
     )
@@ -95,7 +95,7 @@ async def refresh_token(data: RefreshTokenRequest, db: AsyncSession = Depends(ge
             "sub": payload["sub"],
             "email": user.email,
             "username": user.username,
-            "is_admin": user.is_admin,
+            "role": user.role,
             "user_id": user.id_user    
         })
         
