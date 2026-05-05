@@ -10,6 +10,7 @@ const MENU_ITEMS = [
   { name: "Times", path: "/teams" },
   { name: "Jogadores", path: "/players" },
   { name: "Partidas", path: "/matches" },
+  { name: "Rodadas", path: "/rounds" },
   { name: "Prêmios (Awards)", path: "/awards" },
   { name: "Regras (Admin)", path: "/admin/rules" },
 ];
@@ -21,16 +22,16 @@ export default function Sidebar() {
   return (
     <aside className={styles.sidebar}>
       <div className={styles.header}>
-        <h2>Baygon <span>API</span></h2>
+        <h2>Associação   <span>Baygon</span></h2>
       </div>
 
       <nav className={styles.nav}>
         {MENU_ITEMS.map((item) => {
           const isActive = pathname === item.path || (item.path !== "/" && pathname.startsWith(item.path));
           return (
-            <Link 
-              key={item.path} 
-              href={item.path} 
+            <Link
+              key={item.path}
+              href={item.path}
               className={`${styles.navItem} ${isActive ? styles.active : ""}`}
             >
               {item.name}

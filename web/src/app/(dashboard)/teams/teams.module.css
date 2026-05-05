@@ -1,0 +1,206 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg, 24px);
+  animation: fadeIn 0.4s ease-out;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+  background: var(--bg-surface);
+  padding: 24px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-color);
+}
+.header h1 {
+  margin: 0;
+  font-size: 24px;
+  color: var(--text-main);
+}
+.headerActions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.filterBar {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  background: var(--bg-surface);
+  padding: 16px 24px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-color);
+}
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 200px;
+}
+.filterGroup label {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.select {
+  padding: 10px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  outline: none;
+}
+.select:focus {
+  border-color: var(--primary-color);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.teamCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  padding: 24px;
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+.teamCard:hover {
+  border-color: var(--primary-color);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.teamName {
+  font-size: 20px;
+  font-weight: bold;
+  color: var(--text-main);
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+}
+.teamMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-color);
+  padding-top: 12px;
+  margin-top: auto;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 60px 20px;
+  background: var(--bg-surface);
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius);
+  text-align: center;
+  color: var(--text-muted);
+}
+.emptyState h3 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 18px;
+}
+.emptyState p {
+  margin: 0;
+  max-width: 400px;
+}
+
+.btnPrimary {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: opacity 0.2s;
+}
+.btnPrimary:hover {
+  opacity: 0.9;
+}
+.btnSecondary {
+  background: transparent;
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.btnSecondary:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+.modalContent {
+  background: var(--bg-surface);
+  padding: 32px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-color);
+  width: 90%;
+  max-width: 400px;
+}
+.modalContent h2 {
+  margin-top: 0;
+  margin-bottom: 24px;
+}
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.formGroup label {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.formGroup input, .formGroup select {
+  padding: 12px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+}
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
