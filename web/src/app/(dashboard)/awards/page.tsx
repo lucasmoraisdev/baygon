@@ -1,47 +1,47 @@
-"use client";
-import { useEffect, useState } from "react";
-import { fetchAPI } from "@/lib/api";
-import styles from "../seasons/seasons.module.css"; 
+'use client';
+
+import { useQuery } from '@tanstack/react-query';
+import { fetchAPI } from '@/lib/api';
+import { Loading } from '@/components/Loading';
 
 export default function AwardsPage() {
-  const [awards, setAwards] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+	const { data: awards = [], isLoading, isError } = useQuery<any[]>({
+		queryKey: ['awards', 'round', 1],
+		queryFn: () => fetchAPI('/awards/round/1').catch(() => []),
+	});
 
-  useEffect(() => {
-    fetchAPI("/awards/round/1") 
-      .then(res => setAwards(res))
-      .catch((e) => {
-          console.log("No global endpoint, showing empty or mocked data", e);
-          setAwards([]);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+	if (isLoading) return <Loading />;
+	if (isError)
+		return <div className="text-red-500 p-4">Erro ao carregar prêmios.</div>;
 
-  if (loading) return <div>Carregando troféus...</div>;
+	return (
+		<div className="flex flex-col gap-6 animate-slide-down">
+			<div>
+				<h1 className="text-3xl text-main">Galeria de Prêmios</h1>
+				<p className="text-sm text-muted mt-1">Conquistas distribuídas durante a temporada.</p>
+			</div>
 
-  return (
-    <div className={styles.container}>
-      <div className={styles.header}>
-        <div>
-           <h1>Galeria de Prêmios 🏆</h1>
-           <p style={{ margin: '8px 0 0', color: 'var(--text-muted)' }}>Conquistas distribuídas durante a temporada.</p>
-        </div>
-      </div>
-
-      <div className={styles.grid}>
-        {awards.length === 0 && <p style={{ color: 'var(--text-muted)' }}>Nenhum prêmio distribuído ainda.</p>}
-        {awards.map(a => (
-          <div key={a.id_award} className={styles.card}>
-            <div className={styles.cardHeader}>
-              <span className={styles.badge}>Prêmio #{a.id_award}</span>
-              <h2>{a.event_type}</h2>
-            </div>
-            <div className={styles.cardBody}>
-              <p>Rodada associada: <strong>{a.round_id}</strong></p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+			{awards.length === 0 ? (
+				<div className="bg-surface border border-border rounded-xl p-6 text-muted text-sm">
+					Nenhum prêmio distribuído ainda.
+				</div>
+			) : (
+				<div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">
+					{awards.map((a) => (
+						<div key={a.id_award} className="bg-surface border border-border rounded-xl p-5">
+							<div className="flex items-center gap-2 mb-3">
+								<span className="text-xs text-primary font-semibold bg-primary/10 px-2 py-1 rounded-full">
+									Prêmio #{a.id_award}
+								</span>
+							</div>
+							<h2 className="text-base font-semibold text-main mb-2">{a.event_type}</h2>
+							<p className="text-sm text-muted">
+								Rodada associada: <strong>{a.round_id}</strong>
+							</p>
+						</div>
+					))}
+				</div>
+			)}
+		</div>
+	);
 }

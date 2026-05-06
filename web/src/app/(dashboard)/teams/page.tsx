@@ -1,16 +1,21 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import Link from 'next/link';
-import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchAPI } from '@/lib/api';
-import { useAuth } from '@/context/AuthContext';
-import { Loading } from '@/components/Loading';
 import { Button } from '@/components/Button';
-import { Input } from '@/components/Input';
-import { Select } from '@/components/Select';
 import { FormField } from '@/components/FormField';
+import { Input } from '@/components/Input';
+import { Loading } from '@/components/Loading';
 import { Modal } from '@/components/Modal';
+import { Select } from '@/components/Select';
+import { useAuth } from '@/context/AuthContext';
+import { fetchAPI } from '@/lib/api';
+import {
+	useMutation,
+	useQueries,
+	useQuery,
+	useQueryClient,
+} from '@tanstack/react-query';
+import Link from 'next/link';
+import { useMemo, useState } from 'react';
 
 export default function TeamsPage() {
 	const { user } = useAuth();
@@ -29,26 +34,40 @@ export default function TeamsPage() {
 		date: new Date().toISOString().split('T')[0],
 	});
 
-	const [newTeam, setNewTeam] = useState<{ name: string; round_id: string; player_ids: string[] }>({
+	const [newTeam, setNewTeam] = useState<{
+		name: string;
+		round_id: string;
+		player_ids: string[];
+	}>({
 		name: '',
 		round_id: '',
 		player_ids: ['', '', '', '', ''],
 	});
 
-	const [seasonsQuery, currentSeasonQuery, teamsQuery, playersQuery] = useQueries({
-		queries: [
-			{ queryKey: ['seasons'], queryFn: () => fetchAPI('/seasons/') },
-			{
-				queryKey: ['seasons', 'current'],
-				queryFn: async () => {
-					try { return await fetchAPI('/seasons/current'); }
-					catch { return null; }
+	const [seasonsQuery, currentSeasonQuery, teamsQuery, playersQuery] =
+		useQueries({
+			queries: [
+				{ queryKey: ['seasons'], queryFn: () => fetchAPI('/seasons/') },
+				{
+					queryKey: ['seasons', 'current'],
+					queryFn: async () => {
+						try {
+							return await fetchAPI('/seasons/current');
+						} catch {
+							return null;
+						}
+					},
 				},
-			},
-			{ queryKey: ['teams'], queryFn: () => fetchAPI('/teams/').catch(() => []) },
-			{ queryKey: ['players'], queryFn: () => fetchAPI('/players/').catch(() => []) },
-		],
-	});
+				{
+					queryKey: ['teams'],
+					queryFn: () => fetchAPI('/teams/').catch(() => []),
+				},
+				{
+					queryKey: ['players'],
+					queryFn: () => fetchAPI('/players/').catch(() => []),
+				},
+			],
+		});
 
 	const seasons: any[] = seasonsQuery.data ?? [];
 	const allTeams: any[] = teamsQuery.data ?? [];
@@ -68,11 +87,15 @@ export default function TeamsPage() {
 
 	const rounds: any[] = roundsQuery.data ?? [];
 
-	const activeRound = useMemo(() => rounds.find((r) => !r.end_time), [rounds]);
+	const activeRound = useMemo(
+		() => rounds.find((r) => !r.end_time),
+		[rounds],
+	);
 
 	const filteredTeams = useMemo(() => {
 		return allTeams.filter((team) => {
-			if (filterRoundId) return team.round_id.toString() === filterRoundId;
+			if (filterRoundId)
+				return team.round_id.toString() === filterRoundId;
 			return rounds.some((r) => r.id_round === team.round_id);
 		});
 	}, [allTeams, filterRoundId, rounds]);
@@ -89,9 +112,14 @@ export default function TeamsPage() {
 
 	const startRoundMutation = useMutation({
 		mutationFn: (body: object) =>
-			fetchAPI('/rounds/', { method: 'POST', body: JSON.stringify(body) }),
+			fetchAPI('/rounds/', {
+				method: 'POST',
+				body: JSON.stringify(body),
+			}),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ['rounds', 'season', selectedSeason] });
+			queryClient.invalidateQueries({
+				queryKey: ['rounds', 'season', selectedSeason],
+			});
 			setIsRoundModalOpen(false);
 		},
 	});
@@ -102,7 +130,11 @@ export default function TeamsPage() {
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['teams'] });
 			setIsTeamModalOpen(false);
-			setNewTeam({ name: '', round_id: activeRound?.id_round?.toString() ?? '', player_ids: ['', '', '', '', ''] });
+			setNewTeam({
+				name: '',
+				round_id: activeRound?.id_round?.toString() ?? '',
+				player_ids: ['', '', '', '', ''],
+			});
 		},
 	});
 
@@ -120,7 +152,9 @@ export default function TeamsPage() {
 
 	const handleCreateTeam = (e: React.FormEvent) => {
 		e.preventDefault();
-		const pIds = newTeam.player_ids.filter((id) => id !== '').map((id) => parseInt(id));
+		const pIds = newTeam.player_ids
+			.filter((id) => id !== '')
+			.map((id) => parseInt(id));
 		createTeamMutation.mutate({
 			name: newTeam.name,
 			round_id: parseInt(newTeam.round_id),
@@ -141,33 +175,45 @@ export default function TeamsPage() {
 			<div className="flex items-center justify-between flex-wrap gap-4">
 				<div>
 					<h1 className="text-3xl text-main">Times</h1>
-					<p className="text-sm text-muted mt-1">Gerencie os times de cada rodada</p>
+					<p className="text-sm text-muted mt-1">
+						Gerencie os times de cada rodada
+					</p>
 				</div>
 				<div className="flex items-center gap-3">
 					<Select
 						value={selectedSeason}
-						onChange={(e) => setSelectedSeasonOverride(e.target.value)}
+						onChange={(e) =>
+							setSelectedSeasonOverride(e.target.value)
+						}
 						className="w-auto"
 					>
 						{seasons.map((s) => (
 							<option key={s.id_season} value={s.id_season}>
-								Temporada {s.number} {s.is_active ? '(Atual)' : ''}
+								Temporada {s.number}{' '}
+								{s.is_active ? '(Atual)' : ''}
 							</option>
 						))}
 					</Select>
 					{isAdmin && (
-						<Button onClick={() => setIsTeamModalOpen(true)} className="w-auto">
+						<Button
+							onClick={() => setIsTeamModalOpen(true)}
+							className="w-auto"
+						>
 							+ Novo Time
 						</Button>
 					)}
 				</div>
 			</div>
 
-			<Select value={filterRoundId} onChange={(e) => setFilterRoundId(e.target.value)}>
+			<Select
+				value={filterRoundId}
+				onChange={(e) => setFilterRoundId(e.target.value)}
+			>
 				<option value="">Toda a Temporada</option>
 				{rounds.map((r) => (
 					<option key={r.id_round} value={r.id_round}>
-						Rodada {r.round_number} ({new Date(r.date).toLocaleDateString('pt-BR')}){' '}
+						Rodada {r.round_number} (
+						{new Date(r.date).toLocaleDateString('pt-BR')}){' '}
 						{!r.end_time ? '[Ativa]' : ''}
 					</option>
 				))}
@@ -175,26 +221,39 @@ export default function TeamsPage() {
 
 			{!activeRound ? (
 				<div className="bg-surface border border-border rounded-xl p-6 flex flex-col items-center gap-3 text-center">
-					<h3 className="text-lg font-semibold">Nenhuma Rodada Ativa</h3>
+					<h3 className="text-lg font-semibold">
+						Nenhuma Rodada Ativa
+					</h3>
 					<p className="text-muted text-sm">
-						Para interagir com os times desta semana, inicie uma nova rodada.
+						Para interagir com os times desta semana, inicie uma
+						nova rodada.
 					</p>
 					{isAdmin && (
-						<Button onClick={() => setIsRoundModalOpen(true)} className="w-auto">
+						<Button
+							onClick={() => setIsRoundModalOpen(true)}
+							className="w-auto"
+						>
 							▶ Iniciar Nova Rodada
 						</Button>
 					)}
 				</div>
-			) : currentRoundTeams.length === 0 && filterRoundId === activeRound.id_round.toString() ? (
+			) : currentRoundTeams.length === 0 &&
+			  filterRoundId === activeRound.id_round.toString() ? (
 				<div className="bg-surface border border-border rounded-xl p-6 flex flex-col items-center gap-3 text-center">
-					<h3 className="text-lg font-semibold">Nenhum time cadastrado ainda</h3>
+					<h3 className="text-lg font-semibold">
+						Nenhum time cadastrado ainda
+					</h3>
 					<p className="text-muted text-sm">
-						A rodada {activeRound.round_number} está em andamento, mas não há times cadastrados.
+						A rodada {activeRound.round_number} está em andamento,
+						mas não há times cadastrados.
 					</p>
 					{isAdmin && (
 						<Button
 							onClick={() => {
-								setNewTeam((prev) => ({ ...prev, round_id: activeRound.id_round.toString() }));
+								setNewTeam((prev) => ({
+									...prev,
+									round_id: activeRound.id_round.toString(),
+								}));
 								setIsTeamModalOpen(true);
 							}}
 							className="w-auto"
@@ -213,7 +272,9 @@ export default function TeamsPage() {
 						className="bg-surface border border-border rounded-xl p-5 hover:border-primary transition-colors"
 					>
 						<div className="flex items-center justify-between mb-2">
-							<span className="font-semibold text-main">{team.name}</span>
+							<span className="font-semibold text-main">
+								{team.name}
+							</span>
 							<span>⚽</span>
 						</div>
 						<div className="flex items-center justify-between text-sm text-muted">
@@ -224,13 +285,25 @@ export default function TeamsPage() {
 				))}
 			</div>
 
-			<Modal isOpen={isRoundModalOpen} onClose={() => setIsRoundModalOpen(false)} title="Iniciar Nova Rodada">
-				<form onSubmit={handleStartRound} className="flex flex-col gap-2">
+			<Modal
+				isOpen={isRoundModalOpen}
+				onClose={() => setIsRoundModalOpen(false)}
+				title="Iniciar Nova Rodada"
+			>
+				<form
+					onSubmit={handleStartRound}
+					className="flex flex-col gap-2"
+				>
 					<FormField label="Número da Rodada">
 						<Input
 							type="number"
 							value={newRound.round_number}
-							onChange={(e) => setNewRound({ ...newRound, round_number: e.target.value })}
+							onChange={(e) =>
+								setNewRound({
+									...newRound,
+									round_number: e.target.value,
+								})
+							}
 							required
 							placeholder="Ex: 1"
 						/>
@@ -239,7 +312,12 @@ export default function TeamsPage() {
 						<Input
 							type="text"
 							value={newRound.location}
-							onChange={(e) => setNewRound({ ...newRound, location: e.target.value })}
+							onChange={(e) =>
+								setNewRound({
+									...newRound,
+									location: e.target.value,
+								})
+							}
 							required
 						/>
 					</FormField>
@@ -247,7 +325,12 @@ export default function TeamsPage() {
 						<Input
 							type="text"
 							value={newRound.referee}
-							onChange={(e) => setNewRound({ ...newRound, referee: e.target.value })}
+							onChange={(e) =>
+								setNewRound({
+									...newRound,
+									referee: e.target.value,
+								})
+							}
 							required
 						/>
 					</FormField>
@@ -255,28 +338,51 @@ export default function TeamsPage() {
 						<Input
 							type="date"
 							value={newRound.date}
-							onChange={(e) => setNewRound({ ...newRound, date: e.target.value })}
+							onChange={(e) =>
+								setNewRound({
+									...newRound,
+									date: e.target.value,
+								})
+							}
 							required
 						/>
 					</FormField>
 					<div className="flex gap-3 mt-2">
-						<Button type="submit" disabled={startRoundMutation.isPending}>
-							{startRoundMutation.isPending ? 'Iniciando...' : 'Iniciar Rodada'}
+						<Button
+							type="submit"
+							disabled={startRoundMutation.isPending}
+						>
+							{startRoundMutation.isPending
+								? 'Iniciando...'
+								: 'Iniciar Rodada'}
 						</Button>
-						<Button type="button" variant="ghost" onClick={() => setIsRoundModalOpen(false)}>
+						<Button
+							type="button"
+							variant="ghost"
+							onClick={() => setIsRoundModalOpen(false)}
+						>
 							Cancelar
 						</Button>
 					</div>
 				</form>
 			</Modal>
 
-			<Modal isOpen={isTeamModalOpen} onClose={() => setIsTeamModalOpen(false)} title="Cadastrar Novo Time">
-				<form onSubmit={handleCreateTeam} className="flex flex-col gap-2">
+			<Modal
+				isOpen={isTeamModalOpen}
+				onClose={() => setIsTeamModalOpen(false)}
+				title="Cadastrar Novo Time"
+			>
+				<form
+					onSubmit={handleCreateTeam}
+					className="flex flex-col gap-2"
+				>
 					<FormField label="Nome do Time">
 						<Input
 							type="text"
 							value={newTeam.name}
-							onChange={(e) => setNewTeam({ ...newTeam, name: e.target.value })}
+							onChange={(e) =>
+								setNewTeam({ ...newTeam, name: e.target.value })
+							}
 							required
 							placeholder="Ex: Time Azul"
 						/>
@@ -284,13 +390,19 @@ export default function TeamsPage() {
 					<FormField label="Rodada Alvo">
 						<Select
 							value={newTeam.round_id}
-							onChange={(e) => setNewTeam({ ...newTeam, round_id: e.target.value })}
+							onChange={(e) =>
+								setNewTeam({
+									...newTeam,
+									round_id: e.target.value,
+								})
+							}
 							required
 						>
 							<option value="">Selecione uma Rodada</option>
 							{rounds.map((r) => (
 								<option key={r.id_round} value={r.id_round}>
-									Rodada {r.round_number} {!r.end_time ? '[Ativa]' : ''}
+									Rodada {r.round_number}{' '}
+									{!r.end_time ? '[Ativa]' : ''}
 								</option>
 							))}
 						</Select>
@@ -302,24 +414,42 @@ export default function TeamsPage() {
 								onChange={(e) => {
 									const newIds = [...newTeam.player_ids];
 									newIds[index] = e.target.value;
-									setNewTeam({ ...newTeam, player_ids: newIds });
+									setNewTeam({
+										...newTeam,
+										player_ids: newIds,
+									});
 								}}
 								required
 							>
 								<option value="">Selecione o jogador...</option>
 								{allPlayers.map((p) => (
-									<option key={p.id_player} value={p.id_player}>
-										{p.nome} {p.potes ? `(Pote Origem: ${p.potes})` : ''}
+									<option
+										key={p.id_player}
+										value={p.id_player}
+									>
+										{p.nome}{' '}
+										{p.potes
+											? `(Pote Origem: ${p.potes})`
+											: ''}
 									</option>
 								))}
 							</Select>
 						</FormField>
 					))}
 					<div className="flex gap-3 mt-2">
-						<Button type="submit" disabled={createTeamMutation.isPending}>
-							{createTeamMutation.isPending ? 'Criando...' : 'Criar Time'}
+						<Button
+							type="submit"
+							disabled={createTeamMutation.isPending}
+						>
+							{createTeamMutation.isPending
+								? 'Criando...'
+								: 'Criar Time'}
 						</Button>
-						<Button type="button" variant="ghost" onClick={() => setIsTeamModalOpen(false)}>
+						<Button
+							type="button"
+							variant="ghost"
+							onClick={() => setIsTeamModalOpen(false)}
+						>
 							Cancelar
 						</Button>
 					</div>
