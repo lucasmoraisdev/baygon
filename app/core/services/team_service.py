@@ -7,8 +7,9 @@ class TeamService:
         self.repo = repo
 
     async def create_team(self, team_data: dict) -> Teams:
+        player_ids = team_data.pop("player_ids", [])
         team_obj = Teams(**team_data)
-        return await self.repo.create(team=team_obj)
+        return await self.repo.create(team=team_obj, player_ids=player_ids)
     
     async def list_teams_by_round(self, round_id: int) -> Sequence[Teams]:
         return await self.repo.list_teams_by_round(round_id)
