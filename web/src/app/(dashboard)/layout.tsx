@@ -1,36 +1,41 @@
-"use client";
+'use client';
 
-import Sidebar from "@/components/Sidebar";
-import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { Loading } from '@/components/Loading';
+import Sidebar from '@/components/Sidebar';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function DashboardLayout({
-  children,
+	children,
 }: {
-  children: React.ReactNode;
+	children: React.ReactNode;
 }) {
-  const { user, loading } = useAuth();
-  const router = useRouter();
+	const { user, loading } = useAuth();
+	const router = useRouter();
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push("/login");
-    }
-  }, [user, loading, router]);
+	useEffect(() => {
+		if (!loading && !user) {
+			router.push('/login');
+		}
+	}, [user, loading, router]);
 
-  if (loading || !user) {
-    return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>Carregando...</div>;
-  }
+	if (loading || !user) {
+		return (
+			<div className="flex items-center justify-center h-screen">
+				<Loading />
+			</div>
+		);
+	}
 
-  return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
-      <Sidebar />
-      <main style={{ flex: 1, marginLeft: "260px", padding: "var(--spacing-lg)" }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto", width: "100%", animation: "fade-in 0.4s ease-out" }}>
-          {children}
-        </div>
-      </main>
-    </div>
-  );
+	return (
+		<div className="flex min-h-screen">
+			<Sidebar />
+			<main className="flex-1 ml-64 p-6">
+				<div className="max-w-6xl m-auto w-full animate-fade-in">
+					{children}
+				</div>
+			</main>
+		</div>
+	);
 }

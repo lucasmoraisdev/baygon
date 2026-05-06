@@ -1,28 +1,33 @@
-import './global.css';
 import Providers from '@/components/Providers';
+import './global.css';
 
 export const metadata = {
-  title: 'Baygon API - Admin Board',
-  description: 'Sistema administrativo moderno do Baygon',
+	title: 'Baygon API - Admin Board',
+	description: 'Sistema administrativo moderno do Baygon',
 };
 
 export default function RootLayout({
-  children,
+	children,
 }: {
-  children: React.ReactNode;
+	children: React.ReactNode;
 }) {
-  return (
-    <html lang="pt-BR">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-      </head>
-      <body>
-        <Providers>
-          {children}
-        </Providers>
-      </body>
-    </html>
-  );
+	return (
+		<html lang="pt-BR">
+			<head>
+				<link rel="preconnect" href="https://fonts.googleapis.com" />
+				<link
+					rel="preconnect"
+					href="https://fonts.gstatic.com"
+					crossOrigin="anonymous"
+				/>
+				<link
+					href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+					rel="stylesheet"
+				/>
+			</head>
+			<body className="bg-background text-main">
+				<Providers>{children}</Providers>
+			</body>
+		</html>
+	);
 }

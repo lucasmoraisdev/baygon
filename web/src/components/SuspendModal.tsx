@@ -1,5 +1,11 @@
-import React, { useState } from 'react';
-import styles from './SuspendModal.module.css';
+"use client";
+
+import { useState } from "react";
+import { Button } from "@/components/Button";
+import { FormField } from "@/components/FormField";
+import { Input } from "@/components/Input";
+import { Modal } from "@/components/Modal";
+import { Select } from "@/components/Select";
 
 interface SuspendModalProps {
   isOpen: boolean;
@@ -7,60 +13,46 @@ interface SuspendModalProps {
   onConfirm: (type: string, value: number) => void | Promise<void>;
 }
 
+const VALUE_LABEL: Record<string, string> = {
+  days:  "dias",
+  weeks: "semanas",
+  games: "jogos",
+};
+
 export default function SuspendModal({ isOpen, onClose, onConfirm }: SuspendModalProps) {
-  const [suspendType, setSuspendType] = useState('days');
+  const [suspendType, setSuspendType]   = useState("days");
   const [suspendValue, setSuspendValue] = useState(1);
 
-  if (!isOpen) return null;
-
   return (
-    <div className={styles.modalOverlay}>
-      <div className={styles.modalContent}>
-        <h2>Suspender Jogador</h2>
-        <div className={styles.inputGroup}>
-          <label>Tipo de Suspensão:</label>
-          <select 
-            value={suspendType} 
-            onChange={(e) => setSuspendType(e.target.value)}
-            className={styles.input}
-          >
-            <option value="days">Por Dias</option>
-            <option value="weeks">Por Semanas</option>
-            <option value="games">Por Jogos</option>
-            <option value="indefinite">Indefinidamente</option>
-          </select>
-        </div>
-        
-        {suspendType !== 'indefinite' && (
-          <div className={styles.inputGroup}>
-            <label>Quantidade ({suspendType === 'games' ? 'jogos' : suspendType === 'weeks' ? 'semanas' : 'dias'}):</label>
-            <input
-              type="number"
-              min="1"
-              value={suspendValue}
-              onChange={(e) => setSuspendValue(parseInt(e.target.value))}
-              className={styles.input}
-            />
-          </div>
-        )}
-        
-        <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-          <button
-            onClick={() => onConfirm(suspendType, suspendValue)}
-            className={`${styles.actionBtn} ${styles.btnRed}`}
-            style={{ margin: 0 }}
-          >
-            Confirmar Suspensão
-          </button>
-          <button
-            onClick={onClose}
-            className={`${styles.actionBtn}`}
-            style={{ background: 'var(--bg-surface)', margin: 0, border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
-          >
-            Cancelar
-          </button>
-        </div>
+    <Modal isOpen={isOpen} onClose={onClose} title="Suspender Jogador">
+      <FormField label="Tipo de Suspensão:">
+        <Select value={suspendType} onChange={(e) => setSuspendType(e.target.value)}>
+          <option value="days">Por Dias</option>
+          <option value="weeks">Por Semanas</option>
+          <option value="games">Por Jogos</option>
+          <option value="indefinite">Indefinidamente</option>
+        </Select>
+      </FormField>
+
+      {suspendType !== "indefinite" && (
+        <FormField label={`Quantidade (${VALUE_LABEL[suspendType] ?? "dias"}):`}>
+          <Input
+            type="number"
+            min={1}
+            value={suspendValue}
+            onChange={(e) => setSuspendValue(parseInt(e.target.value))}
+          />
+        </FormField>
+      )}
+
+      <div className="flex gap-3 mt-6">
+        <Button variant="danger" onClick={() => onConfirm(suspendType, suspendValue)}>
+          Confirmar Suspensão
+        </Button>
+        <Button variant="ghost" onClick={onClose}>
+          Cancelar
+        </Button>
       </div>
-    </div>
+    </Modal>
   );
 }
