@@ -21,6 +21,14 @@ export const DEFAULT_ROUND = {
 	date: new Date().toISOString().split('T')[0],
 };
 
+export const DEFAULT_MATCH = {
+	round_id: '',
+	home_team_id: '',
+	away_team_id: '',
+	home_score: 0,
+	away_score: 0,
+};
+
 export const COLOR_MAP: Record<string, string> = {
 	green: 'text-green-400',
 	red: 'text-red-400',
