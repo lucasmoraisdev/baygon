@@ -1,5 +1,6 @@
 'use client';
 
+import { Loading } from '@/components/Loading';
 import { RankingTable, type RankingEntry } from '@/components/RankingTable';
 import { StatsCard } from '@/components/StatsCard';
 import { useAuth } from '@/context/AuthContext';
@@ -24,15 +25,10 @@ export default function DashboardPage() {
 	const isError =
 		rankingsQuery.isError || playersQuery.isError || matchesQuery.isError;
 
-	if (isLoading)
-		return (
-			<div style={{ color: 'var(--text-muted)' }}>
-				Carregando dashboard...
-			</div>
-		);
+	if (isLoading) return <Loading />;
 	if (isError)
 		return (
-			<div style={{ color: 'var(--text-muted)' }}>
+			<div className=" text-muted items-center">
 				Erro ao carregar dados.
 			</div>
 		);

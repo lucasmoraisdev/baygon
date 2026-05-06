@@ -21,11 +21,7 @@ export default function DashboardLayout({
 	}, [user, loading, router]);
 
 	if (loading || !user) {
-		return (
-			<div className="flex items-center justify-center h-screen">
-				<Loading />
-			</div>
-		);
+		return <Loading />;
 	}
 
 	return (

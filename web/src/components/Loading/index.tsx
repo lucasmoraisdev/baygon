@@ -5,5 +5,9 @@ interface IProps {
 }
 
 export const Loading = ({ className = '' }: IProps) => {
-	return <LoaderCircle className={className} />;
+	return (
+		<div className="flex items-center justify-center h-screen">
+			<LoaderCircle className={`animate-spin ${className}`} />
+		</div>
+	);
 };
