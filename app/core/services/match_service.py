@@ -13,6 +13,9 @@ class MatchService:
     async def get_match_by_id(self, match_id: int) -> Optional[Match]:
         return await self.repo.get_by_id(match_id)
     
+    async def list_all_matches(self) -> Sequence[Match]:
+        return await self.repo.get_all()
+
     async def list_matches_by_round(self, round_id: int) -> Sequence[Match]:
         return await self.repo.get_by_round(round_id)
 

@@ -9,6 +9,14 @@ from app.schemas.match_schema import MatchCreate, MatchRead, MatchUpdate
 
 router = APIRouter(prefix="/matches", tags=["Matches"])
 
+@router.get("/", response_model=List[MatchRead], status_code=status.HTTP_200_OK)
+async def list_matches(
+    db: AsyncSession = Depends(get_db)
+):
+    repo = MatchRepository(db)
+    service = MatchService(repo)
+    return await service.list_all_matches()
+
 @router.post("/", response_model=MatchRead, status_code=status.HTTP_201_CREATED)
 async def create_match(
     match_create: MatchCreate,
