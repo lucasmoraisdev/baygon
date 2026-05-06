@@ -27,6 +27,9 @@ export default function PlayersPage() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingPlayerId, setEditingPlayerId] = useState<number | null>(null);
+
   const [nome, setNome] = useState("");
   const [apelido, setApelido] = useState("");
   const [email, setEmail] = useState("");
@@ -54,6 +57,18 @@ export default function PlayersPage() {
   const [suspendModalOpen, setSuspendModalOpen] = useState(false);
   const [playerToSuspend, setPlayerToSuspend] = useState<number | null>(null);
 
+  const clearFields = () => {
+    setNome("");
+    setApelido("");
+    setEmail("");
+    setTelefone("");
+    setPosicao("");
+    setPe("");
+    setPotes("");
+    setIsGuest(false);
+    setEditingPlayerId(null);
+  };
+
   const handleConfirmSuspend = async (type: string, value: number) => {
     if (!playerToSuspend) return;
     try {
@@ -72,11 +87,27 @@ export default function PlayersPage() {
     }
   };
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleEdit = (player: Player) => {
+    setEditingPlayerId(player.id_player);
+    setNome(player.nome);
+    setApelido(player.apelido || "");
+    setEmail(player.email || "");
+    setTelefone(player.telefone || "");
+    setPosicao(player.posicao || "");
+    setPe(player.pe || "");
+    setPotes(player.potes || "");
+    setIsGuest(player.is_guest);
+    setIsEditing(true);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await fetchAPI("/players/", {
-        method: "POST",
+      const url = isEditing ? `/players/${editingPlayerId}` : "/players/";
+      const method = isEditing ? "PUT" : "POST";
+
+      await fetchAPI(url, {
+        method,
         body: JSON.stringify({
           nome,
           apelido: apelido || null,
@@ -89,18 +120,14 @@ export default function PlayersPage() {
           is_guest: isGuest
         })
       });
+
       setIsCreating(false);
-      setNome("");
-      setApelido("");
-      setEmail("");
-      setTelefone("");
-      setPosicao("");
-      setPe("");
-      setPotes("");
-      setIsGuest(false);
+      setIsEditing(false);
+      clearFields();
       loadPlayers();
     } catch (err) {
       console.error(err);
+      alert(`Erro ao salvar jogador: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
     }
   };
 
@@ -115,67 +142,67 @@ export default function PlayersPage() {
         </button>
       </div>
 
-      {isCreating && (
+      {(isCreating || isEditing) && (
         <div className={styles.modalOverlay}>
           <div className={styles.modalContent}>
-            <h2>Novo Jogador</h2>
-            <form onSubmit={handleCreate}>
-          <div className={styles.inputGroup}>
-            <label>Nome do Jogador *</label>
-            <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} required placeholder="Ex: Lucas Morais" />
-          </div>
-          <div className={styles.inputGroup}>
-            <label>Apelido</label>
-            <input type="text" value={apelido} onChange={(e) => setApelido(e.target.value)} placeholder="Ex: Lucão" />
-          </div>
-          <div className={styles.inputGroup}>
-            <label>Email</label>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Ex: lucas@example.com" />
-          </div>
-          <div className={styles.inputGroup}>
-            <label>Telefone</label>
-            <input type="tel" value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="Ex: (11) 98765-4321" />
-          </div>
-          <div className={styles.inputGroup}>
-            <label>Posição</label>
-            <select value={posicao} onChange={(e) => setPosicao(e.target.value as "goleiro" | "pivo" | "ala" | "fixo" | "")}>
-              <option value="">Selecione uma posição...</option>
-              <option value="goleiro">Goleiro</option>
-              <option value="pivo">Pívô</option>
-              <option value="ala">Ala</option>
-              <option value="fixo">Fixo</option>
-            </select>
-          </div>
-          <div className={styles.inputGroup}>
-            <label>Pé Predominante</label>
-            <select value={pe} onChange={(e) => setPe(e.target.value as "D" | "E" | "A" | "")}>
-              <option value="">Selecione um pé...</option>
-              <option value="D">Direito</option>
-              <option value="E">Esquerdo</option>
-              <option value="A">Ambidestro</option>
-            </select>
-          </div>
-          <div className={styles.inputGroup}>
-            <label>Potes (1-5)</label>
-            <select value={potes} onChange={(e) => setPotes(e.target.value ? parseInt(e.target.value) : "")}>
-              <option value="">Selecione um pote...</option>
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
-              <option value="5">5</option>
-            </select>
-          </div>
-          <div className={styles.inputGroupRow}>
-            <label>
-              <input type="checkbox" checked={isGuest} onChange={(e) => setIsGuest(e.target.checked)} />
-              É convidado? (Se não selecionado, será mensalista)
-            </label>
-          </div>
-          <div className={styles.actions}>
-            <button type="submit" className={styles.primaryBtn} disabled={loading}>Salvar</button>
-            <button type="button" className={styles.secondaryBtn} onClick={() => setIsCreating(false)}>Cancelar</button>
-          </div>
+            <h2>{isEditing ? "Editar Jogador" : "Novo Jogador"}</h2>
+            <form onSubmit={handleSave}>
+              <div className={styles.inputGroup}>
+                <label>Nome do Jogador *</label>
+                <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} required placeholder="Ex: Lucas Morais" />
+              </div>
+              <div className={styles.inputGroup}>
+                <label>Apelido</label>
+                <input type="text" value={apelido} onChange={(e) => setApelido(e.target.value)} placeholder="Ex: Lucão" />
+              </div>
+              <div className={styles.inputGroup}>
+                <label>Email</label>
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Ex: lucas@example.com" />
+              </div>
+              <div className={styles.inputGroup}>
+                <label>Telefone</label>
+                <input type="tel" value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="Ex: (11) 98765-4321" />
+              </div>
+              <div className={styles.inputGroup}>
+                <label>Posição</label>
+                <select value={posicao} onChange={(e) => setPosicao(e.target.value as "goleiro" | "pivo" | "ala" | "fixo" | "")}>
+                  <option value="">Selecione uma posição...</option>
+                  <option value="goleiro">Goleiro</option>
+                  <option value="pivo">Pívô</option>
+                  <option value="ala">Ala</option>
+                  <option value="fixo">Fixo</option>
+                </select>
+              </div>
+              <div className={styles.inputGroup}>
+                <label>Pé Predominante</label>
+                <select value={pe} onChange={(e) => setPe(e.target.value as "D" | "E" | "A" | "")}>
+                  <option value="">Selecione um pé...</option>
+                  <option value="D">Direito</option>
+                  <option value="E">Esquerdo</option>
+                  <option value="A">Ambidestro</option>
+                </select>
+              </div>
+              <div className={styles.inputGroup}>
+                <label>Potes (1-5)</label>
+                <select value={potes} onChange={(e) => setPotes(e.target.value ? parseInt(e.target.value) : "")}>
+                  <option value="">Selecione um pote...</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                </select>
+              </div>
+              <div className={styles.inputGroupRow}>
+                <label>
+                  <input type="checkbox" checked={isGuest} onChange={(e) => setIsGuest(e.target.checked)} />
+                  É convidado? (Se não selecionado, será mensalista)
+                </label>
+              </div>
+              <div className={styles.actions}>
+                <button type="submit" className={styles.primaryBtn} disabled={loading}>Salvar</button>
+                <button type="button" className={styles.secondaryBtn} onClick={() => { setIsCreating(false); setIsEditing(false); clearFields(); }}>Cancelar</button>
+              </div>
             </form>
           </div>
         </div>
@@ -187,8 +214,9 @@ export default function PlayersPage() {
           <div key={player.id_player} className={styles.listItem}>
             <div className={styles.avatar}>{player.nome.charAt(0).toUpperCase()}</div>
             <div className={styles.details}>
-              <strong>{player.nome}</strong>
+              <strong>{player.apelido}</strong>
               {player.apelido && <span style={{ fontSize: '0.9em', color: 'var(--text-muted)' }}>Apelido: {player.apelido}</span>}
+              {player.nome && <span style={{ fontSize: '0.9em', color: 'var(--text-muted)' }}>Nome: {player.nome}</span>}
               {player.email && <span style={{ fontSize: '0.9em', color: 'var(--text-muted)' }}>Email: {player.email}</span>}
               {player.telefone && <span style={{ fontSize: '0.9em', color: 'var(--text-muted)' }}>Tel: {player.telefone}</span>}
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
@@ -202,13 +230,22 @@ export default function PlayersPage() {
             </div>
             <div className={styles.actionsBox} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               {isAdmin && (
-                <button
-                  onClick={() => { setPlayerToSuspend(player.id_player); setSuspendModalOpen(true); }}
-                  className={styles.secondaryBtn}
-                  style={{ padding: '6px 12px', fontSize: '13px', background: '#ef4444', color: 'white', border: 'none' }}
-                >
-                  Suspender
-                </button>
+                <>
+                  <button
+                    onClick={() => handleEdit(player)}
+                    className={styles.secondaryBtn}
+                    style={{ padding: '6px 12px', fontSize: '13px', background: '#3b82f6', color: 'white', border: 'none' }}
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => { setPlayerToSuspend(player.id_player); setSuspendModalOpen(true); }}
+                    className={styles.secondaryBtn}
+                    style={{ padding: '6px 12px', fontSize: '13px', background: '#ef4444', color: 'white', border: 'none' }}
+                  >
+                    Suspender
+                  </button>
+                </>
               )}
               <Link href={`/players/${player.id_player}`} className={styles.secondaryBtn} style={{ padding: '6px 12px', fontSize: '13px' }}>
                 Perfil Completo

@@ -1,4 +1,4 @@
-from typing import List
+from typing import Any, Dict, List
 from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies.auth_dependencies import user_has_permission
@@ -27,6 +27,18 @@ async def get_rounds_by_season(
     repo = RoundRepository(db)
     service = RoundService(repo)
     return await service.list_rounds_from_season(season_id)
+
+@router.get("/{round_id}/stats", response_model=Dict[str, Any], status_code=status.HTTP_200_OK)
+async def get_round_stats(
+    round_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    repo = RoundRepository(db)
+    service = RoundService(repo)
+    round_obj = await service.get_round_by_id(round_id)
+    if not round_obj:
+        raise HTTPException(status_code=404, detail="Round not found")
+    return await service.get_round_stats(round_id)
 
 @router.get("/{round_id}", response_model=RoundRead, status_code=status.HTTP_200_OK)
 async def get_round(

@@ -7,7 +7,7 @@ class TeamBase(BaseModel):
     round_id: int
 
 class TeamCreate(TeamBase):
-    pass
+    player_ids: list[int] = []
 
 class TeamUpdate(BaseModel):
     name: Optional[str] = None
