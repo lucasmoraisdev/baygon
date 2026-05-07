@@ -28,6 +28,11 @@ class MatchRepository:
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
     
+    async def get_all(self) -> Sequence[Match]:
+        stmt = select(Match).where(Match.deleted_at.is_(None))
+        result = await self.db.execute(stmt)
+        return result.scalars().all()
+
     async def get_by_round(self, round_id: int) -> Sequence[Match]:
         """
         Busca todas as partidas de um round.

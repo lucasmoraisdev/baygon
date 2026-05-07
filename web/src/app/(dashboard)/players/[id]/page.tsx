@@ -1,621 +1,686 @@
 'use client';
 
-import { useEffect, useState, useContext } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { AuthContext } from '@/context/AuthContext';
-import { fetchAPI } from '@/lib/api';
-import Link from 'next/link';
+import { Button } from '@/components/Button';
+import { FormField } from '@/components/FormField';
+import { Input } from '@/components/Input';
+import { Loading } from '@/components/Loading';
 import SeasonChart from '@/components/SeasonChart';
+import { StatCard } from '@/components/StatCard';
 import SuspendModal from '@/components/SuspendModal';
-import styles from './player-profile.module.css';
+import { useAuth } from '@/context/AuthContext';
+import { fetchAPI } from '@/lib/api';
+import { PlayerProfile } from '@/types/types';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
+import { useState } from 'react';
 
-interface Stats {
-  total_matches: number;
-  total_wins: number;
-  total_losses: number;
-  total_draws: number;
-  total_goals: number;
-  total_assists: number;
-  total_awards: number;
-  total_seasons: number;
-}
-
-interface SeasonStats {
-  season_id: number;
-  season_name: string;
-  total_matches: number;
-  total_wins: number;
-  total_losses: number;
-  total_draws: number;
-  total_goals: number;
-  total_assists: number;
-  total_points: number;
-}
-
-interface Team {
-  id_team: number;
-  name: string;
-}
-
-interface Award {
-  id_award: number;
-  event_type: string;
-}
-
-interface PlayerProfile {
-  id_player: number;
-  nome: string;
-  apelido: string;
-  email: string;
-  telefone: string;
-  posicao: string;
-  pe: string;
-  potes: number;
-  user_id: number;
-  is_associate: boolean;
-  is_guest: boolean;
-  created_at: string;
-  updated_at: string;
-  stats: Stats;
-  season_stats: SeasonStats[];
-  teams: Team[];
-  awards: Award[];
-}
+const AWARD_MAP: Record<string, string> = {
+	time_vencedor_rodada: 'Campeão da Rodada',
+	bola_cheia: 'MVP',
+	bola_murcha: 'Pior Jogador',
+	gol_rodada: 'Gol da Rodada',
+	defesa_rodada: 'Defesa da Rodada',
+	drible_rodada: 'Drible da Rodada',
+	inacreditavel: 'Inacreditável',
+	goleiro_menos_vazado: 'Goleiro Menos Vazado',
+	roleta: 'Roleta',
+};
 
 export default function PlayerProfilePage() {
-  const params = useParams();
-  const router = useRouter();
-  const { user } = useContext(AuthContext);
-  const [player, setPlayer] = useState<PlayerProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [showAdminPanel, setShowAdminPanel] = useState(false);
-  const [adminAction, setAdminAction] = useState<string>('');
-  const [showSuspendModal, setShowSuspendModal] = useState(false);
-  const [fineAmount, setFineAmount] = useState(0);
-  const [observations, setObservations] = useState('');
-  const [adminActionsHistory, setAdminActionsHistory] = useState<any[]>([]);
-  const [playerStatus, setPlayerStatus] = useState<any>(null);
+	const params = useParams();
+	const router = useRouter();
+	const { user } = useAuth();
+	const queryClient = useQueryClient();
+	const playerId = params.id as string;
+	const isAdmin = user?.role === 'admin';
 
-  const playerId = params.id as string;
+	const [showAdminPanel, setShowAdminPanel] = useState(false);
+	const [showSuspendModal, setShowSuspendModal] = useState(false);
+	const [fineAmount, setFineAmount] = useState(0);
+	const [observations, setObservations] = useState('');
 
-  useEffect(() => {
-    loadPlayerProfile();
-  }, [playerId]);
+	const {
+		data: player,
+		isLoading,
+		isError,
+	} = useQuery<PlayerProfile>({
+		queryKey: ['player', playerId],
+		queryFn: () => fetchAPI(`/players/${playerId}/profile`),
+	});
 
-  const loadPlayerProfile = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await fetchAPI(`/players/${playerId}/profile`);
-      setPlayer(data);
+	const { data: playerStatus } = useQuery({
+		queryKey: ['player-status', playerId],
+		queryFn: () => fetchAPI(`/players/${playerId}/status`),
+		enabled: isAdmin,
+	});
 
-      // Carregar status do admin se o usuário for admin
-      if (user?.role === 'admin') {
-        try {
-          const statusData = await fetchAPI(`/players/${playerId}/status`);
-          setPlayerStatus(statusData);
+	const { data: adminActionsHistory = [] } = useQuery<any[]>({
+		queryKey: ['player-actions', playerId],
+		queryFn: () => fetchAPI(`/players/${playerId}/admin/actions`),
+		enabled: isAdmin,
+	});
 
-          const actionsData = await fetchAPI(`/players/${playerId}/admin/actions`);
-          setAdminActionsHistory(actionsData);
-        } catch (err) {
-          console.log('Erro ao carregar dados de admin:', err);
-        }
-      }
-    } catch (err: any) {
-      setError(err.message || 'Erro ao carregar perfil do jogador');
-      console.error('Erro ao carregar perfil:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+	const invalidate = () => {
+		queryClient.invalidateQueries({ queryKey: ['player', playerId] });
+		queryClient.invalidateQueries({
+			queryKey: ['player-status', playerId],
+		});
+		queryClient.invalidateQueries({
+			queryKey: ['player-actions', playerId],
+		});
+	};
 
-  const handleConfirmSuspend = async (type: string, value: number) => {
-    try {
-      const endpoint = `/players/${playerId}/admin/suspend`;
-      const body = { suspension_type: type, value };
-      await fetchAPI(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      await loadPlayerProfile();
-      alert('Jogador suspenso com sucesso!');
-      setShowSuspendModal(false);
-    } catch (err: any) {
-      console.error('Erro ao suspender:', err);
-      alert(`Erro: ${err.message || 'Falha ao executar ação'}`);
-    }
-  };
+	const adminMutation = useMutation({
+		mutationFn: ({ action, body }: { action: string; body?: object }) =>
+			fetchAPI(`/players/${playerId}/admin/${action}`, {
+				method: 'POST',
+				body: body ? JSON.stringify(body) : undefined,
+			}),
+		onSuccess: (_, { action }) => {
+			invalidate();
+			alert(`Ação "${action}" executada com sucesso!`);
+		},
+		onError: (err: any) => {
+			alert(`Erro: ${err.message ?? 'Falha ao executar ação'}`);
+		},
+	});
 
-  const handleAdminAction = async (action: string) => {
-    if (!action) return;
+	const suspendMutation = useMutation({
+		mutationFn: ({ type, value }: { type: string; value: number }) =>
+			fetchAPI(`/players/${playerId}/admin/suspend`, {
+				method: 'POST',
+				body: JSON.stringify({ suspension_type: type, value }),
+			}),
+		onSuccess: () => {
+			invalidate();
+			setShowSuspendModal(false);
+			alert('Jogador suspenso com sucesso!');
+		},
+		onError: (err: any) => {
+			alert(`Erro: ${err.message ?? 'Falha ao suspender'}`);
+		},
+	});
 
-    try {
-      let endpoint = '';
-      let method = 'POST';
-      let body = {};
+	if (isLoading) return <Loading />;
+	if (isError || !player)
+		return (
+			<div className="flex flex-col gap-4 p-4">
+				<Button
+					variant="ghost"
+					onClick={() => router.back()}
+					className="w-auto"
+				>
+					← Voltar
+				</Button>
+				<div className="text-red-400">
+					{isError
+						? 'Erro ao carregar perfil.'
+						: 'Jogador não encontrado.'}
+				</div>
+			</div>
+		);
 
-      switch (action) {
-        case 'unsuspend':
-          endpoint = `/players/${playerId}/admin/unsuspend`;
-          break;
-        case 'fine':
-          endpoint = `/players/${playerId}/admin/fine`;
-          body = { fine_amount: fineAmount };
-          break;
-        case 'observe':
-          endpoint = `/players/${playerId}/admin/observe`;
-          body = { observations };
-          break;
-        case 'block':
-          endpoint = `/players/${playerId}/admin/block`;
-          break;
-        case 'unblock':
-          endpoint = `/players/${playerId}/admin/unblock`;
-          break;
-        default:
-          return;
-      }
+	return (
+		<div className="flex flex-col gap-6 animate-slide-down">
+			<Button
+				variant="ghost"
+				onClick={() => router.back()}
+				className="w-auto self-start"
+			>
+				← Voltar
+			</Button>
 
-      const response = await fetchAPI(endpoint, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: Object.keys(body).length > 0 ? JSON.stringify(body) : undefined,
-      });
+			<div className="bg-surface border border-border rounded-xl p-6">
+				<div className="flex items-start justify-between gap-4 flex-wrap">
+					<div className="flex items-center gap-4">
+						<div className="w-16 h-16 rounded-full bg-primary/20 text-primary text-2xl font-bold flex items-center justify-center shrink-0">
+							{player.nome.charAt(0).toUpperCase()}
+						</div>
+						<div className="flex flex-col gap-1">
+							<h1 className="text-2xl font-bold text-main">
+								{player.nome}
+							</h1>
+							{player.apelido && (
+								<p className="text-muted text-sm italic">
+									"{player.apelido}"
+								</p>
+							)}
+							<div className="flex gap-2 flex-wrap mt-1">
+								{player.posicao && (
+									<span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full">
+										{player.posicao
+											.charAt(0)
+											.toUpperCase() +
+											player.posicao.slice(1)}
+									</span>
+								)}
+								{player.pe && (
+									<span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">
+										Pé: {player.pe}
+									</span>
+								)}
+								{player.potes && (
+									<span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full">
+										Pote {player.potes}
+									</span>
+								)}
+								<span
+									className={`text-xs px-2 py-0.5 rounded-full ${player.is_guest ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}
+								>
+									{player.is_guest
+										? 'Convidado'
+										: 'Mensalista'}
+								</span>
+							</div>
+						</div>
+					</div>
+					{isAdmin && (
+						<Button
+							variant="ghost"
+							onClick={() => setShowAdminPanel(!showAdminPanel)}
+							className="w-auto"
+						>
+							{showAdminPanel
+								? 'Fechar Painel Admin'
+								: 'Abrir Painel Admin'}
+						</Button>
+					)}
+				</div>
 
-      // Recarregar dados após ação bem-sucedida
-      await loadPlayerProfile();
-      alert(`Ação "${action}" executada com sucesso!`);
-      setAdminAction('');
-      setShowSuspendModal(false);
-    } catch (err: any) {
-      console.error('Erro ao executar ação admin:', err);
-      alert(`Erro: ${err.message || 'Falha ao executar ação'}`);
-    }
-  };
+				{(player.email || player.telefone) && (
+					<div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-border">
+						{player.email && (
+							<div className="flex flex-col gap-0.5">
+								<label className="text-xs text-muted">
+									Email
+								</label>
+								<p className="text-sm text-main">
+									{player.email}
+								</p>
+							</div>
+						)}
+						{player.telefone && (
+							<div className="flex flex-col gap-0.5">
+								<label className="text-xs text-muted">
+									Telefone
+								</label>
+								<p className="text-sm text-main">
+									{player.telefone}
+								</p>
+							</div>
+						)}
+					</div>
+				)}
+			</div>
 
-  if (loading) {
-    return (
-      <div className={styles.loading}>
-        Carregando perfil do jogador...
-      </div>
-    );
-  }
+			{isAdmin && showAdminPanel && (
+				<div className="bg-surface/50 border border-border rounded-xl p-6 flex flex-col gap-6">
+					<h2 className="text-xl font-semibold">
+						Painel Administrativo
+					</h2>
 
-  if (error || !player) {
-    return (
-      <div className={styles.error}>
-        <button onClick={() => router.back()} className={styles.backBtn}>
-          ← Voltar
-        </button>
-        <div>{error || 'Jogador não encontrado'}</div>
-      </div>
-    );
-  }
+					{playerStatus && (
+						<div className="bg-surface border border-border rounded-xl p-4">
+							<h3 className="font-semibold mb-3">Status Atual</h3>
+							<div className="flex flex-col gap-2">
+								<div className="flex items-center justify-between">
+									<span className="text-sm text-muted">
+										Bloqueado:
+									</span>
+									<span
+										className={
+											playerStatus.is_blocked
+												? 'text-red-400 font-semibold'
+												: 'text-green-400 font-semibold'
+										}
+									>
+										{playerStatus.is_blocked
+											? 'SIM'
+											: 'NÃO'}
+									</span>
+								</div>
+								{playerStatus.suspension && (
+									<>
+										{playerStatus.suspension
+											.is_indefinite ? (
+											<div className="flex items-center justify-between">
+												<span className="text-sm text-muted">
+													Suspensão:
+												</span>
+												<span className="text-red-400 font-semibold">
+													Indefinida
+												</span>
+											</div>
+										) : playerStatus.suspension
+												.suspension_matches ? (
+											<div className="flex items-center justify-between">
+												<span className="text-sm text-muted">
+													Jogos restantes:
+												</span>
+												<span className="text-yellow-400 font-semibold">
+													{
+														playerStatus.suspension
+															.suspension_matches
+													}
+												</span>
+											</div>
+										) : (
+											<>
+												<div className="flex items-center justify-between">
+													<span className="text-sm text-muted">
+														Suspenso até:
+													</span>
+													<span className="text-yellow-400 font-semibold">
+														{new Date(
+															playerStatus
+																.suspension
+																.suspended_until,
+														).toLocaleDateString(
+															'pt-BR',
+														)}
+													</span>
+												</div>
+												<div className="flex items-center justify-between">
+													<span className="text-sm text-muted">
+														Dias restantes:
+													</span>
+													<span className="text-yellow-400 font-semibold">
+														{
+															playerStatus
+																.suspension
+																.days_remaining
+														}
+													</span>
+												</div>
+											</>
+										)}
+										<Button
+											variant="ghost"
+											className="w-auto mt-2 border-green-500/50 text-green-400 hover:bg-green-500/10"
+											onClick={() =>
+												adminMutation.mutate({
+													action: 'unsuspend',
+												})
+											}
+											disabled={adminMutation.isPending}
+										>
+											Remover Suspensão Ativa
+										</Button>
+									</>
+								)}
+							</div>
+						</div>
+					)}
 
-  const isAdmin = user?.role === 'admin';
+					<div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
+						<div className="bg-surface border border-border rounded-xl p-4 flex flex-col gap-3">
+							<h3 className="font-semibold">
+								Gerenciar Suspensão
+							</h3>
+							<p className="text-sm text-muted">
+								Aplique penalidades de suspensão
+							</p>
+							<Button
+								variant="danger"
+								onClick={() => setShowSuspendModal(true)}
+								disabled={adminMutation.isPending}
+							>
+								Configurar Suspensão
+							</Button>
+						</div>
 
-  return (
-    <div className={styles.container}>
-      {/* Header com informações básicas */}
-      <div>
-        <button onClick={() => router.back()} className={styles.backBtn}>
-          ← Voltar
-        </button>
+						<div className="bg-surface border border-border rounded-xl p-4 flex flex-col gap-3">
+							<h3 className="font-semibold">Aplicar Multa</h3>
+							<FormField label="Valor (R$)">
+								<Input
+									type="number"
+									min="0"
+									step="0.01"
+									value={fineAmount}
+									onChange={(e) =>
+										setFineAmount(
+											parseFloat(e.target.value),
+										)
+									}
+								/>
+							</FormField>
+							<Button
+								variant="ghost"
+								className="border-orange-500/50 text-orange-400 hover:bg-orange-500/10"
+								onClick={() =>
+									adminMutation.mutate({
+										action: 'fine',
+										body: { fine_amount: fineAmount },
+									})
+								}
+								disabled={adminMutation.isPending}
+							>
+								Aplicar Multa de R$ {fineAmount.toFixed(2)}
+							</Button>
+						</div>
 
-        <div className={styles.card}>
-          <div className={styles.profileHeader}>
-            <div className={styles.profileInfo}>
-              <div className={styles.avatar}>
-                {player.nome.charAt(0).toUpperCase()}
-              </div>
-              <div className={styles.nameSection}>
-                <h1>{player.nome}</h1>
-                {player.apelido && <p className={styles.nickname}>"{player.apelido}"</p>}
-                <div className={styles.tags}>
-                  {player.posicao && (
-                    <span className={`${styles.tag} ${styles.tagBlue}`}>
-                      {player.posicao.charAt(0).toUpperCase() + player.posicao.slice(1).toLowerCase()}
-                    </span>
-                  )}
-                  {player.pe && (
-                    <span className={`${styles.tag} ${styles.tagGreen}`}>
-                      Pé: {player.pe}
-                    </span>
-                  )}
-                  {player.potes && (
-                    <span className={`${styles.tag} ${styles.tagYellow}`}>
-                      Pote {player.potes}
-                    </span>
-                  )}
-                  <span className={`${styles.tag} ${player.is_guest ? styles.tagRed : styles.tagGreen}`}>
-                    {player.is_guest ? 'Convidado' : 'Mensalista'}
-                  </span>
-                </div>
-              </div>
-            </div>
+						<div className="bg-surface border border-border rounded-xl p-4 flex flex-col gap-3">
+							<h3 className="font-semibold">Observações</h3>
+							<textarea
+								value={observations}
+								onChange={(e) =>
+									setObservations(e.target.value)
+								}
+								placeholder="Digite suas observações..."
+								className="w-full px-3 py-2.5 bg-background/80 border border-border rounded-md text-main text-sm focus:outline-none focus:border-primary transition-colors resize-none h-24"
+							/>
+							<Button
+								variant="ghost"
+								onClick={() =>
+									adminMutation.mutate({
+										action: 'observe',
+										body: { observations },
+									})
+								}
+								disabled={adminMutation.isPending}
+							>
+								Salvar Observações
+							</Button>
+						</div>
 
-            {isAdmin && (
-              <button
-                onClick={() => setShowAdminPanel(!showAdminPanel)}
-                className={styles.adminBtn}
-              >
-                {showAdminPanel ? 'Fechar Painel Admin' : 'Abrir Painel Admin'}
-              </button>
-            )}
-          </div>
+						<div className="bg-surface border border-border rounded-xl p-4 flex flex-col gap-3">
+							<h3 className="font-semibold">
+								Controle de Acesso
+							</h3>
+							<Button
+								variant="danger"
+								onClick={() =>
+									adminMutation.mutate({ action: 'block' })
+								}
+								disabled={adminMutation.isPending}
+							>
+								Bloquear Acesso
+							</Button>
+							<Button
+								variant="ghost"
+								className="border-green-500/50 text-green-400 hover:bg-green-500/10"
+								onClick={() =>
+									adminMutation.mutate({ action: 'unblock' })
+								}
+								disabled={adminMutation.isPending}
+							>
+								Desbloquear Acesso
+							</Button>
+						</div>
+					</div>
 
-          {/* Informações de contato */}
-          <div className={styles.contactGrid}>
-            {player.email && (
-              <div className={styles.contactItem}>
-                <label>Email</label>
-                <p>{player.email}</p>
-              </div>
-            )}
-            {player.telefone && (
-              <div className={styles.contactItem}>
-                <label>Telefone</label>
-                <p>{player.telefone}</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+					{adminActionsHistory.length > 0 && (
+						<div className="bg-surface border border-border rounded-xl p-4">
+							<h3 className="font-semibold mb-3">
+								Histórico de Ações
+							</h3>
+							<div className="max-h-64 overflow-y-auto flex flex-col divide-y divide-border">
+								{adminActionsHistory.map((action, idx) => (
+									<div
+										key={idx}
+										className="py-2 first:pt-0 last:pb-0"
+									>
+										<div className="flex items-center justify-between">
+											<span className="text-sm font-medium text-main">
+												{action.action_type}
+											</span>
+											<span className="text-xs text-muted">
+												{new Date(
+													action.created_at,
+												).toLocaleDateString('pt-BR')}
+											</span>
+										</div>
+										{action.description && (
+											<p className="text-xs text-muted mt-1">
+												{action.description}
+											</p>
+										)}
+									</div>
+								))}
+							</div>
+						</div>
+					)}
+				</div>
+			)}
 
-      {/* Painel Admin */}
-      {isAdmin && showAdminPanel && (
-        <div className={styles.adminPanel}>
-          <h2>Painel Administrativo</h2>
+			<div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+				<div className="grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] gap-3 flex-1">
+					<StatCard
+						label="Partidas"
+						value={player.stats.total_matches}
+					/>
+					<StatCard
+						label="Vitórias"
+						value={player.stats.total_wins}
+						color="green"
+					/>
+					<StatCard
+						label="Derrotas"
+						value={player.stats.total_losses}
+						color="red"
+					/>
+					<StatCard
+						label="Empates"
+						value={player.stats.total_draws}
+						color="yellow"
+					/>
+					<StatCard
+						label="Gols"
+						value={player.stats.total_goals}
+						color="blue"
+					/>
+					<StatCard
+						label="Assistências"
+						value={player.stats.total_assists}
+						color="purple"
+					/>
+					<StatCard
+						label="Prêmios"
+						value={player.stats.total_awards}
+						color="orange"
+					/>
+					<StatCard
+						label="Temporadas"
+						value={player.stats.total_seasons}
+					/>
+				</div>
 
-          {/* Status do jogador */}
-          {playerStatus && (
-            <div className={styles.adminCard} style={{ marginBottom: '24px' }}>
-              <h3>Status Atual</h3>
-              <div className={styles.summaryList}>
-                <div className={styles.summaryItem}>
-                  <span className={styles.summaryItemLabel}>Bloqueado:</span>
-                  <span className={playerStatus.is_blocked ? styles.colorRed : styles.colorGreen}>
-                    {playerStatus.is_blocked ? 'SIM' : 'NÃO'}
-                  </span>
-                </div>
-                {playerStatus.suspension && (
-                  <>
-                    {playerStatus.suspension.is_indefinite ? (
-                      <div className={styles.summaryItem}>
-                        <span className={styles.summaryItemLabel}>Suspensão:</span>
-                        <span className={styles.colorRed}>Indefinida</span>
-                      </div>
-                    ) : playerStatus.suspension.suspension_matches ? (
-                      <div className={styles.summaryItem}>
-                        <span className={styles.summaryItemLabel}>Jogos restantes:</span>
-                        <span className={styles.colorYellow}>{playerStatus.suspension.suspension_matches}</span>
-                      </div>
-                    ) : (
-                      <>
-                        <div className={styles.summaryItem}>
-                          <span className={styles.summaryItemLabel}>Suspenso até:</span>
-                          <span className={styles.colorYellow}>
-                            {new Date(playerStatus.suspension.suspended_until).toLocaleDateString('pt-BR')}
-                          </span>
-                        </div>
-                        <div className={styles.summaryItem}>
-                          <span className={styles.summaryItemLabel}>Dias restantes:</span>
-                          <span className={styles.colorYellow}>{playerStatus.suspension.days_remaining}</span>
-                        </div>
-                      </>
-                    )}
-                    <button
-                      onClick={() => handleAdminAction('unsuspend')}
-                      className={`${styles.actionBtn} ${styles.btnGreen}`}
-                      style={{ marginTop: '12px' }}
-                    >
-                      Remover Suspensão Ativa
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
+				<div className="bg-surface border border-border rounded-xl p-6 lg:w-64 shrink-0">
+					<h2 className="text-lg font-semibold mb-4">Resumo</h2>
+					<div className="flex flex-col gap-3">
+						{[
+							{
+								label: 'Taxa de Vitória',
+								value:
+									player.stats.total_matches > 0
+										? `${((player.stats.total_wins / player.stats.total_matches) * 100).toFixed(1)}%`
+										: '0%',
+							},
+							{
+								label: 'Gols por Partida',
+								value:
+									player.stats.total_matches > 0
+										? (
+												player.stats.total_goals /
+												player.stats.total_matches
+											).toFixed(2)
+										: '0',
+							},
+							{
+								label: 'Assist. por Part.',
+								value:
+									player.stats.total_matches > 0
+										? (
+												player.stats.total_assists /
+												player.stats.total_matches
+											).toFixed(2)
+										: '0',
+							},
+							{ label: 'Times', value: player.teams.length },
+						].map(({ label, value }) => (
+							<div
+								key={label}
+								className="flex items-center justify-between"
+							>
+								<span className="text-sm text-muted">
+									{label}
+								</span>
+								<span className="text-sm font-semibold text-main">
+									{value}
+								</span>
+							</div>
+						))}
+					</div>
+				</div>
+			</div>
 
-          <div className={styles.adminGrid}>
-            {/* Ação de suspensão */}
-            <div className={styles.adminCard}>
-              <h3>Gerenciar Suspensão</h3>
-              <p className={styles.summaryItemLabel} style={{ marginBottom: '16px' }}>Aplique penalidades de suspensão</p>
-              <button
-                onClick={() => setShowSuspendModal(true)}
-                className={`${styles.actionBtn} ${styles.btnRed}`}
-              >
-                Configurar Suspensão
-              </button>
-            </div>
+			{player.season_stats.length > 0 && (
+				<div className="bg-surface border border-border rounded-xl p-6">
+					<h2 className="text-xl font-semibold mb-4">
+						Estatísticas por Temporada
+					</h2>
+					<div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4 mb-6">
+						<SeasonChart
+							stats={player.season_stats}
+							dataKey="total_matches"
+							label="Partidas"
+							color="#3b82f6"
+						/>
+						<SeasonChart
+							stats={player.season_stats}
+							dataKey="total_goals"
+							label="Gols"
+							color="#10b981"
+						/>
+						<SeasonChart
+							stats={player.season_stats}
+							dataKey="total_assists"
+							label="Assistências"
+							color="#f59e0b"
+						/>
+						<SeasonChart
+							stats={player.season_stats}
+							dataKey="total_wins"
+							label="Vitórias"
+							color="#8b5cf6"
+						/>
+					</div>
+					<div className="overflow-x-auto">
+						<table className="w-full text-sm">
+							<thead>
+								<tr className="border-b border-border">
+									<th className="text-left py-2 text-muted font-medium">
+										Temporada
+									</th>
+									<th className="text-center py-2 text-muted font-medium">
+										P
+									</th>
+									<th className="text-center py-2 text-muted font-medium">
+										V
+									</th>
+									<th className="text-center py-2 text-muted font-medium">
+										D
+									</th>
+									<th className="text-center py-2 text-muted font-medium">
+										E
+									</th>
+									<th className="text-center py-2 text-muted font-medium">
+										G
+									</th>
+									<th className="text-center py-2 text-muted font-medium">
+										A
+									</th>
+								</tr>
+							</thead>
+							<tbody>
+								{player.season_stats.map((s) => (
+									<tr
+										key={s.season_id}
+										className="border-b border-border/50"
+									>
+										<td className="py-2 text-main">
+											{s.season_name ||
+												`Temporada ${s.season_id}`}
+										</td>
+										<td className="text-center py-2 text-muted">
+											{s.total_matches}
+										</td>
+										<td className="text-center py-2 text-green-400">
+											{s.total_wins}
+										</td>
+										<td className="text-center py-2 text-red-400">
+											{s.total_losses}
+										</td>
+										<td className="text-center py-2 text-yellow-400">
+											{s.total_draws}
+										</td>
+										<td className="text-center py-2 text-blue-400">
+											{s.total_goals}
+										</td>
+										<td className="text-center py-2 text-purple-400">
+											{s.total_assists}
+										</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			)}
 
-            {/* Ação de multa */}
-            <div className={styles.adminCard}>
-              <h3>Aplicar Multa</h3>
-              <div className={styles.inputGroup}>
-                <label>Valor da multa (R$):</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={fineAmount}
-                  onChange={(e) => setFineAmount(parseFloat(e.target.value))}
-                  className={styles.input}
-                />
-              </div>
-              <button
-                onClick={() => handleAdminAction('fine')}
-                className={`${styles.actionBtn} ${styles.btnOrange}`}
-              >
-                Aplicar Multa de R$ {fineAmount.toFixed(2)}
-              </button>
-            </div>
+			{player.teams.length > 0 && (
+				<div className="bg-surface border border-border rounded-xl p-6">
+					<h2 className="text-xl font-semibold mb-4">Times</h2>
+					<div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-3">
+						{player.teams.map((team) => (
+							<Link
+								key={team.id_team}
+								href={`/teams/${team.id_team}`}
+								className="bg-surface/50 border border-border rounded-lg p-3 hover:border-primary transition-colors"
+							>
+								<p className="font-semibold text-main text-sm">
+									{team.name}
+								</p>
+								<p className="text-xs text-primary mt-1">
+									Ver detalhes →
+								</p>
+							</Link>
+						))}
+					</div>
+				</div>
+			)}
 
-            {/* Ação de observações */}
-            <div className={styles.adminCard}>
-              <h3>Adicionar Observações</h3>
-              <div className={styles.inputGroup}>
-                <textarea
-                  value={observations}
-                  onChange={(e) => setObservations(e.target.value)}
-                  placeholder="Digite suas observações..."
-                  className={styles.textarea}
-                />
-              </div>
-              <button
-                onClick={() => handleAdminAction('observe')}
-                className={`${styles.actionBtn} ${styles.btnBlue}`}
-              >
-                Salvar Observações
-              </button>
-            </div>
+			{/* Prêmios */}
+			{player.awards.length > 0 && (
+				<div className="bg-surface border border-border rounded-xl p-6">
+					<h2 className="text-xl font-semibold mb-4">
+						Prêmios ({player.awards.length})
+					</h2>
+					<div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-3">
+						{player.awards.map((award, idx) => (
+							<div
+								key={idx}
+								className="bg-surface/50 border border-border rounded-xl p-3 flex flex-col items-center gap-2 text-center"
+							>
+								<span className="text-2xl">🏆</span>
+								<span className="text-xs text-muted">
+									{AWARD_MAP[award.event_type] ??
+										award.event_type}
+								</span>
+							</div>
+						))}
+					</div>
+				</div>
+			)}
 
-            {/* Ações de bloqueio */}
-            <div className={styles.adminCard}>
-              <h3>Controle de Acesso</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
-                <button
-                  onClick={() => handleAdminAction('block')}
-                  className={`${styles.actionBtn} ${styles.btnRed}`}
-                  style={{ margin: 0 }}
-                >
-                  Bloquear Acesso
-                </button>
-                <button
-                  onClick={() => handleAdminAction('unblock')}
-                  className={`${styles.actionBtn} ${styles.btnGreen}`}
-                  style={{ margin: 0 }}
-                >
-                  Desbloquear Acesso
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Histórico de ações */}
-          {adminActionsHistory.length > 0 && (
-            <div className={styles.adminCard} style={{ marginTop: '24px' }}>
-              <h3>Histórico de Ações</h3>
-              <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
-                {adminActionsHistory.map((action, idx) => (
-                  <div key={idx} className={styles.historyItem}>
-                    <div className={styles.historyHeader}>
-                      <span className={styles.historyAction}>{action.action_type}</span>
-                      <span className={styles.historyDate}>
-                        {new Date(action.created_at).toLocaleDateString('pt-BR')}
-                      </span>
-                    </div>
-                    {action.description && <p className={styles.historyDesc}>{action.description}</p>}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Dashboard com estatísticas */}
-      <div className={styles.dashboardGrid}>
-        {/* Cards de estatísticas */}
-        <div className={styles.statsGrid}>
-          <StatCard label="Partidas" value={player.stats.total_matches} />
-          <StatCard label="Vitórias" value={player.stats.total_wins} color="green" />
-          <StatCard label="Derrotas" value={player.stats.total_losses} color="red" />
-          <StatCard label="Empates" value={player.stats.total_draws} color="yellow" />
-          <StatCard label="Gols" value={player.stats.total_goals} color="blue" />
-          <StatCard label="Assistências" value={player.stats.total_assists} color="purple" />
-          <StatCard label="Prêmios" value={player.stats.total_awards} color="orange" />
-          <StatCard label="Temporadas" value={player.stats.total_seasons} />
-        </div>
-
-        {/* Card de resumo */}
-        <div className={`${styles.card} ${styles.summarySection}`}>
-          <h2>Resumo</h2>
-          <div className={styles.summaryList}>
-            <div className={styles.summaryItem}>
-              <span className={styles.summaryItemLabel}>Taxa de Vitória:</span>
-              <span className={styles.summaryItemValue}>
-                {player.stats.total_matches > 0
-                  ? ((player.stats.total_wins / player.stats.total_matches) * 100).toFixed(1)
-                  : 0}
-                %
-              </span>
-            </div>
-            <div className={styles.summaryItem}>
-              <span className={styles.summaryItemLabel}>Gols por Partida:</span>
-              <span className={styles.summaryItemValue}>
-                {player.stats.total_matches > 0
-                  ? (player.stats.total_goals / player.stats.total_matches).toFixed(2)
-                  : 0}
-              </span>
-            </div>
-            <div className={styles.summaryItem}>
-              <span className={styles.summaryItemLabel}>Assistências por Part.:</span>
-              <span className={styles.summaryItemValue}>
-                {player.stats.total_matches > 0
-                  ? (player.stats.total_assists / player.stats.total_matches).toFixed(2)
-                  : 0}
-              </span>
-            </div>
-            <div className={styles.summaryItem}>
-              <span className={styles.summaryItemLabel}>Times:</span>
-              <span className={styles.summaryItemValue}>{player.teams.length}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Estatísticas por temporada */}
-      {player.season_stats.length > 0 && (
-        <div className={styles.card}>
-          <h2 className={styles.sectionTitle}>Estatísticas por Temporada</h2>
-
-          {/* Gráficos */}
-          <div className={styles.chartsGrid}>
-            <SeasonChart
-              stats={player.season_stats}
-              dataKey="total_matches"
-              label="Partidas"
-              color="#3b82f6"
-            />
-            <SeasonChart
-              stats={player.season_stats}
-              dataKey="total_goals"
-              label="Gols"
-              color="#10b981"
-            />
-            <SeasonChart
-              stats={player.season_stats}
-              dataKey="total_assists"
-              label="Assistências"
-              color="#f59e0b"
-            />
-            <SeasonChart
-              stats={player.season_stats}
-              dataKey="total_wins"
-              label="Vitórias"
-              color="#8b5cf6"
-            />
-          </div>
-
-          {/* Tabela detalhada */}
-          <div className={styles.tableWrapper}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Temporada</th>
-                  <th style={{ textAlign: 'center' }}>Partidas</th>
-                  <th style={{ textAlign: 'center' }}>Vitórias</th>
-                  <th style={{ textAlign: 'center' }}>Derrotas</th>
-                  <th style={{ textAlign: 'center' }}>Empates</th>
-                  <th style={{ textAlign: 'center' }}>Gols</th>
-                  <th style={{ textAlign: 'center' }}>Assistências</th>
-                </tr>
-              </thead>
-              <tbody>
-                {player.season_stats.map((season) => (
-                  <tr key={season.season_id}>
-                    <td>{season.season_name || `Temporada ${season.season_id}`}</td>
-                    <td style={{ textAlign: 'center' }}>{season.total_matches}</td>
-                    <td style={{ textAlign: 'center' }} className={styles.colorGreen}>{season.total_wins}</td>
-                    <td style={{ textAlign: 'center' }} className={styles.colorRed}>{season.total_losses}</td>
-                    <td style={{ textAlign: 'center' }} className={styles.colorYellow}>{season.total_draws}</td>
-                    <td style={{ textAlign: 'center' }} className={styles.colorBlue}>{season.total_goals}</td>
-                    <td style={{ textAlign: 'center' }} className={styles.colorPurple}>{season.total_assists}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Times */}
-      {player.teams.length > 0 && (
-        <div className={styles.card}>
-          <h2 className={styles.sectionTitle}>Times</h2>
-          <div className={styles.teamsGrid}>
-            {player.teams.map((team) => (
-              <Link
-                key={team.id_team}
-                href={`/teams/${team.id_team}`}
-                className={styles.teamCard}
-              >
-                <p className={styles.teamName}>{team.name}</p>
-                <p className={styles.teamAction}>Ver detalhes →</p>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Prêmios */}
-      {player.awards.length > 0 && (
-        <div className={styles.card}>
-          <h2 className={styles.sectionTitle}>Prêmios ({player.awards.length})</h2>
-          <div className={styles.awardsGrid}>
-            {player.awards.map((award, idx) => (
-              <div key={idx} className={styles.awardCard}>
-                <div className={styles.awardIcon}>🏆</div>
-                <div className={styles.awardName}>{formatAwardType(award.event_type)}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <SuspendModal
-        isOpen={showSuspendModal}
-        onClose={() => setShowSuspendModal(false)}
-        onConfirm={handleConfirmSuspend}
-      />
-    </div>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  color = 'gray',
-}: {
-  label: string;
-  value: number;
-  color?: string;
-}) {
-  const getColorClass = (c: string) => {
-    switch (c) {
-      case 'green': return styles.colorGreen;
-      case 'red': return styles.colorRed;
-      case 'yellow': return styles.colorYellow;
-      case 'blue': return styles.colorBlue;
-      case 'purple': return styles.colorPurple;
-      case 'orange': return styles.colorOrange;
-      default: return '';
-    }
-  };
-
-  return (
-    <div className={styles.statCard}>
-      <span className={styles.statLabel}>{label}</span>
-      <span className={`${styles.statValue} ${getColorClass(color)}`}>{value}</span>
-    </div>
-  );
-}
-
-function formatAwardType(eventType: string): string {
-  const awardMap: Record<string, string> = {
-    time_vencedor_rodada: 'Campeão da Rodada',
-    bola_cheia: 'MVP',
-    bola_murcha: 'Pior Jogador',
-    gol_rodada: 'Gol da Rodada',
-    defesa_rodada: 'Defesa da Rodada',
-    drible_rodada: 'Drible da Rodada',
-    inacreditavel: 'Inacreditável',
-    goleiro_menos_vazado: 'Goleiro Menos Vazado',
-    roleta: 'Roleta',
-  };
-  return awardMap[eventType] || eventType;
+			<SuspendModal
+				isOpen={showSuspendModal}
+				onClose={() => setShowSuspendModal(false)}
+				onConfirm={(type, value) =>
+					suspendMutation.mutate({ type, value })
+				}
+			/>
+		</div>
+	);
 }

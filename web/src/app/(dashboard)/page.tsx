@@ -1,71 +1,62 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { fetchAPI } from "@/lib/api";
-import { useAuth } from "@/context/AuthContext";
-import styles from "./dashboard.module.css";
+import { Loading } from '@/components/Loading';
+import { RankingTable, type RankingEntry } from '@/components/RankingTable';
+import { StatsCard } from '@/components/StatsCard';
+import { useAuth } from '@/context/AuthContext';
+import { fetchAPI } from '@/lib/api';
+import { useQueries } from '@tanstack/react-query';
 
 export default function DashboardPage() {
-  const { user } = useAuth();
-  const [stats, setStats] = useState({ matches: 0, goals: 0, players: 0 });
-  const [rankings, setRankings] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+	const { user } = useAuth();
 
-  useEffect(() => {
-    Promise.all([
-      fetchAPI("/rankings/"),
-      fetchAPI("/players/"),
-      fetchAPI("/matches/")
-    ]).then(([ranks, players, matches]) => {
-      setRankings(ranks || []);
-      setStats({
-        players: (players || []).length,
-        matches: (matches || []).length,
-        goals: 0
-      });
-    }).catch(console.error).finally(() => setLoading(false));
-  }, []);
+	const [rankingsQuery, playersQuery, matchesQuery] = useQueries({
+		queries: [
+			{ queryKey: ['rankings'], queryFn: () => fetchAPI('/rankings/') },
+			{ queryKey: ['players'], queryFn: () => fetchAPI('/players/') },
+			{ queryKey: ['matches'], queryFn: () => fetchAPI('/matches/') },
+		],
+	});
 
-  if (loading) return <div style={{ color: 'var(--text-muted)' }}>Carregando dashboard...</div>;
+	const isLoading =
+		rankingsQuery.isLoading ||
+		playersQuery.isLoading ||
+		matchesQuery.isLoading;
+	const isError =
+		rankingsQuery.isError || playersQuery.isError || matchesQuery.isError;
 
-  return (
-    <div className={styles.container}>
-      <div className={styles.welcome}>
-        <h1>Olá, {user?.username} 👋</h1>
-        <p>Aqui está o resumo do desempenho no Baygon.</p>
-      </div>
+	if (isLoading) return <Loading />;
+	if (isError)
+		return (
+			<div className=" text-muted items-center">
+				Erro ao carregar dados.
+			</div>
+		);
 
-      <div className={styles.statsGrid}>
-        <div className={styles.statCard}>
-          <h3>Jogadores Ativos</h3>
-          <div className={styles.statValue}>{stats.players}</div>
-        </div>
-        <div className={styles.statCard}>
-          <h3>Partidas Realizadas</h3>
-          <div className={styles.statValue}>{stats.matches}</div>
-        </div>
-      </div>
+	const rankings: RankingEntry[] = rankingsQuery.data ?? [];
+	const players: unknown[] = playersQuery.data ?? [];
+	const matches: unknown[] = matchesQuery.data ?? [];
 
-      <div className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <h2>🔥 Top Ranking Global</h2>
-        </div>
-        <div className={styles.rankingTable}>
-          <div className={styles.tableHeader}>
-            <span>Posição</span>
-            <span>Jogador</span>
-            <span>Pontos</span>
-          </div>
-          {rankings.length === 0 && <div className={styles.empty}>Nenhum dado na tabela de classificação ainda.</div>}
-          {rankings.slice(0, 10).map((r, i) => (
-             <div key={r.id_player_score || i} className={styles.tableRow}>
-                <span className={styles.rankBadge}>#{i + 1}</span>
-                <span>Jogador #{r.player_id}</span>
-                <span className={styles.points}>{r.points} pts</span>
-             </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+	return (
+		<div className="flex flex-col gap-8 animate-slide-down">
+			<div>
+				<h1 className="text-3xl text-main">Olá, {user?.username} 👋</h1>
+				<p className="text-lg text-main">
+					Aqui está o resumo do desempenho no Baygon.
+				</p>
+			</div>
+
+			<div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-6">
+				<StatsCard title="Jogadores Ativos" value={players.length} />
+				<StatsCard title="Partidas Realizadas" value={matches.length} />
+			</div>
+
+			<div className="bg-surface border border-border rounded-xl p-6">
+				<div className="mb-6">
+					<h2 className="text-xl">🔥 Top Ranking Global</h2>
+				</div>
+				<RankingTable data={rankings} />
+			</div>
+		</div>
+	);
 }
