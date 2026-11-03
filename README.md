@@ -77,11 +77,11 @@ O sistema foi completamente mapeado a partir do `USE_CASES.md`, englobando endpo
 
 6. **Inicie o servidor de desenvolvimento FastAPI:**
    ```bash
-   uvicorn app.main:app --reload
+   uvicorn app.main:app --port 8001 --reload
    ```
 
 6. **Acesse e teste a API:**
-   - Acesse em seu navegador: [http://localhost:8000/docs](http://localhost:8000/docs)
+   - Acesse em seu navegador: [http://localhost:8001/docs](http://localhost:8001/docs)
    - O *Swagger UI* trará a documentação de todos os endpoints perfeitamente estruturados e interativos!
 
 ### 🖥️ Como Executar o Frontend (Next.js)

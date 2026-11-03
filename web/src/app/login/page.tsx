@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
-import { fetchAPI } from '@/lib/api';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { FormField } from '@/components/FormField';
@@ -15,15 +14,23 @@ export default function LoginPage() {
 
 	const loginMutation = useMutation({
 		mutationFn: async () => {
-			const response = await fetchAPI('/login', {
+			// Dispara para o BFF interno do Next.js
+			const response = await fetch('/api/auth/login', {
 				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
 				body: JSON.stringify({ email, password }),
 			});
-			if (response.access_token) {
-				const userResp = await fetchAPI('/users/me', {
-					headers: { Authorization: `Bearer ${response.access_token}` },
-				});
-				login(response.access_token, response.refresh_token ?? null, userResp);
+
+			const data = await response.json();
+
+			if (!response.ok) {
+				throw new Error(data.detail || 'Credenciais inválidas');
+			}
+
+			if (data.access_token) {
+				login(data.access_token, data.refresh_token ?? null, data.user);
 			}
 		},
 	});

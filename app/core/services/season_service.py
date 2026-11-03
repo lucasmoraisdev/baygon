@@ -13,6 +13,9 @@ class SeasonService:
                 last_season = await self.repo.get_last_season_number()
                 season_data["number"] = last_season + 1
 
+            if "is_active" not in season_data or season_data["is_active"] is None:
+                season_data["is_active"] = True
+
             season = Seasons(**season_data)
             new_season = await self.repo.create(season=season)
 

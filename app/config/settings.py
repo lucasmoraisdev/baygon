@@ -4,7 +4,7 @@ import toml
 
 load_dotenv()
 
-ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+ENVIRONMENT = os.getenv("ENVIRONMENT", os.getenv("environment", "development"))
 
 secrets_path = os.path.join(os.path.dirname(__file__), "..", "..", ".streamlit", "secrets.toml")
 secrets_path = os.path.abspath(secrets_path)
@@ -41,8 +41,9 @@ APP_URL = (
     else "https://baygon-fantasy.streamlit.app"
 )
 
-API_URL = (
-    "http://localhost:8000"
+API_URL = os.getenv(
+    "API_URL",
+    "http://localhost:8001"
     if ENVIRONMENT == "development"
     else "https://api-baygon-fantasy.streamlit.app"
 )
@@ -58,21 +59,21 @@ if ENCODING:
     PHRASE_ENCODE = ENCODING.get("decode")
     PHRASE_DECODE = ENCODING.get("encode")
 else:
-    PHRASE_DECODE = None
-    PHRASE_ENCODE = None
+    PHRASE_DECODE = os.getenv("PHRASE_DECODE")
+    PHRASE_ENCODE = os.getenv("PHRASE_ENCODE")
 
 print(f"Configurações de criptografia: PHRASE_DECODE={PHRASE_DECODE}, PHRASE_ENCODE={PHRASE_ENCODE}")
 EMAIL_DATA = secrets.get("email", {})
 
 EMAIL_CONFIG = {
-    "from_email": EMAIL_DATA.get("from_email", ""),
-    "smtp_server": EMAIL_DATA.get("smtp_server", ""),
-    "smtp_port": EMAIL_DATA.get("smtp_port", ""),
-    "smtp_user": EMAIL_DATA.get("smtp_user", ""),
-    "smtp_password": EMAIL_DATA.get("smtp_password", "")
+    "from_email": EMAIL_DATA.get("from_email", os.getenv("SMTP_FROM_EMAIL", "")),
+    "smtp_server": EMAIL_DATA.get("smtp_server", os.getenv("SMTP_SERVER", "")),
+    "smtp_port": EMAIL_DATA.get("smtp_port", os.getenv("SMTP_PORT", "")),
+    "smtp_user": EMAIL_DATA.get("smtp_user", os.getenv("SMTP_USER", "")),
+    "smtp_password": EMAIL_DATA.get("smtp_password", os.getenv("SMTP_PASSWORD", ""))
 }
 
-SECRET_KEY = secrets.get("secret_key", "").get("key", "")
+SECRET_KEY = secrets.get("secret_key", {}).get("key") or os.getenv("SECRET_KEY", "dev-secret-key")
 
-ACCESS_TOKEN_EXPIRE_HOURS = secrets.get("access_token_expire_hours", 24)
-REFRESH_TOKEN_EXPIRE_DAYS = secrets.get("refresh_token_expire_days", 30)
+ACCESS_TOKEN_EXPIRE_HOURS = int(secrets.get("access_token_expire_hours", os.getenv("ACCESS_TOKEN_EXPIRE_HOURS", 24)))
+REFRESH_TOKEN_EXPIRE_DAYS = int(secrets.get("refresh_token_expire_days", os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", 30)))
