@@ -80,3 +80,49 @@ async def complete_registration(payload: CompleteRegistrationSchema, db: AsyncSe
     service = UserService(repo)
     
     return await service.complete_user_registration(payload.setup_token, payload.temporary_password, payload.new_password)
+
+
+@router.post("/{user_id}/resend-invite", response_model=UserInvite, status_code=status.HTTP_200_OK)
+async def resend_invite(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(user_has_permission),
+):
+    repo = UserRepository(db)
+    service = UserService(repo)
+    return await service.resend_invite(user_id)
+
+
+@router.post("/{user_id}/link-player/{player_id}", response_model=UserRead, status_code=status.HTTP_200_OK)
+async def link_player_to_user(
+    user_id: int,
+    player_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(user_has_permission),
+):
+    repo = UserRepository(db)
+    service = UserService(repo)
+    return await service.link_player(user_id, player_id)
+
+
+@router.delete("/{user_id}/unlink-player/{player_id}", response_model=UserRead, status_code=status.HTTP_200_OK)
+async def unlink_player_from_user(
+    user_id: int,
+    player_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(user_has_permission),
+):
+    repo = UserRepository(db)
+    service = UserService(repo)
+    return await service.unlink_player(user_id, player_id)
+
+
+@router.post("/{user_id}/reset-password-link", status_code=status.HTTP_200_OK)
+async def generate_user_reset_password_link(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(user_has_permission),
+):
+    repo = UserRepository(db)
+    service = UserService(repo)
+    return await service.generate_admin_reset_link(user_id)

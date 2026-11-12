@@ -23,7 +23,8 @@ class EventScoreRuleRepository:
         Busca uma regra de pontuação de evento pelo seu id.
         """
         stmt = select(EventScoreRule).where(
-            EventScoreRule.id_event_score_rule == id_event_score_rule
+            EventScoreRule.id_event_score_rule == id_event_score_rule,
+            EventScoreRule.deleted_at.is_(None),
         )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
@@ -33,7 +34,8 @@ class EventScoreRuleRepository:
         Lista todas as regras de pontuação de evento de uma temporada.
         """
         stmt = select(EventScoreRule).where(
-            EventScoreRule.season_id == season_id
+            EventScoreRule.season_id == season_id,
+            EventScoreRule.deleted_at.is_(None),
         )
         result = await self.db.execute(stmt)
         return result.scalars().all()

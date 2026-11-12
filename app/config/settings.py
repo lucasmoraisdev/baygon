@@ -77,3 +77,13 @@ SECRET_KEY = secrets.get("secret_key", {}).get("key") or os.getenv("SECRET_KEY",
 
 ACCESS_TOKEN_EXPIRE_HOURS = int(secrets.get("access_token_expire_hours", os.getenv("ACCESS_TOKEN_EXPIRE_HOURS", 24)))
 REFRESH_TOKEN_EXPIRE_DAYS = int(secrets.get("refresh_token_expire_days", os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", 30)))
+
+# Sumula OCR / Vision Extraction settings (local open-source RapidOCR by default)
+SUMULA_VISION_PROVIDER = os.getenv("SUMULA_VISION_PROVIDER", "auto")
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5vl")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+OPENAI_VISION_MODEL = os.getenv("OPENAI_VISION_MODEL", "gpt-4o")

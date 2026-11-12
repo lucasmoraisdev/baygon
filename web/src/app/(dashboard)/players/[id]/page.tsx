@@ -33,7 +33,7 @@ export default function PlayerProfilePage() {
 	const { user } = useAuth();
 	const queryClient = useQueryClient();
 	const playerId = params.id as string;
-	const isAdmin = user?.role === 'admin';
+	const isAdmin = Boolean(user?.is_admin || user?.role === 'admin');
 
 	const [showAdminPanel, setShowAdminPanel] = useState(false);
 	const [showSuspendModal, setShowSuspendModal] = useState(false);
@@ -99,6 +99,18 @@ export default function PlayerProfilePage() {
 		},
 		onError: (err: any) => {
 			alert(`Erro: ${err.message ?? 'Falha ao suspender'}`);
+		},
+	});
+
+	const deletePlayerMutation = useMutation({
+		mutationFn: () =>
+			fetchAPI(`/players/${playerId}`, { method: 'DELETE' }),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['players'] });
+			router.push('/players');
+		},
+		onError: (err: any) => {
+			alert(`Erro ao excluir jogador: ${err.message ?? 'Falha ao excluir'}`);
 		},
 	});
 
@@ -176,15 +188,35 @@ export default function PlayerProfilePage() {
 						</div>
 					</div>
 					{isAdmin && (
-						<Button
-							variant="ghost"
-							onClick={() => setShowAdminPanel(!showAdminPanel)}
-							className="w-auto"
-						>
-							{showAdminPanel
-								? 'Fechar Painel Admin'
-								: 'Abrir Painel Admin'}
-						</Button>
+						<div className="flex items-center gap-2">
+							<Button
+								variant="ghost"
+								onClick={() => setShowAdminPanel(!showAdminPanel)}
+								className="w-auto"
+							>
+								{showAdminPanel
+									? 'Fechar Painel Admin'
+									: 'Abrir Painel Admin'}
+							</Button>
+							<Button
+								variant="danger"
+								disabled={deletePlayerMutation.isPending}
+								onClick={() => {
+									if (
+										window.confirm(
+											`Tem certeza que deseja excluir "${player.apelido || player.nome}"?`,
+										)
+									) {
+										deletePlayerMutation.mutate();
+									}
+								}}
+								className="w-auto"
+							>
+								{deletePlayerMutation.isPending
+									? 'Excluindo...'
+									: 'Excluir Jogador'}
+							</Button>
+						</div>
 					)}
 				</div>
 

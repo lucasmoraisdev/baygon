@@ -1,33 +1,66 @@
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 from app.core.enum.events_enum import EventTypeEnum
 from app.schemas.match_event_schema import (
     MatchEventCreate,
-    MatchEventUpdate,
     MatchEventRead,
+    MatchEventUpdate,
 )
 
-class MatchBase(BaseModel):
+
+class MatchCreate(BaseModel):
     round_id: int
     home_team_id: int
     away_team_id: int
     filmed_by_id: Optional[int] = None
-    home_score: Optional[int] = Field(0, ge=0)
-    away_score: Optional[int] = Field(0, ge=0)
-
-class MatchCreate(MatchBase):
+    filmed_by: Optional[int] = None
+    home_score: Optional[int] = Field(None, ge=0)
+    away_score: Optional[int] = Field(None, ge=0)
+    score_home: Optional[int] = Field(None, ge=0)
+    score_away: Optional[int] = Field(None, ge=0)
+    event_type: Optional[EventTypeEnum] = None
     events: Optional[list[MatchEventCreate]] = []
 
-class MatchUpdate(MatchBase):
-    home_score: Optional[int] = None
-    away_score: Optional[int] = None
+
+class MatchUpdate(BaseModel):
+    round_id: Optional[int] = None
+    home_team_id: Optional[int] = None
+    away_team_id: Optional[int] = None
+    home_score: Optional[int] = Field(None, ge=0)
+    away_score: Optional[int] = Field(None, ge=0)
+    score_home: Optional[int] = Field(None, ge=0)
+    score_away: Optional[int] = Field(None, ge=0)
     filmed_by_id: Optional[int] = None
+    filmed_by: Optional[int] = None
+    event_type: Optional[EventTypeEnum] = None
     events: Optional[list[MatchEventUpdate]] = []
 
-class MatchRead(MatchBase):
-    id: int
+
+class MatchRead(BaseModel):
+    id_match: int
+    round_id: int
+    home_team_id: int
+    away_team_id: int
+    filmed_by: int
+    event_type: EventTypeEnum
+    score_home: int = 0
+    score_away: int = 0
     events: Optional[list[MatchEventRead]] = []
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
+
+    @computed_field
+    @property
+    def id(self) -> int:
+        return self.id_match
+
+    @computed_field
+    @property
+    def home_score(self) -> int:
+        return self.score_home
+
+    @computed_field
+    @property
+    def away_score(self) -> int:
+        return self.score_away

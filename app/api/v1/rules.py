@@ -66,3 +66,27 @@ async def delete_rule(
     if not success:
         raise HTTPException(status_code=404, detail="Rule not found")
     return
+
+
+@router.post("/season/{season_id}/seed-defaults", response_model=List[EventScoreRuleRead], status_code=status.HTTP_201_CREATED)
+async def seed_default_rules(
+    season_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(user_has_permission),
+):
+    """Cria as regras padrão de pontuação para uma temporada (sem duplicar existentes)."""
+    repo = EventScoreRuleRepository(db)
+    service = RuleService(repo)
+    return await service.seed_default_rules(season_id)
+
+
+@router.post("/round/{round_id}/calculate-scores", status_code=status.HTTP_200_OK)
+async def calculate_round_scores(
+    round_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(user_has_permission),
+):
+    """Calcula e atualiza PlayerScore e PlayerSeasonScore de uma rodada com base nas regras da temporada."""
+    repo = EventScoreRuleRepository(db)
+    service = RuleService(repo)
+    return await service.calculate_round_scores(round_id)

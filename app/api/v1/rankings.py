@@ -1,13 +1,50 @@
-from typing import List
-from fastapi import APIRouter, Depends, status, HTTPException
+from typing import List, Optional
+from fastapi import APIRouter, Depends, Query, status, HTTPException
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies.auth_dependencies import user_has_permission
+from app.core.services.association_ranking_service import AssociationRankingService
 from app.core.services.score_service import ScoreService
 from app.db.base import get_db
 from app.db.repositories.player_score_repository import PlayerScoreRepository
 from app.schemas.player_score_schema import PlayerScoreCreate, PlayerScoreRead, PlayerScoreUpdate
+from app.schemas.ranking_schema import AssociationRankingResponse
 
 router = APIRouter(prefix="/rankings", tags=["Rankings / Scores"])
+
+
+@router.get("/association", response_model=AssociationRankingResponse)
+async def get_association_ranking(
+    season_id: Optional[int] = Query(None),
+    db: AsyncSession = Depends(get_db),
+):
+    service = AssociationRankingService(db)
+    return await service.get_season_ranking(season_id=season_id)
+
+
+@router.get("/season/{season_id}/association", response_model=AssociationRankingResponse)
+async def get_season_association_ranking(
+    season_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    service = AssociationRankingService(db)
+    return await service.get_season_ranking(season_id=season_id)
+
+
+@router.get("/season/{season_id}/export-csv")
+async def export_season_association_ranking_csv(
+    season_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    service = AssociationRankingService(db)
+    csv_content, season_number = await service.export_season_ranking_csv(season_id=season_id)
+    filename = f"ranking_associacao_baygon_t{season_number or season_id}.csv"
+    return Response(
+        content=csv_content.encode("utf-8-sig"),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
 
 @router.post("/", response_model=PlayerScoreRead, status_code=status.HTTP_201_CREATED)
 async def create_score(

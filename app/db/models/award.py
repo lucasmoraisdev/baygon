@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from app.db.models.team import Teams
     from app.db.models.player import Player
 
+
 class Awards(Base, Timestamp):
     __tablename__ = "awards"
 
@@ -18,17 +19,23 @@ class Awards(Base, Timestamp):
 
     round: Mapped["Round"] = relationship(
         "Round",
-        back_populates="awards"
+        back_populates="awards",
     )
 
     teams: Mapped[list["Teams"]] = relationship(
-        "Teams", 
+        "Teams",
         secondary="award_teams",
-        back_populates="awards"
+        back_populates="awards",
+        lazy="selectin",
     )
 
     player: Mapped[list["Player"]] = relationship(
-        "Player", 
+        "Player",
         secondary="award_players",
-        back_populates="awards"
+        back_populates="awards",
+        lazy="selectin",
     )
+
+    @property
+    def players(self) -> list["Player"]:
+        return self.player

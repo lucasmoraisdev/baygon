@@ -25,7 +25,10 @@ async def create_match(
 ):
     repo = MatchRepository(db)
     service = MatchService(repo)
-    return await service.create_match(match_create.model_dump(exclude={"events"}))
+    return await service.create_match(
+        match_create.model_dump(exclude={"events"}),
+        fallback_user_id=current_user.id_user,
+    )
 
 @router.get("/{match_id}", response_model=MatchRead, status_code=status.HTTP_200_OK)
 async def get_match(

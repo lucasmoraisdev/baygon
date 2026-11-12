@@ -5,7 +5,14 @@ from app.core.dependencies.auth_dependencies import user_has_permission
 from app.core.services.team_service import TeamService
 from app.db.base import get_db
 from app.db.repositories.team_repository import TeamRepository
-from app.schemas.team_schema import TeamCreate, TeamRead, TeamUpdate
+from app.schemas.team_schema import (
+    RoundTeamsBatchRequest,
+    TeamCreate,
+    TeamDrawRequest,
+    TeamDrawResponse,
+    TeamRead,
+    TeamUpdate,
+)
 
 router = APIRouter(prefix="/teams", tags=["Teams"])
 
@@ -26,6 +33,41 @@ async def create_team(
     repo = TeamRepository(db)
     service = TeamService(repo)
     return await service.create_team(team_create.model_dump())
+
+@router.post("/draw-preview", response_model=TeamDrawResponse)
+async def draw_teams_preview(
+    payload: TeamDrawRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(user_has_permission)
+):
+    repo = TeamRepository(db)
+    service = TeamService(repo)
+    try:
+        return await service.draw_teams(
+            player_ids=payload.player_ids,
+            num_teams=payload.num_teams,
+            pote_overrides=payload.pote_overrides,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@router.post("/round/{round_id}/batch", response_model=List[TeamRead], status_code=status.HTTP_201_CREATED)
+async def save_round_teams_batch(
+    round_id: int,
+    payload: RoundTeamsBatchRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(user_has_permission)
+):
+    repo = TeamRepository(db)
+    service = TeamService(repo)
+    try:
+        return await service.set_round_teams_batch(
+            round_id=round_id,
+            teams=payload.teams,
+            overwrite_existing=payload.overwrite_existing,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 @router.get("/round/{round_id}", response_model=List[TeamRead])
 async def get_teams_by_round(

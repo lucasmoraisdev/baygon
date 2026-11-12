@@ -24,6 +24,14 @@ export interface SeasonStats {
 export interface Team {
 	id_team: number;
 	name: string;
+	round_id?: number;
+	players?: Array<{
+		id_player: number;
+		nome: string;
+		apelido?: string | null;
+		potes?: number | null;
+		posicao?: string | null;
+	}>;
 }
 
 export interface Award {
@@ -103,6 +111,7 @@ export interface Player {
 	nome: string;
 	apelido: string | null;
 	posicao: string | null;
+	potes?: number | null;
 }
 
 export interface Match {

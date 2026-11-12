@@ -10,6 +10,7 @@ from app.db.models.event_score_rule import EventScoreRule
 from app.db.models.player_score import PlayerScore
 from app.db.models.player_season_score import PlayerSeasonScore
 from app.db.models.player_admin_action import PlayerAdminAction
+from app.db.models.round_attendance import RoundAttendance
 
 __all__ = [
     "User",
@@ -23,5 +24,6 @@ __all__ = [
     "EventScoreRule",
     "PlayerScore",
     "PlayerSeasonScore",
-    "PlayerAdminAction"
+    "PlayerAdminAction",
+    "RoundAttendance",
 ]

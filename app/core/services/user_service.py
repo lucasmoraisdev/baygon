@@ -55,7 +55,7 @@ class UserService:
         jwt_token = generate_setup_token(new_user.id_user, setup_token, exp)
 
         # enviar email 
-        invite_link = f"{APP_URL}/complete_registration?setup_token={jwt_token}"
+        invite_link = f"{APP_URL}/complete-registration?setup_token={jwt_token}"
         try:
             send_invite_email(
                 from_email=EMAIL_CONFIG["from_email"],
@@ -72,7 +72,90 @@ class UserService:
             print(f"Erro ao enviar o e-mail: {str(e)}")
         
         new_user.invite_link = invite_link
+        new_user.temporary_password = default_password
         return new_user
+
+    async def resend_invite(self, user_id: int) -> User:
+        user = await self.repo.get_by_id(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+
+        setup_token = str(uuid.uuid4())
+        default_password = get_random_password(self.default_passwords)
+        exp = datetime.utcnow() + timedelta(hours=24)
+
+        updated = await self.repo.update(
+            user_id,
+            {
+                "setup_token": setup_token,
+                "password": encrypt_data(default_password, self.key),
+                "invite_token_expires": exp,
+            },
+        )
+        jwt_token = generate_setup_token(user.id_user, setup_token, exp)
+        invite_link = f"{APP_URL}/complete-registration?setup_token={jwt_token}"
+
+        try:
+            send_invite_email(
+                from_email=EMAIL_CONFIG["from_email"],
+                to_email=user.email,
+                invite_link=invite_link,
+                smtp_server=EMAIL_CONFIG["smtp_server"],
+                smtp_port=EMAIL_CONFIG["smtp_port"],
+                smtp_user=EMAIL_CONFIG["smtp_user"],
+                smtp_password=EMAIL_CONFIG["smtp_password"],
+                default_password=default_password,
+            )
+        except Exception as e:
+            print(f"Erro ao reenviar e-mail: {str(e)}")
+
+        updated.invite_link = invite_link
+        updated.temporary_password = default_password
+        return updated
+
+    async def link_player(self, user_id: int, player_id: int) -> User:
+        from sqlalchemy import select
+        from app.db.models.player import Player
+
+        user = await self.repo.get_by_id(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+
+        player = (
+            await self.repo.db.execute(
+                select(Player).where(Player.id_player == player_id, Player.deleted_at.is_(None))
+            )
+        ).scalar_one_or_none()
+        if not player:
+            raise HTTPException(status_code=404, detail="Jogador não encontrado.")
+
+        player.user_id = user_id
+        await self.repo.db.commit()
+        return await self.repo.get_by_id(user_id)
+
+    async def unlink_player(self, user_id: int, player_id: int) -> User:
+        from sqlalchemy import select
+        from app.db.models.player import Player
+
+        user = await self.repo.get_by_id(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+
+        player = (
+            await self.repo.db.execute(
+                select(Player).where(
+                    Player.id_player == player_id,
+                    Player.user_id == user_id,
+                    Player.deleted_at.is_(None),
+                )
+            )
+        ).scalar_one_or_none()
+        if not player:
+            raise HTTPException(status_code=404, detail="Vínculo jogador/usuário não encontrado.")
+
+        player.user_id = None
+        await self.repo.db.commit()
+        return await self.repo.get_by_id(user_id)
 
     async def list_all_users(self, active: bool = True):
         if active:
@@ -100,6 +183,15 @@ class UserService:
     async def delete_user(self, user_id: int):
         return await self.repo.delete_user(user_id)
 
+    @staticmethod
+    def _validate_password_strength(password: str) -> None:
+        password_pattern = r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$'
+        if not re.match(password_pattern, password):
+            raise HTTPException(
+                status_code=400,
+                detail="A senha deve ter pelo menos 8 caracteres, incluindo letras maiúsculas, minúsculas, números e símbolos."
+            )
+
     async def complete_user_registration(self, setup_token: str, temporary_password: str, new_password: str):
         decode_token = decode_jwt_token(setup_token)
 
@@ -116,12 +208,7 @@ class UserService:
         if temporary_password != stored_temp_password:
             raise HTTPException(status_code=401, detail="Senha temporária incorreta")
         
-        password_pattern = r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$'
-        if not re.match(password_pattern, new_password):
-            raise HTTPException(
-                status_code=400,
-                detail="A senha deve ter pelo menos 8 caracteres, incluindo letras maiúsculas, minúsculas, números e símbolos."
-            )
+        self._validate_password_strength(new_password)
 
         user.password = encrypt_data(new_password, self.key)
         user.is_active = True
@@ -138,7 +225,99 @@ class UserService:
                 "email": user.email
             }
         }
-    
+
+    async def change_password(self, user_id: int, current_password: str, new_password: str) -> dict:
+        user = await self.repo.get_by_id(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+
+        try:
+            stored_password = decrypt_data(user.password, self.key)
+        except Exception:
+            raise HTTPException(status_code=500, detail="Erro ao validar senha atual.")
+
+        if current_password != stored_password:
+            raise HTTPException(status_code=401, detail="Senha atual incorreta.")
+
+        self._validate_password_strength(new_password)
+
+        encrypted = encrypt_data(new_password, self.key)
+        await self.repo.update(user_id, {"password": encrypted})
+        return {"message": "Senha alterada com sucesso."}
+
+    async def _create_reset_link_for_user(self, user: User) -> str:
+        setup_token = str(uuid.uuid4())
+        exp = datetime.utcnow() + timedelta(hours=1)
+        await self.repo.update(
+            user.id_user,
+            {
+                "setup_token": setup_token,
+                "invite_token_expires": exp,
+            },
+        )
+        jwt_token = generate_setup_token(user.id_user, setup_token, exp)
+        return f"{APP_URL}/reset-password?token={jwt_token}"
+
+    async def request_password_reset(self, email: str) -> dict:
+        user = await self.repo.get_by_email(email.strip())
+        if user and user.is_active:
+            reset_link = await self._create_reset_link_for_user(user)
+            try:
+                send_invite_email(
+                    from_email=EMAIL_CONFIG["from_email"],
+                    to_email=user.email,
+                    invite_link=reset_link,
+                    smtp_server=EMAIL_CONFIG["smtp_server"],
+                    smtp_port=EMAIL_CONFIG["smtp_port"],
+                    smtp_user=EMAIL_CONFIG["smtp_user"],
+                    smtp_password=EMAIL_CONFIG["smtp_password"],
+                    default_password="(Use o link acima para definir sua nova senha)",
+                )
+            except Exception as e:
+                print(f"Erro ao enviar e-mail de redefinição: {str(e)}")
+
+        return {
+            "message": "Se o e-mail estiver cadastrado, enviaremos instruções para redefinição de senha."
+        }
+
+    async def generate_admin_reset_link(self, user_id: int) -> dict:
+        user = await self.repo.get_by_id(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+        reset_link = await self._create_reset_link_for_user(user)
+        return {"reset_link": reset_link, "email": user.email}
+
+    async def reset_password_with_token(self, token: str, new_password: str) -> dict:
+        try:
+            decoded = decode_jwt_token(token)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Token inválido ou expirado.")
+
+        setup_token = decoded.get("setup_token")
+        if not setup_token:
+            raise HTTPException(status_code=400, detail="Token inválido.")
+
+        user = await self.repo.get_by_setup_token(setup_token)
+        if not user:
+            raise HTTPException(status_code=404, detail="Token inválido ou expirado.")
+
+        if user.invite_token_expires and user.invite_token_expires < datetime.utcnow():
+            raise HTTPException(status_code=400, detail="Token expirado. Solicite um novo link.")
+
+        self._validate_password_strength(new_password)
+
+        encrypted = encrypt_data(new_password, self.key)
+        await self.repo.update(
+            user.id_user,
+            {
+                "password": encrypted,
+                "setup_token": None,
+                "invite_token_expires": None,
+                "is_active": True,
+            },
+        )
+        return {"message": "Senha redefinida com sucesso!"}
+
     async def user_is_admin(self, user_id: int) -> bool:
         user = await self.get_user_by_id(user_id=user_id)
         return user.is_active and user.is_admin if user is not None else False

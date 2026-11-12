@@ -129,3 +129,55 @@ async def get_me(current_user=Depends(get_current_user)):
     """
     print(f"Usuário autenticado: {current_user.username}")
     return current_user
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+
+@router.post("/change-password")
+async def change_password(
+    data: ChangePasswordRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """Permite ao usuário autenticado alterar sua própria senha."""
+    user_service = UserService.UserService(UserRepository(db))
+    return await user_service.change_password(
+        user_id=current_user.id_user,
+        current_password=data.current_password,
+        new_password=data.new_password,
+    )
+
+
+@router.post("/forgot-password")
+async def forgot_password(
+    data: ForgotPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Solicita link de redefinição de senha por e-mail."""
+    user_service = UserService.UserService(UserRepository(db))
+    return await user_service.request_password_reset(data.email)
+
+
+@router.post("/reset-password")
+async def reset_password(
+    data: ResetPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Redefine a senha utilizando um token válido."""
+    user_service = UserService.UserService(UserRepository(db))
+    return await user_service.reset_password_with_token(
+        token=data.token,
+        new_password=data.new_password,
+    )

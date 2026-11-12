@@ -96,10 +96,9 @@ class UserRepository:
             if hasattr(user, field):
                 setattr(user, field, value)
         
-        user.updated = datetime.now(timezone.utc)
+        user.updated_at = datetime.now(timezone.utc)
         await self.db.commit()
-        await self.db.refresh(user)
-        return user
+        return await self.get_by_id(iduser)
     
     async def list_all_users(self) -> Sequence[User]:
         """
@@ -136,9 +135,13 @@ class UserRepository:
         """
         Busca um usuario (ativo) pelo seu id.
         """
-        stmt = select(User).where(
-            User.id_user == iduser,
-            User.deleted_at.is_(None)
+        from sqlalchemy.orm import selectinload
+
+        stmt = (
+            select(User)
+            .options(selectinload(User.players))
+            .where(User.id_user == iduser, User.deleted_at.is_(None))
+            .execution_options(populate_existing=True)
         )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()

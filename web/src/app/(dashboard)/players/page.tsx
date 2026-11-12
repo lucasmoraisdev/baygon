@@ -11,7 +11,7 @@ import { useAuth } from '@/context/AuthContext';
 import { fetchAPI } from '@/lib/api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
 interface Player {
@@ -46,7 +46,7 @@ const PE_LABEL: Record<string, string> = {
 
 export default function PlayersPage() {
 	const { user } = useAuth();
-	const isAdmin = user?.role === 'admin';
+	const isAdmin = Boolean(user?.is_admin || user?.role === 'admin');
 	const queryClient = useQueryClient();
 
 	const [form, setForm] = useState(EMPTY_FORM);
@@ -54,6 +54,9 @@ export default function PlayersPage() {
 	const [isFormOpen, setIsFormOpen] = useState(false);
 	const [suspendModalOpen, setSuspendModalOpen] = useState(false);
 	const [playerToSuspend, setPlayerToSuspend] = useState<number | null>(null);
+	const [search, setSearch] = useState('');
+	const [potFilter, setPotFilter] = useState<string>('all');
+	const [typeFilter, setTypeFilter] = useState<string>('all');
 
 	const {
 		data: players = [],
@@ -108,6 +111,48 @@ export default function PlayersPage() {
 		},
 	});
 
+	const deleteMutation = useMutation({
+		mutationFn: (id: number) =>
+			fetchAPI(`/players/${id}`, { method: 'DELETE' }),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['players'] });
+		},
+		onError: (err: any) => {
+			alert(`Erro ao excluir jogador: ${err.message ?? 'Falha ao excluir'}`);
+		},
+	});
+
+	const handleDelete = (player: Player) => {
+		if (
+			window.confirm(
+				`Tem certeza que deseja excluir o jogador "${player.apelido || player.nome}"?`,
+			)
+		) {
+			deleteMutation.mutate(player.id_player);
+		}
+	};
+
+	const filteredPlayers = useMemo(() => {
+		const q = search.toLowerCase().trim();
+		return players.filter((p) => {
+			if (
+				q &&
+				!p.nome.toLowerCase().includes(q) &&
+				!(p.apelido ?? '').toLowerCase().includes(q)
+			) {
+				return false;
+			}
+			if (potFilter !== 'all') {
+				if (potFilter === 'none' && p.potes) return false;
+				if (potFilter !== 'none' && String(p.potes ?? '') !== potFilter)
+					return false;
+			}
+			if (typeFilter === 'guest' && !p.is_guest) return false;
+			if (typeFilter === 'associate' && p.is_guest) return false;
+			return true;
+		});
+	}, [players, search, potFilter, typeFilter]);
+
 	const handleEdit = (player: Player) => {
 		setEditingId(player.id_player);
 		setForm({
@@ -146,7 +191,7 @@ export default function PlayersPage() {
 
 	const listRef = useRef<HTMLDivElement>(null);
 	const virtualizer = useVirtualizer({
-		count: players.length,
+		count: filteredPlayers.length,
 		getScrollElement: () => listRef.current,
 		estimateSize: () => 90,
 		overscan: 5,
@@ -160,9 +205,13 @@ export default function PlayersPage() {
 
 	return (
 		<div className="flex flex-col gap-6 animate-slide-down">
-			<div className="flex items-center justify-between">
+			<div className="flex items-center justify-between flex-wrap gap-3">
 				<h1 className="text-3xl text-main">
-					Jogadores ({players.length})
+					Jogadores ({filteredPlayers.length}
+					{filteredPlayers.length !== players.length
+						? ` / ${players.length}`
+						: ''}
+					)
 				</h1>
 				{isAdmin && (
 					<Button
@@ -178,15 +227,43 @@ export default function PlayersPage() {
 				)}
 			</div>
 
-			{players.length === 0 ? (
+			<div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+				<Input
+					placeholder="Buscar por nome ou apelido..."
+					value={search}
+					onChange={(e) => setSearch(e.target.value)}
+				/>
+				<Select
+					value={potFilter}
+					onChange={(e) => setPotFilter(e.target.value)}
+				>
+					<option value="all">Todos os Potes</option>
+					{[1, 2, 3, 4, 5].map((p) => (
+						<option key={p} value={String(p)}>
+							Pote {p}
+						</option>
+					))}
+					<option value="none">Sem Pote</option>
+				</Select>
+				<Select
+					value={typeFilter}
+					onChange={(e) => setTypeFilter(e.target.value)}
+				>
+					<option value="all">Mensalistas e Convidados</option>
+					<option value="associate">Apenas Mensalistas</option>
+					<option value="guest">Apenas Convidados</option>
+				</Select>
+			</div>
+
+			{filteredPlayers.length === 0 ? (
 				<div className="bg-surface border border-border rounded-xl p-6 text-muted text-sm">
-					Nenhum jogador registrado.
+					Nenhum jogador encontrado.
 				</div>
 			) : (
 				<div ref={listRef} className="overflow-y-auto max-h-[70vh]">
 					<div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
 						{virtualizer.getVirtualItems().map((vItem) => {
-							const player = players[vItem.index];
+							const player = filteredPlayers[vItem.index];
 							return (
 								<div
 									key={player.id_player}
@@ -267,6 +344,15 @@ export default function PlayersPage() {
 											}}
 										>
 											Suspender
+										</Button>
+										<Button
+											size="sm"
+											variant="ghost"
+											onClick={() => handleDelete(player)}
+											disabled={deleteMutation.isPending}
+											className="text-red-400 hover:text-red-300"
+										>
+											Excluir
 										</Button>
 									</>
 								)}

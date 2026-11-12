@@ -25,8 +25,9 @@ class MatchEventRepository:
         Lista todos os eventos de uma partida.
         """
         stmt = select(MatchEvent).where(
-            MatchEvent.match_id == match_id
-        )
+            MatchEvent.match_id == match_id,
+            MatchEvent.deleted_at.is_(None),
+        ).order_by(MatchEvent.id_event.asc())
         result = await self.db.execute(stmt)
         return result.scalars().all()
     
@@ -35,7 +36,8 @@ class MatchEventRepository:
         Busca um evento de uma partida pelo seu id.
         """
         stmt = select(MatchEvent).where(
-            MatchEvent.id_event == event_id
+            MatchEvent.id_event == event_id,
+            MatchEvent.deleted_at.is_(None),
         )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()

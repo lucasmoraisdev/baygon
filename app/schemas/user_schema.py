@@ -1,8 +1,9 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from typing import Optional, List
 from datetime import datetime
 
 from app.schemas.player_schema import PlayerRead
+
 
 class UserBase(BaseModel):
     name: str
@@ -11,9 +12,11 @@ class UserBase(BaseModel):
     phone_number: str
     is_admin: bool = False
 
+
 class UserCreate(UserBase):
     password: str
     setup_token: Optional[str] = None
+
 
 class UserUpdate(BaseModel):
     name: Optional[str] = None
@@ -22,28 +25,33 @@ class UserUpdate(BaseModel):
     password: Optional[str] = None
     phone_number: Optional[str] = None
     is_admin: Optional[bool] = None
+    is_active: Optional[bool] = None
     setup_token: Optional[str] = None
+
 
 class UserRead(UserBase):
     id_user: int
+    is_active: bool = True
     setup_token: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     role: str
 
-    players: Optional[List[PlayerRead]] = None 
+    players: Optional[List[PlayerRead]] = None
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 class UserInvite(UserRead):
     invite_link: str
+    temporary_password: Optional[str] = None
 
 
 class CompleteRegistrationSchema(BaseModel):
     setup_token: str = Field(..., description="Token enviado por email para completar o cadastro")
     temporary_password: str = Field(..., min_length=1, description="Senha temporária recebida por email")
     new_password: str = Field(..., min_length=8, description="Nova senha do usuário")
+
 
 class CompleteRegistrationResponse(BaseModel):
     user_id: int

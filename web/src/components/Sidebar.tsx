@@ -11,12 +11,15 @@ const MENU_ITEMS = [
 	{ name: 'Jogadores', path: '/players' },
 	{ name: 'Partidas', path: '/matches' },
 	{ name: 'Prêmios (Awards)', path: '/awards' },
-	{ name: 'Regras (Admin)', path: '/admin/rules' },
+	{ name: 'Regras (Admin)', path: '/admin/rules', adminOnly: true },
+	{ name: 'Importar Súmula (Admin)', path: '/admin/sumulas', adminOnly: true },
+	{ name: 'Usuários (Admin)', path: '/admin/users', adminOnly: true },
 ];
 
 export default function Sidebar() {
 	const pathname = usePathname();
 	const { user, logout } = useAuth();
+	const isAdmin = Boolean(user?.is_admin || user?.role === 'admin');
 
 	return (
 		<aside className="w-64 bg-background/85 border-r border-r-border flex flex-col h-screen fixed left-0 top-0 backdrop-blur-md">
@@ -27,7 +30,7 @@ export default function Sidebar() {
 			</div>
 
 			<nav className="flex-1 flex flex-col gap-1 overflow-y-auto ">
-				{MENU_ITEMS.map((item) => {
+				{MENU_ITEMS.filter((item) => !item.adminOnly || isAdmin).map((item) => {
 					const isActive =
 						pathname === item.path ||
 						(item.path !== '/' && pathname.startsWith(item.path));
@@ -62,6 +65,12 @@ export default function Sidebar() {
 						</span>
 					</div>
 				</div>
+				<Link
+					href="/change-password"
+					className="text-center text-xs text-muted hover:text-main border border-border rounded-lg py-2 transition-colors"
+				>
+					Alterar Senha
+				</Link>
 				<Button variant="danger" onClick={logout}>
 					Sair
 				</Button>
