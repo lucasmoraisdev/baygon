@@ -30,3 +30,8 @@ class PlayerService:
     async def get_player_season_stats(self, player_id: int) -> Sequence[Dict[str, Any]]:
         """Obtém estatísticas do jogador por temporada"""
         return await self.repo.get_player_season_stats(player_id)
+
+    async def get_player_full_analytics(self, player_id: int) -> Dict[str, Any]:
+        """Obtém estatísticas completas (geral, temporadas, rodadas, times e prêmios)"""
+        return await self.repo.get_player_full_analytics(player_id)
+

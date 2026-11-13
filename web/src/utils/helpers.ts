@@ -8,10 +8,10 @@ export const initials = (nome: string) =>
 		.toUpperCase();
 
 export const POS_LABEL: Record<string, string> = {
-	goleiro: 'GK',
-	pivo: 'PIV',
-	ala: 'ALA',
-	fixo: 'FIX',
+	goleiro: 'GOL',
+	defensores: 'DEF',
+	meias: 'MEI',
+	atacantes: 'ATA',
 };
 
 export const DEFAULT_ROUND = {

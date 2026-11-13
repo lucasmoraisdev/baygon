@@ -8,7 +8,7 @@ class PlayerBase(BaseModel):
     apelido: Optional[str] = None
     email: Optional[str] = None
     telefone: Optional[str] = None
-    posicao: Optional[PosicaoEnum] = None
+    posicao: Optional[str] = None
     pe: Optional[PeEnum] = None
     potes: Optional[int] = None
     user_id: Optional[int] = None
@@ -16,7 +16,7 @@ class PlayerBase(BaseModel):
     is_guest: bool = False
 
 class PlayerCreate(PlayerBase):
-    pass
+    posicao: Optional[PosicaoEnum] = None
 
 
 class PlayerUpdate(BaseModel):
@@ -33,6 +33,7 @@ class PlayerUpdate(BaseModel):
 
 class PlayerRead(PlayerBase):
     id_player: int
+    status: Optional[str] = "Ativo"
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -42,6 +43,10 @@ class PlayerRead(PlayerBase):
 class TeamSummary(BaseModel):
     id_team: int
     name: str
+    round_id: Optional[int] = None
+    season_id: Optional[int] = None
+    season_name: Optional[str] = None
+    round_number: Optional[int] = None
 
     class Config:
         orm_mode = True
@@ -50,6 +55,11 @@ class TeamSummary(BaseModel):
 class AwardSummary(BaseModel):
     id_award: int
     event_type: str
+    round_id: Optional[int] = None
+    season_id: Optional[int] = None
+    season_name: Optional[str] = None
+    round_number: Optional[int] = None
+    date: Optional[str] = None
 
     class Config:
         orm_mode = True
@@ -121,9 +131,26 @@ class SeasonStatsDetail(BaseModel):
     total_points: int = 0
 
 
+class RoundStatsDetail(BaseModel):
+    """Estatísticas de uma rodada específica (série temporal)"""
+    round_id: int
+    round_number: int
+    date: Optional[str] = None
+    season_id: int
+    season_name: Optional[str] = None
+    total_matches: int = 0
+    total_wins: int = 0
+    total_losses: int = 0
+    total_draws: int = 0
+    total_goals: int = 0
+    total_assists: int = 0
+    total_points: int = 0
+
+
 class PlayerProfileRead(PlayerRead):
     """Perfil completo do jogador com estatísticas"""
     stats: PlayerStatsRead
     season_stats: List[SeasonStatsDetail] = []
+    round_stats: List[RoundStatsDetail] = []
     teams: List[TeamSummary] = []
     awards: List[AwardSummary] = []

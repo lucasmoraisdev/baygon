@@ -32,7 +32,10 @@ async def create_team(
 ):
     repo = TeamRepository(db)
     service = TeamService(repo)
-    return await service.create_team(team_create.model_dump())
+    try:
+        return await service.create_team(team_create.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 @router.post("/draw-preview", response_model=TeamDrawResponse)
 async def draw_teams_preview(
@@ -99,7 +102,10 @@ async def update_team(
 ):
     repo = TeamRepository(db)
     service = TeamService(repo)
-    updated_team = await service.edit_team(team_id, team_update.model_dump(exclude_unset=True))
+    try:
+        updated_team = await service.edit_team(team_id, team_update.model_dump(exclude_unset=True))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     if not updated_team:
         raise HTTPException(status_code=404, detail="Team not found")
     return updated_team

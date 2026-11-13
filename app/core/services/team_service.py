@@ -16,8 +16,32 @@ class TeamService:
     def __init__(self, repo: TeamRepository):
         self.repo = repo
 
+    async def _validate_unique_players_in_round(
+        self,
+        round_id: int,
+        player_ids: list[int],
+        exclude_team_id: Optional[int] = None,
+    ) -> None:
+        if not player_ids:
+            return
+        existing_teams = await self.repo.list_teams_by_round(round_id)
+        requested_set = set(player_ids)
+        for existing_team in existing_teams:
+            if exclude_team_id is not None and existing_team.id_team == exclude_team_id:
+                continue
+            for player in existing_team.players or []:
+                if player.id_player in requested_set:
+                    display_name = player.apelido or player.nome
+                    raise ValueError(
+                        f"O jogador '{display_name}' já está escalado no time '{existing_team.name}' nesta rodada. "
+                        f"Remova-o do time '{existing_team.name}' antes de adicioná-lo a outro time."
+                    )
+
     async def create_team(self, team_data: dict) -> Teams:
         player_ids = team_data.pop("player_ids", [])
+        round_id = team_data.get("round_id")
+        if round_id and player_ids:
+            await self._validate_unique_players_in_round(round_id, player_ids)
         team_obj = Teams(**team_data)
         return await self.repo.create(team=team_obj, player_ids=player_ids)
 
@@ -28,6 +52,17 @@ class TeamService:
         return await self.repo.get_by_id(team_id)
 
     async def edit_team(self, team_id: int, team_data: dict) -> Optional[Teams]:
+        current_team = await self.repo.get_by_id(team_id)
+        if not current_team:
+            return None
+        player_ids = team_data.get("player_ids")
+        target_round_id = team_data.get("round_id") or current_team.round_id
+        if player_ids is not None and target_round_id:
+            await self._validate_unique_players_in_round(
+                target_round_id,
+                player_ids,
+                exclude_team_id=team_id,
+            )
         return await self.repo.update(id_team=team_id, updates=team_data)
 
     async def delete_team(self, team_id: int) -> bool:

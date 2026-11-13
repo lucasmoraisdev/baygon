@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: dark;
   --primary-color: #3b82f6;
   --primary-hover: #2563eb;
   --bg-color: #0f172a;
@@ -10,6 +11,17 @@
   --border-hover: rgba(255, 255, 255, 0.2);
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.8) sepia(1) saturate(3) hue-rotate(190deg);
+  cursor: pointer;
+  opacity: 0.85;
+  transition: opacity 0.2s ease;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
 }
 
 @keyframes slideDown {

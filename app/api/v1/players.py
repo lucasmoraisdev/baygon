@@ -8,7 +8,7 @@ from app.core.services.player_admin_action_service import PlayerAdminActionServi
 from app.db.base import get_db
 from app.db.repositories.player_repository import PlayerRepository
 from app.db.repositories.player_admin_action_repository import PlayerAdminActionRepository
-from app.schemas.player_schema import PlayerCreate, PlayerRead, PlayerUpdate, PlayerProfileRead, PlayerStatsRead, SeasonStatsDetail
+from app.schemas.player_schema import PlayerCreate, PlayerRead, PlayerUpdate, PlayerProfileRead, PlayerStatsRead, SeasonStatsDetail, RoundStatsDetail
 
 router = APIRouter(prefix="/players", tags=["Players"])
 
@@ -54,20 +54,12 @@ async def get_player_profile(
     player_obj = await service.get_player_by_id(player_id)
     if not player_obj:
         raise HTTPException(status_code=404, detail="Player not found")
-    
-    # Obter estatísticas
-    stats_data = await service.get_player_stats(player_id)
-    season_stats_data = await service.get_player_season_stats(player_id)
-    
-    # Construir resposta
-    stats = PlayerStatsRead(**stats_data)
-    season_stats = [SeasonStatsDetail(**s) for s in season_stats_data]
-    
-    # Preparar teams e awards
-    print(f"Player object: {player_obj}")
-    teams = [{"id_team": t.id_team, "name": t.name} for t in player_obj.teams] if hasattr(player_obj, 'teams') else []
-    awards = [{"id_award": a.id_award, "event_type": str(a.event_type)} for a in player_obj.awards] if hasattr(player_obj, 'awards') else []
-    
+
+    analytics = await service.get_player_full_analytics(player_id)
+    stats = PlayerStatsRead(**analytics["stats"])
+    season_stats = [SeasonStatsDetail(**s) for s in analytics["season_stats"]]
+    round_stats = [RoundStatsDetail(**r) for r in analytics["round_stats"]]
+
     return PlayerProfileRead(
         id_player=player_obj.id_player,
         nome=player_obj.nome,
@@ -84,8 +76,9 @@ async def get_player_profile(
         updated_at=player_obj.updated_at,
         stats=stats,
         season_stats=season_stats,
-        teams=teams,
-        awards=awards
+        round_stats=round_stats,
+        teams=analytics["teams"],
+        awards=analytics["awards"],
     )
 
 @router.get("/{player_id}", response_model=PlayerRead, status_code=status.HTTP_200_OK)

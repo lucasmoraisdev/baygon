@@ -32,9 +32,9 @@ class EventContextEnum(str, enum.Enum):
 
 class PosicaoEnum(str, enum.Enum):
     GOLEIRO = "goleiro"
-    PIVO = "pivo"
-    ALA = "ala"
-    FIXO = "fixo"
+    DEFENSORES = "defensores"
+    MEIAS = "meias"
+    ATACANTES = "atacantes"
 
 
 class PeEnum(str, enum.Enum):

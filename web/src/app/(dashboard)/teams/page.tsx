@@ -37,12 +37,13 @@ export default function TeamsPage() {
 	const [newTeam, setNewTeam] = useState<{
 		name: string;
 		round_id: string;
-		player_ids: string[];
+		player_ids: number[];
 	}>({
 		name: '',
 		round_id: '',
-		player_ids: ['', '', '', '', ''],
+		player_ids: [],
 	});
+	const [teamPlayerSearch, setTeamPlayerSearch] = useState('');
 
 	const [seasonsQuery, currentSeasonQuery, teamsQuery, playersQuery] =
 		useQueries({
@@ -72,6 +73,42 @@ export default function TeamsPage() {
 	const seasons: any[] = seasonsQuery.data ?? [];
 	const allTeams: any[] = teamsQuery.data ?? [];
 	const allPlayers: any[] = playersQuery.data ?? [];
+
+	const playerTeamInSelectedRoundMap = useMemo(() => {
+		const m = new Map<number, { id_team: number; name: string }>();
+		if (!newTeam.round_id) return m;
+		for (const t of allTeams) {
+			if (String(t.round_id) !== String(newTeam.round_id)) continue;
+			for (const p of t.players ?? []) {
+				m.set(p.id_player, { id_team: t.id_team, name: t.name });
+			}
+		}
+		return m;
+	}, [allTeams, newTeam.round_id]);
+
+	const filteredModalPlayers = useMemo(() => {
+		const q = teamPlayerSearch.toLowerCase().trim();
+		const base = !q
+			? allPlayers
+			: allPlayers.filter(
+					(p: any) =>
+						p.nome?.toLowerCase().includes(q) ||
+						p.apelido?.toLowerCase().includes(q),
+				);
+		return [...base].sort((a: any, b: any) => {
+			const aAssigned = playerTeamInSelectedRoundMap.has(a.id_player)
+				? 1
+				: 0;
+			const bAssigned = playerTeamInSelectedRoundMap.has(b.id_player)
+				? 1
+				: 0;
+			if (aAssigned !== bAssigned) return aAssigned - bAssigned;
+			return String(a.apelido || a.nome || '').localeCompare(
+				String(b.apelido || b.nome || ''),
+				'pt-BR',
+			);
+		});
+	}, [allPlayers, teamPlayerSearch, playerTeamInSelectedRoundMap]);
 
 	const selectedSeason =
 		selectedSeasonOverride ||
@@ -129,13 +166,21 @@ export default function TeamsPage() {
 			fetchAPI('/teams/', { method: 'POST', body: JSON.stringify(body) }),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['teams'] });
+			if (newTeam.round_id) {
+				queryClient.invalidateQueries({
+					queryKey: ['teams', 'round', String(newTeam.round_id)],
+				});
+			}
 			setIsTeamModalOpen(false);
 			setNewTeam({
 				name: '',
 				round_id: activeRound?.id_round?.toString() ?? '',
-				player_ids: ['', '', '', '', ''],
+				player_ids: [],
 			});
+			setTeamPlayerSearch('');
 		},
+		onError: (err: Error) =>
+			alert(`Erro ao criar time: ${err.message}`),
 	});
 
 	const handleStartRound = (e: React.FormEvent) => {
@@ -152,13 +197,13 @@ export default function TeamsPage() {
 
 	const handleCreateTeam = (e: React.FormEvent) => {
 		e.preventDefault();
-		const pIds = newTeam.player_ids
-			.filter((id) => id !== '')
-			.map((id) => parseInt(id));
+		const validPlayerIds = newTeam.player_ids.filter(
+			(pid) => !playerTeamInSelectedRoundMap.has(pid),
+		);
 		createTeamMutation.mutate({
-			name: newTeam.name,
-			round_id: parseInt(newTeam.round_id),
-			player_ids: pIds,
+			name: newTeam.name.trim(),
+			round_id: parseInt(newTeam.round_id, 10),
+			player_ids: validPlayerIds,
 		});
 	};
 
@@ -394,6 +439,7 @@ export default function TeamsPage() {
 								setNewTeam({
 									...newTeam,
 									round_id: e.target.value,
+									player_ids: [],
 								})
 							}
 							required
@@ -407,35 +453,98 @@ export default function TeamsPage() {
 							))}
 						</Select>
 					</FormField>
-					{[0, 1, 2, 3, 4].map((index) => (
-						<FormField key={index} label={`Pote ${index + 1}`}>
-							<Select
-								value={newTeam.player_ids[index]}
-								onChange={(e) => {
-									const newIds = [...newTeam.player_ids];
-									newIds[index] = e.target.value;
-									setNewTeam({
-										...newTeam,
-										player_ids: newIds,
-									});
-								}}
-								required
-							>
-								<option value="">Selecione o jogador...</option>
-								{allPlayers.map((p) => (
-									<option
+					<FormField
+						label={`Jogadores (${newTeam.player_ids.length} selecionados)`}
+					>
+						<Input
+							value={teamPlayerSearch}
+							onChange={(e) =>
+								setTeamPlayerSearch(e.target.value)
+							}
+							placeholder="Filtrar jogador..."
+							className="mb-2"
+						/>
+						{playerTeamInSelectedRoundMap.size > 0 && (
+							<p className="text-[11px] text-[#94a3b8] mb-2">
+								Jogadores já escalados em outro time desta
+								rodada exibem a tag do time e ficam bloqueados.
+								Para incluí-los aqui, remova-os primeiro do time
+								atual.
+							</p>
+						)}
+						<div className="max-h-56 overflow-y-auto border border-border rounded-md divide-y divide-border/50">
+							{filteredModalPlayers.map((p: any) => {
+								const assignedTeam =
+									playerTeamInSelectedRoundMap.get(
+										p.id_player,
+									);
+								const isAssigned = Boolean(assignedTeam);
+								const isChecked =
+									!isAssigned &&
+									newTeam.player_ids.includes(p.id_player);
+								return (
+									<label
 										key={p.id_player}
-										value={p.id_player}
+										className={`flex items-center justify-between gap-2 px-3 py-2 text-sm ${
+											isAssigned
+												? 'opacity-60 cursor-not-allowed bg-white/[0.01] text-[#94a3b8]'
+												: 'text-main hover:bg-white/5 cursor-pointer'
+										}`}
 									>
-										{p.nome}{' '}
-										{p.potes
-											? `(Pote Origem: ${p.potes})`
-											: ''}
-									</option>
-								))}
-							</Select>
-						</FormField>
-					))}
+										<div className="flex items-center gap-2 min-w-0">
+											<input
+												type="checkbox"
+												disabled={isAssigned}
+												checked={isChecked}
+												onChange={() => {
+													if (isAssigned) return;
+													setNewTeam((prev) => {
+														const exists =
+															prev.player_ids.includes(
+																p.id_player,
+															);
+														return {
+															...prev,
+															player_ids: exists
+																? prev.player_ids.filter(
+																		(id) =>
+																			id !==
+																			p.id_player,
+																	)
+																: [
+																		...prev.player_ids,
+																		p.id_player,
+																	],
+														};
+													});
+												}}
+												className={
+													isAssigned
+														? 'cursor-not-allowed opacity-50'
+														: 'cursor-pointer'
+												}
+											/>
+											<span className="truncate">
+												{p.apelido || p.nome}
+											</span>
+										</div>
+										{assignedTeam ? (
+											<span
+												className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 text-[#facc15] border border-amber-500/30 shrink-0"
+												title={`Escalado em ${assignedTeam.name}. Remova-o de lá para selecionar aqui.`}
+											>
+												{assignedTeam.name}
+											</span>
+										) : p.potes ? (
+											<span className="text-xs text-[#94a3b8] shrink-0">
+												Pote {p.potes}
+											</span>
+										) : null}
+									</label>
+								);
+							})}
+						</div>
+					</FormField>
 					<div className="flex gap-3 mt-2">
 						<Button
 							type="submit"

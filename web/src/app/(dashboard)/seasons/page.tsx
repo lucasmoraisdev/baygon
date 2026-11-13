@@ -9,6 +9,7 @@ import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { FormField } from '@/components/FormField';
 import { Modal } from '@/components/Modal';
+import { DatePicker } from '@/components/DatePicker';
 import { Plus, Search, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Season {
@@ -250,16 +251,14 @@ export default function SeasonsPage() {
             />
           </FormField>
           <FormField label="Data Inicial">
-            <Input
-              type="date"
+            <DatePicker
               value={newDate}
               onChange={(e) => setNewDate(e.target.value)}
               required
             />
           </FormField>
           <FormField label="Data de Encerramento">
-            <Input
-              type="date"
+            <DatePicker
               value={newEndDate}
               onChange={(e) => setNewEndDate(e.target.value)}
             />

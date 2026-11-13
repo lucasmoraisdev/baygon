@@ -21,10 +21,28 @@ export interface SeasonStats {
 	total_points: number;
 }
 
+export interface RoundStatsItem {
+	round_id: number;
+	round_number: number;
+	date?: string | null;
+	season_id: number;
+	season_name?: string | null;
+	total_matches: number;
+	total_wins: number;
+	total_losses: number;
+	total_draws: number;
+	total_goals: number;
+	total_assists: number;
+	total_points: number;
+}
+
 export interface Team {
 	id_team: number;
 	name: string;
 	round_id?: number;
+	season_id?: number;
+	season_name?: string | null;
+	round_number?: number | null;
 	players?: Array<{
 		id_player: number;
 		nome: string;
@@ -37,6 +55,11 @@ export interface Team {
 export interface Award {
 	id_award: number;
 	event_type: string;
+	round_id?: number;
+	season_id?: number;
+	season_name?: string | null;
+	round_number?: number | null;
+	date?: string | null;
 }
 
 export interface PlayerProfile {
@@ -55,6 +78,7 @@ export interface PlayerProfile {
 	updated_at: string;
 	stats: Stats;
 	season_stats: SeasonStats[];
+	round_stats?: RoundStatsItem[];
 	teams: Team[];
 	awards: Award[];
 }

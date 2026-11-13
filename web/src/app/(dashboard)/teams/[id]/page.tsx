@@ -45,22 +45,53 @@ export default function TeamDetailPage({ params }: { params: { id: string } }) {
 		queryFn: () => fetchAPI(`/teams/${params.id}`),
 	});
 
+	const roundId = teamQuery.data?.round_id;
+
+	const roundTeamsQuery = useQuery<TeamDetail[]>({
+		queryKey: ['teams', 'round', String(roundId ?? '')],
+		queryFn: () =>
+			fetchAPI(`/teams/round/${roundId}`).catch(() => []),
+		enabled: Boolean(roundId),
+	});
+
 	const playersQuery = useQuery<Player[]>({
 		queryKey: ['players'],
 		queryFn: () => fetchAPI('/players/').catch(() => []),
 		enabled: isAdmin && isEditOpen,
 	});
 
+	const otherTeamByPlayerId = useMemo(() => {
+		const m = new Map<number, { id_team: number; name: string }>();
+		const currentTeamId = teamQuery.data?.id_team;
+		for (const t of roundTeamsQuery.data ?? []) {
+			if (t.id_team === currentTeamId) continue;
+			for (const p of t.players ?? []) {
+				m.set(p.id_player, { id_team: t.id_team, name: t.name });
+			}
+		}
+		return m;
+	}, [roundTeamsQuery.data, teamQuery.data?.id_team]);
+
 	const allPlayers = playersQuery.data ?? [];
 	const filteredPlayers = useMemo(() => {
 		const q = playerSearch.toLowerCase().trim();
-		if (!q) return allPlayers;
-		return allPlayers.filter(
-			(p) =>
-				p.nome.toLowerCase().includes(q) ||
-				(p.apelido ?? '').toLowerCase().includes(q),
-		);
-	}, [allPlayers, playerSearch]);
+		const base = !q
+			? allPlayers
+			: allPlayers.filter(
+					(p) =>
+						p.nome.toLowerCase().includes(q) ||
+						(p.apelido ?? '').toLowerCase().includes(q),
+				);
+		return [...base].sort((a, b) => {
+			const aAssigned = otherTeamByPlayerId.has(a.id_player) ? 1 : 0;
+			const bAssigned = otherTeamByPlayerId.has(b.id_player) ? 1 : 0;
+			if (aAssigned !== bAssigned) return aAssigned - bAssigned;
+			return (a.apelido || a.nome).localeCompare(
+				b.apelido || b.nome,
+				'pt-BR',
+			);
+		});
+	}, [allPlayers, playerSearch, otherTeamByPlayerId]);
 
 	const updateTeamMutation = useMutation({
 		mutationFn: (body: { name: string; player_ids: number[] }) =>
@@ -71,6 +102,11 @@ export default function TeamDetailPage({ params }: { params: { id: string } }) {
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['team', params.id] });
 			queryClient.invalidateQueries({ queryKey: ['teams'] });
+			if (roundId) {
+				queryClient.invalidateQueries({
+					queryKey: ['teams', 'round', String(roundId)],
+				});
+			}
 			setIsEditOpen(false);
 		},
 		onError: (err: Error) =>
@@ -78,13 +114,16 @@ export default function TeamDetailPage({ params }: { params: { id: string } }) {
 	});
 
 	const deleteTeamMutation = useMutation({
-		mutationFn: (roundId: number) =>
+		mutationFn: (rId: number) =>
 			fetchAPI(`/teams/${params.id}`, { method: 'DELETE' }).then(
-				() => roundId,
+				() => rId,
 			),
-		onSuccess: (roundId: number) => {
+		onSuccess: (rId: number) => {
 			queryClient.invalidateQueries({ queryKey: ['teams'] });
-			router.push(`/rounds/${roundId}`);
+			queryClient.invalidateQueries({
+				queryKey: ['teams', 'round', String(rId)],
+			});
+			router.push(`/rounds/${rId}`);
 		},
 		onError: (err: Error) =>
 			alert(`Erro ao excluir time: ${err.message}`),
@@ -103,6 +142,23 @@ export default function TeamDetailPage({ params }: { params: { id: string } }) {
 		);
 		setPlayerSearch('');
 		setIsEditOpen(true);
+	};
+
+	const handleRemovePlayerFromTeam = (playerId: number, playerName: string) => {
+		if (
+			!window.confirm(
+				`Remover "${playerName}" do time "${team.name}"?`,
+			)
+		) {
+			return;
+		}
+		const remainingIds = (team.players ?? [])
+			.filter((p) => p.id_player !== playerId)
+			.map((p) => p.id_player);
+		updateTeamMutation.mutate({
+			name: team.name,
+			player_ids: remainingIds,
+		});
 	};
 
 	return (
@@ -173,13 +229,15 @@ export default function TeamDetailPage({ params }: { params: { id: string } }) {
 				) : (
 					<div className="divide-y divide-border">
 						{team.players.map((p) => (
-							<Link
+							<div
 								key={p.id_player}
-								href={`/players/${p.id_player}`}
-								className="flex items-center justify-between py-3 px-2 hover:bg-white/5 rounded transition-colors"
+								className="flex items-center justify-between py-3 px-2 hover:bg-white/5 rounded transition-colors gap-3"
 							>
-								<div>
-									<span className="text-sm font-medium text-main">
+								<Link
+									href={`/players/${p.id_player}`}
+									className="flex-1 min-w-0"
+								>
+									<span className="text-sm font-medium text-main hover:text-primary transition-colors">
 										{p.apelido || p.nome}
 									</span>
 									{p.apelido && p.apelido !== p.nome && (
@@ -187,8 +245,8 @@ export default function TeamDetailPage({ params }: { params: { id: string } }) {
 											({p.nome})
 										</span>
 									)}
-								</div>
-								<div className="flex items-center gap-3 text-xs text-muted">
+								</Link>
+								<div className="flex items-center gap-3 text-xs text-muted shrink-0">
 									{p.potes && (
 										<span className="px-2 py-0.5 rounded bg-primary/10 text-primary font-semibold">
 											Pote {p.potes}
@@ -199,9 +257,24 @@ export default function TeamDetailPage({ params }: { params: { id: string } }) {
 											{p.posicao}
 										</span>
 									)}
-									<span className="text-primary">→</span>
+									{isAdmin && (
+										<button
+											type="button"
+											disabled={updateTeamMutation.isPending}
+											onClick={() =>
+												handleRemovePlayerFromTeam(
+													p.id_player,
+													p.apelido || p.nome,
+												)
+											}
+											className="px-2 py-1 rounded border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 text-[11px] font-medium transition-colors cursor-pointer"
+											title="Remover jogador deste time"
+										>
+											Remover
+										</button>
+									)}
 								</div>
-							</Link>
+							</div>
 						))}
 					</div>
 				)}
@@ -230,39 +303,85 @@ export default function TeamDetailPage({ params }: { params: { id: string } }) {
 							placeholder="Ex: Time Azul"
 						/>
 					</FormField>
-					<FormField label={`Jogadores (${editPlayerIds.size})`}>
+					<FormField label={`Jogadores (${editPlayerIds.size} selecionados)`}>
 						<div className="flex flex-col gap-2">
 							<Input
 								placeholder="Buscar jogador..."
 								value={playerSearch}
 								onChange={(e) => setPlayerSearch(e.target.value)}
 							/>
-							<div className="max-h-52 overflow-y-auto border border-border rounded-lg divide-y divide-border">
+							{otherTeamByPlayerId.size > 0 && (
+								<p className="text-[11px] text-[#94a3b8]">
+									Jogadores já escalados em outro time desta
+									rodada exibem a tag do time e ficam
+									bloqueados. Para incluí-los aqui, remova-os
+									primeiro do time em que estão.
+								</p>
+							)}
+							<div className="max-h-56 overflow-y-auto border border-border rounded-lg divide-y divide-border">
 								{filteredPlayers.map((p) => {
-									const checked = editPlayerIds.has(p.id_player);
+									const assignedOtherTeam =
+										otherTeamByPlayerId.get(p.id_player);
+									const isAssignedOther =
+										Boolean(assignedOtherTeam);
+									const checked =
+										!isAssignedOther &&
+										editPlayerIds.has(p.id_player);
 									return (
 										<label
 											key={p.id_player}
-											className="flex items-center gap-2 px-3 py-1.5 text-xs cursor-pointer hover:bg-white/5"
+											className={`flex items-center justify-between gap-2 px-3 py-2 text-xs ${
+												isAssignedOther
+													? 'opacity-60 cursor-not-allowed bg-white/[0.01] text-[#94a3b8]'
+													: 'cursor-pointer hover:bg-white/5 text-main'
+											}`}
 										>
-											<input
-												type="checkbox"
-												checked={checked}
-												onChange={() =>
-													setEditPlayerIds((prev) => {
-														const next = new Set(prev);
-														next.has(p.id_player)
-															? next.delete(p.id_player)
-															: next.add(p.id_player);
-														return next;
-													})
-												}
-											/>
-											<span className="text-main">
-												{p.apelido || p.nome}
-											</span>
-											{p.potes ? (
-												<span className="text-muted ml-auto">
+											<div className="flex items-center gap-2 min-w-0">
+												<input
+													type="checkbox"
+													disabled={isAssignedOther}
+													checked={checked}
+													onChange={() => {
+														if (isAssignedOther)
+															return;
+														setEditPlayerIds(
+															(prev) => {
+																const next =
+																	new Set(
+																		prev,
+																	);
+																next.has(
+																	p.id_player,
+																)
+																	? next.delete(
+																			p.id_player,
+																		)
+																	: next.add(
+																			p.id_player,
+																		);
+																return next;
+															},
+														);
+													}}
+													className={
+														isAssignedOther
+															? 'cursor-not-allowed opacity-50'
+															: 'cursor-pointer'
+													}
+												/>
+												<span className="truncate">
+													{p.apelido || p.nome}
+												</span>
+											</div>
+											{assignedOtherTeam ? (
+												<span
+													className="ml-auto inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 text-[#facc15] border border-amber-500/30 shrink-0"
+													title={`Escalado em ${assignedOtherTeam.name}. Remova-o de lá para selecionar aqui.`}
+												>
+													{assignedOtherTeam.name}
+												</span>
+											) : p.potes ? (
+												<span className="text-muted ml-auto shrink-0">
 													Pote {p.potes}
 												</span>
 											) : null}

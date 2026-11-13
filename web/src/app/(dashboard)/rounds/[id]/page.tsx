@@ -1,6 +1,7 @@
 'use client';
 
 import { Button } from '@/components/Button';
+import { DatePicker } from '@/components/DatePicker';
 import { FormField } from '@/components/FormField';
 import { Input } from '@/components/Input';
 import { Loading } from '@/components/Loading';
@@ -12,13 +13,32 @@ import { Player, Round, Team } from '@/types/types';
 import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 export default function RoundDetail({ params }: { params: { id: string } }) {
 	const router = useRouter();
 	const queryClient = useQueryClient();
 	const { user } = useAuth();
 	const isAdmin = Boolean(user?.is_admin || user?.role === 'admin');
+
+	const [isMenuOpen, setIsMenuOpen] = useState(false);
+	const menuRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		const handleClickOutside = (e: MouseEvent) => {
+			if (
+				menuRef.current &&
+				!menuRef.current.contains(e.target as Node)
+			) {
+				setIsMenuOpen(false);
+			}
+		};
+		if (isMenuOpen) {
+			document.addEventListener('mousedown', handleClickOutside);
+		}
+		return () =>
+			document.removeEventListener('mousedown', handleClickOutside);
+	}, [isMenuOpen]);
 
 	const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
 	const [isMatchModalOpen, setIsMatchModalOpen] = useState(false);
@@ -126,15 +146,35 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 		return m;
 	}, [teams]);
 
+	const playerTeamInRoundMap = useMemo(() => {
+		const m = new Map<number, { id_team: number; name: string }>();
+		for (const t of teams) {
+			for (const p of t.players ?? []) {
+				m.set(p.id_player, { id_team: t.id_team, name: t.name });
+			}
+		}
+		return m;
+	}, [teams]);
+
 	const filteredPlayers = useMemo(() => {
 		const q = playerSearch.toLowerCase().trim();
-		if (!q) return allPlayers;
-		return allPlayers.filter(
-			(p) =>
-				p.nome.toLowerCase().includes(q) ||
-				p.apelido?.toLowerCase().includes(q),
-		);
-	}, [allPlayers, playerSearch]);
+		const base = !q
+			? allPlayers
+			: allPlayers.filter(
+					(p) =>
+						p.nome.toLowerCase().includes(q) ||
+						p.apelido?.toLowerCase().includes(q),
+				);
+		return [...base].sort((a, b) => {
+			const aAssigned = playerTeamInRoundMap.has(a.id_player) ? 1 : 0;
+			const bAssigned = playerTeamInRoundMap.has(b.id_player) ? 1 : 0;
+			if (aAssigned !== bAssigned) return aAssigned - bAssigned;
+			return (a.apelido || a.nome).localeCompare(
+				b.apelido || b.nome,
+				'pt-BR',
+			);
+		});
+	}, [allPlayers, playerSearch, playerTeamInRoundMap]);
 
 	const createTeamMutation = useMutation({
 		mutationFn: (body: object) =>
@@ -405,6 +445,7 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 	};
 
 	const togglePlayer = (id: number) => {
+		if (playerTeamInRoundMap.has(id)) return;
 		setSelectedPlayerIds((prev) => {
 			const next = new Set(prev);
 			next.has(id) ? next.delete(id) : next.add(id);
@@ -471,168 +512,319 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 
 	const round: Round = roundQuery.data;
 
+	const formattedRoundDate = (() => {
+		if (!round.date) return 'Data não definida';
+		const str = new Date(round.date).toLocaleDateString('pt-BR', {
+			weekday: 'short',
+			day: '2-digit',
+			month: 'short',
+			year: 'numeric',
+		});
+		return str.charAt(0).toUpperCase() + str.slice(1).replace(/\./g, '');
+	})();
+
+	const hasTeams = teams.length > 0;
+	const hasMatches = matches.length > 0;
+	const isFinished =
+		hasMatches &&
+		matches.every(
+			(m) =>
+				(m.home_score ?? m.score_home ?? 0) > 0 ||
+				(m.away_score ?? m.score_away ?? 0) > 0,
+		);
+
+	const statusBadge = (() => {
+		if (isFinished) {
+			return {
+				label: 'Concluída',
+				className: 'bg-emerald-500/15 text-[#4ade80]',
+			};
+		}
+		if (hasMatches) {
+			return {
+				label: 'Partidas em andamento',
+				className: 'bg-emerald-500/15 text-[#4ade80]',
+			};
+		}
+		if (hasTeams) {
+			return {
+				label: 'Times definidos',
+				className: 'bg-blue-500/15 text-[#60a5fa]',
+			};
+		}
+		return {
+			label: 'Aguardando presença',
+			className: 'bg-yellow-400/15 text-[#facc15]',
+		};
+	})();
+
+	const steps = [
+		{ num: 1, label: 'Presença', active: true },
+		{ num: 2, label: 'Times', active: hasTeams },
+		{ num: 3, label: 'Partidas', active: hasMatches },
+		{ num: 4, label: 'Pontuação', active: isFinished },
+	];
+
+	const noResponseCount = Math.max(
+		0,
+		allPlayers.length - attendance.items.length,
+	);
+	const maxVacancies = 20;
+	const capacityPct = Math.min(
+		100,
+		(attendance.confirmed_count / maxVacancies) * 100,
+	);
+
+	const openEditRoundModal = () => {
+		setEditRoundNumber(String(round.round_number));
+		setEditRoundDate(
+			round.date ? new Date(round.date).toISOString().slice(0, 10) : '',
+		);
+		setEditRoundLocation(round.location ?? '');
+		setEditRoundReferee(round.referee ?? '');
+		setIsMenuOpen(false);
+		setIsEditRoundOpen(true);
+	};
+
+	const handleDeleteRound = () => {
+		setIsMenuOpen(false);
+		if (
+			window.confirm(
+				`Tem certeza que deseja excluir a Rodada ${round.round_number}?`,
+			)
+		) {
+			deleteRoundMutation.mutate(round.season_id);
+		}
+	};
+
 	return (
-		<div className="flex flex-col gap-6 animate-slide-down">
-			<div className="flex items-center justify-between flex-wrap gap-4">
+		<div className="max-w-[1100px] w-full mx-auto flex flex-col gap-5 text-[#e6edf7] animate-slide-down">
+			{/* Header Row */}
+			<div className="flex flex-wrap items-start justify-between gap-4">
 				<div>
-					<h1 className="text-3xl text-main">
-						Rodada {round.round_number}
-					</h1>
-					<p className="text-sm text-muted mt-1">
-						{new Date(round.date).toLocaleDateString('pt-BR', {
-							weekday: 'long',
-							day: '2-digit',
-							month: 'long',
-							year: 'numeric',
-						})}{' '}
-						· {round.location} · Juiz: {round.referee}
+					<button
+						type="button"
+						onClick={() =>
+							router.push(
+								round.season_id
+									? `/seasons/${round.season_id}`
+									: '/seasons',
+							)
+						}
+						className="text-[13px] text-[#94a3b8] hover:text-[#e6edf7] transition-colors mb-1.5 inline-flex items-center gap-1 cursor-pointer"
+					>
+						← Rodadas
+					</button>
+					<div className="flex items-center gap-3 flex-wrap">
+						<h1 className="m-0 text-[28px] font-bold tracking-[-0.01em] text-[#e6edf7]">
+							Rodada {round.round_number}
+						</h1>
+						<span
+							className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${statusBadge.className}`}
+						>
+							● {statusBadge.label}
+						</span>
+					</div>
+					<p className="text-[#94a3b8] mt-1.5 text-sm">
+						{formattedRoundDate} · {round.location} · Juiz:{' '}
+						{round.referee}
 					</p>
 				</div>
+
 				{isAdmin && (
-					<div className="flex flex-wrap gap-3">
-						<Button
-							variant="ghost"
-							onClick={() => calculateScoresMutation.mutate()}
-							disabled={calculateScoresMutation.isPending}
-							className="w-auto"
+					<div className="flex items-center gap-2">
+						<button
+							type="button"
+							onClick={openEditRoundModal}
+							className="inline-flex items-center justify-center gap-2 min-h-[40px] px-4 rounded-[10px] border border-white/[0.14] bg-transparent hover:bg-white/[0.05] text-[#e6edf7] font-medium text-sm transition-colors cursor-pointer"
 						>
-							{calculateScoresMutation.isPending
-								? 'Calculando...'
-								: '⚡ Calcular Pontuações'}
-						</Button>
-						<Button
-							variant="ghost"
-							onClick={openDrawModal}
-							className="w-auto"
-						>
-							🎲 Sortear / Montar Times
-						</Button>
-						<Button
-							onClick={() => setIsTeamModalOpen(true)}
-							className="w-auto"
-						>
-							+ Time
-						</Button>
-						<Button
-							onClick={() => setIsMatchModalOpen(true)}
-							disabled={teams.length < 2}
-							className="w-auto"
-						>
-							+ Partida
-						</Button>
-						<Button
-							variant="ghost"
-							onClick={() => {
-								setEditRoundNumber(String(round.round_number));
-								setEditRoundDate(
-									round.date
-										? new Date(round.date).toISOString().slice(0, 10)
-										: '',
-								);
-								setEditRoundLocation(round.location ?? '');
-								setEditRoundReferee(round.referee ?? '');
-								setIsEditRoundOpen(true);
-							}}
-							className="w-auto"
-						>
-							Editar Rodada
-						</Button>
-						<Button
-							variant="danger"
-							disabled={deleteRoundMutation.isPending}
-							onClick={() => {
-								if (
-									window.confirm(
-										`Tem certeza que deseja excluir a Rodada ${round.round_number}?`,
-									)
-								) {
-									deleteRoundMutation.mutate(round.season_id);
-								}
-							}}
-							className="w-auto"
-						>
-							{deleteRoundMutation.isPending
-								? 'Excluindo...'
-								: 'Excluir Rodada'}
-						</Button>
+							Editar rodada
+						</button>
+
+						<div className="relative" ref={menuRef}>
+							<button
+								type="button"
+								onClick={() => setIsMenuOpen((prev) => !prev)}
+								title="Mais opções"
+								aria-label="Mais opções"
+								className="inline-flex items-center justify-center min-h-[40px] w-10 p-0 rounded-[10px] border border-white/[0.14] bg-transparent hover:bg-white/[0.05] text-[#e6edf7] text-lg transition-colors cursor-pointer"
+							>
+								⋯
+							</button>
+
+							{isMenuOpen && (
+								<div className="absolute right-0 mt-2 w-56 rounded-xl bg-[#111a2e] border border-white/10 shadow-2xl py-1.5 z-30">
+									<button
+										type="button"
+										onClick={() => {
+											setIsMenuOpen(false);
+											openDrawModal();
+										}}
+										className="w-full px-4 py-2 text-left text-sm text-[#e6edf7] hover:bg-white/[0.06] flex items-center gap-2.5 transition-colors cursor-pointer"
+									>
+										<span>🎲</span> Sortear / Montar times
+									</button>
+									<button
+										type="button"
+										disabled={
+											matches.length === 0 ||
+											calculateScoresMutation.isPending
+										}
+										onClick={() => {
+											setIsMenuOpen(false);
+											calculateScoresMutation.mutate();
+										}}
+										className="w-full px-4 py-2 text-left text-sm text-[#e6edf7] hover:bg-white/[0.06] disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2.5 transition-colors cursor-pointer"
+									>
+										<span>⚡</span> Calcular pontuações
+									</button>
+									<div className="my-1 border-t border-white/[0.07]" />
+									<button
+										type="button"
+										disabled={deleteRoundMutation.isPending}
+										onClick={handleDeleteRound}
+										className="w-full px-4 py-2 text-left text-sm text-[#f87171] hover:bg-red-500/10 flex items-center gap-2.5 transition-colors cursor-pointer"
+									>
+										<span>🗑️</span>{' '}
+										{deleteRoundMutation.isPending
+											? 'Excluindo...'
+											: 'Excluir rodada'}
+									</button>
+								</div>
+							)}
+						</div>
 					</div>
 				)}
 			</div>
 
-			{/* Lista de Presença */}
-			<div className="bg-surface border border-border rounded-xl p-5 flex flex-col gap-4">
-				<div className="flex items-center justify-between flex-wrap gap-3">
-					<div>
-						<h3 className="text-base font-semibold text-main">
-							📋 Lista de Presença
-						</h3>
-						<p className="text-xs text-muted mt-0.5">
-							Confirmados:{' '}
-							<strong className="text-green-400">
-								{attendance.confirmed_count}
-							</strong>{' '}
-							· Lista de espera:{' '}
-							<strong className="text-yellow-400">
-								{attendance.waiting_count}
-							</strong>{' '}
-							· Não vão:{' '}
-							<strong className="text-zinc-400">
-								{attendance.declined_count}
-							</strong>
-						</p>
+			{/* 4-Step Progress Bar */}
+			<div className="flex flex-wrap gap-2.5">
+				{steps.map((step) => (
+					<div
+						key={step.num}
+						className={`flex-1 min-w-[150px] flex items-center gap-2.5 px-3.5 py-3 rounded-xl font-medium text-sm transition-colors ${
+							step.active
+								? 'bg-blue-500/16 text-[#bfdbfe]'
+								: 'bg-white/[0.03] text-[#94a3b8]'
+						}`}
+					>
+						<span
+							className={`w-6 h-6 rounded-full inline-flex items-center justify-center text-xs font-bold ${
+								step.active
+									? 'bg-[#2563eb] text-white'
+									: 'bg-white/[0.08] text-[#94a3b8]'
+							}`}
+						>
+							{step.num}
+						</span>
+						{step.label}
 					</div>
+				))}
+			</div>
+
+			{/* Lista de Presença */}
+			<div className="bg-[#111a2e] border border-white/[0.07] rounded-[16px] p-6 flex flex-col gap-[18px]">
+				<div className="flex flex-wrap items-center justify-between gap-3">
+					<h2 className="m-0 text-lg font-semibold text-[#e6edf7]">
+						Lista de presença
+					</h2>
 					<div className="flex flex-wrap items-center gap-2">
-						<Button
-							size="sm"
-							variant="ghost"
+						<button
+							type="button"
 							disabled={myAttendanceMutation.isPending}
 							onClick={() =>
 								myAttendanceMutation.mutate('confirmed')
 							}
-							className="w-auto border-green-500/40 text-green-400 hover:bg-green-500/10"
+							className="inline-flex items-center justify-center gap-1.5 min-h-[36px] px-3 rounded-[10px] border border-emerald-500/35 bg-emerald-500/10 hover:bg-emerald-500/20 text-[#4ade80] text-xs font-semibold transition-colors cursor-pointer"
 						>
-							✅ Vou jogar
-						</Button>
-						<Button
-							size="sm"
-							variant="ghost"
+							✓ Vou jogar
+						</button>
+						<button
+							type="button"
 							disabled={myAttendanceMutation.isPending}
 							onClick={() =>
 								myAttendanceMutation.mutate('waiting')
 							}
-							className="w-auto border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10"
+							className="inline-flex items-center justify-center gap-1.5 min-h-[36px] px-3 rounded-[10px] border border-yellow-400/35 bg-yellow-400/10 hover:bg-yellow-400/20 text-[#facc15] text-xs font-semibold transition-colors cursor-pointer"
 						>
 							⏳ Espera
-						</Button>
-						<Button
-							size="sm"
-							variant="ghost"
+						</button>
+						<button
+							type="button"
 							disabled={myAttendanceMutation.isPending}
 							onClick={() =>
 								myAttendanceMutation.mutate('declined')
 							}
-							className="w-auto border-red-500/40 text-red-400 hover:bg-red-500/10"
+							className="inline-flex items-center justify-center gap-1.5 min-h-[36px] px-3 rounded-[10px] border border-red-500/35 bg-red-500/10 hover:bg-red-500/20 text-[#f87171] text-xs font-semibold transition-colors cursor-pointer"
 						>
-							❌ Não vou
-						</Button>
+							✕ Não vou
+						</button>
 						{isAdmin && (
-							<Button
-								size="sm"
+							<button
+								type="button"
 								onClick={openAttendanceModal}
-								className="w-auto"
+								className="inline-flex items-center justify-center gap-2 min-h-[40px] px-4 rounded-[10px] bg-[#2563eb] hover:bg-blue-500 text-white font-semibold text-sm transition-colors cursor-pointer"
 							>
-								Gerenciar Lista
-							</Button>
+								Gerenciar lista
+							</button>
 						)}
 					</div>
 				</div>
 
-				{attendance.items.length === 0 ? (
-					<p className="text-xs text-muted">
-						Nenhuma resposta registrada ainda para esta rodada.
-					</p>
-				) : (
-					<div className="flex flex-wrap gap-2">
+				{/* 4 Stat Tiles */}
+				<div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+					<div className="bg-white/[0.03] border border-white/[0.07] rounded-xl p-4">
+						<div className="text-[26px] font-bold text-[#4ade80] leading-tight">
+							{attendance.confirmed_count}
+						</div>
+						<div className="text-xs text-[#94a3b8] mt-1">
+							Confirmados
+						</div>
+					</div>
+					<div className="bg-white/[0.03] border border-white/[0.07] rounded-xl p-4">
+						<div className="text-[26px] font-bold text-[#facc15] leading-tight">
+							{attendance.waiting_count}
+						</div>
+						<div className="text-xs text-[#94a3b8] mt-1">
+							Lista de espera
+						</div>
+					</div>
+					<div className="bg-white/[0.03] border border-white/[0.07] rounded-xl p-4">
+						<div className="text-[26px] font-bold text-[#e6edf7] leading-tight">
+							{attendance.declined_count}
+						</div>
+						<div className="text-xs text-[#94a3b8] mt-1">
+							Não vão
+						</div>
+					</div>
+					<div className="bg-white/[0.03] border border-white/[0.07] rounded-xl p-4">
+						<div className="text-[26px] font-bold text-[#e6edf7] leading-tight">
+							{noResponseCount}
+						</div>
+						<div className="text-xs text-[#94a3b8] mt-1">
+							Sem resposta
+						</div>
+					</div>
+				</div>
+
+				{/* Capacity Progress Bar */}
+				<div>
+					<div className="flex justify-between text-[13px] text-[#94a3b8]">
+						<span>Confirmados</span>
+						<span>
+							{attendance.confirmed_count} de {maxVacancies} vagas
+						</span>
+					</div>
+					<div className="h-2 rounded bg-white/[0.07] mt-2 overflow-hidden">
+						<div
+							className="h-full bg-[#22c55e] transition-all duration-300"
+							style={{ width: `${capacityPct}%` }}
+						/>
+					</div>
+				</div>
+
+				{attendance.items.length > 0 && (
+					<div className="flex flex-wrap gap-2 pt-1 border-t border-white/[0.07]">
 						{attendance.items.map((item) => {
 							const label =
 								item.player?.apelido ||
@@ -640,10 +832,10 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 								`#${item.player_id}`;
 							const badgeStyle =
 								item.status === 'confirmed'
-									? 'bg-green-500/15 border-green-500/30 text-green-300'
+									? 'bg-emerald-500/15 border-emerald-500/30 text-[#4ade80]'
 									: item.status === 'waiting'
-										? 'bg-yellow-500/15 border-yellow-500/30 text-yellow-300'
-										: 'bg-zinc-500/15 border-zinc-500/30 text-zinc-400 line-through';
+										? 'bg-yellow-400/15 border-yellow-400/30 text-[#facc15]'
+										: 'bg-white/[0.04] border-white/10 text-[#94a3b8] line-through';
 							return (
 								<div
 									key={item.id_attendance}
@@ -663,7 +855,7 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 													item.player_id,
 												)
 											}
-											className="ml-1 opacity-70 hover:opacity-100"
+											className="ml-1 opacity-70 hover:opacity-100 cursor-pointer"
 											title="Remover da lista"
 										>
 											×
@@ -676,72 +868,196 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 				)}
 			</div>
 
-			<div className="flex gap-5 flex-wrap items-start">
+			{/* 2-Column Grid: Times & Partidas */}
+			<div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
 				{/* Times */}
-				<div className="flex-1 min-w-64">
-					<h3 className="text-base font-semibold mb-3">
-						Times Participantes ({teams.length})
-					</h3>
-					<div className="bg-surface border border-border rounded-xl divide-y divide-border">
-						{teams.length === 0 ? (
-							<p className="text-sm text-muted p-4">
-								Nenhum time registrado.
-							</p>
-						) : (
-							teams.map((t) => (
+				<div className="bg-[#111a2e] border border-white/[0.07] rounded-[16px] p-6 flex flex-col gap-[18px]">
+					<div className="flex flex-wrap items-center justify-between gap-2">
+						<h2 className="m-0 text-lg font-semibold text-[#e6edf7]">
+							Times{' '}
+							<span className="text-[#94a3b8] font-normal">
+								({teams.length})
+							</span>
+						</h2>
+						{isAdmin && (
+							<div className="flex items-center gap-2">
+								{teams.length > 0 && (
+									<button
+										type="button"
+										onClick={openDrawModal}
+										className="inline-flex items-center justify-center gap-2 min-h-[40px] px-3.5 rounded-[10px] border border-white/[0.14] bg-transparent hover:bg-white/[0.05] text-[#e6edf7] font-medium text-sm transition-colors cursor-pointer"
+									>
+										Sortear times
+									</button>
+								)}
+								<button
+									type="button"
+									onClick={() => {
+										setTeamName('');
+										setSelectedPlayerIds(new Set());
+										setPlayerSearch('');
+										setIsTeamModalOpen(true);
+									}}
+									className="inline-flex items-center justify-center gap-2 min-h-[40px] px-4 rounded-[10px] border border-white/[0.14] bg-transparent hover:bg-white/[0.05] text-[#e6edf7] font-medium text-sm transition-colors cursor-pointer"
+								>
+									+ Time
+								</button>
+							</div>
+						)}
+					</div>
+
+					{teams.length === 0 ? (
+						<div className="border border-dashed border-white/[0.14] rounded-xl py-7 px-5 text-center text-[#94a3b8] flex flex-col gap-3 items-center">
+							<div className="text-sm">
+								Nenhum time ainda. Sorteie automaticamente a
+								partir dos confirmados ou crie manualmente.
+							</div>
+							{isAdmin && (
+								<>
+									<button
+										type="button"
+										disabled={
+											attendance.confirmed_count === 0 &&
+											allPlayers.length === 0
+										}
+										onClick={openDrawModal}
+										className="inline-flex items-center justify-center gap-2 min-h-[40px] px-4 rounded-[10px] border border-white/[0.14] bg-transparent hover:bg-white/[0.05] disabled:opacity-45 disabled:cursor-not-allowed text-[#e6edf7] font-medium text-sm transition-colors cursor-pointer"
+									>
+										Sortear times
+									</button>
+									<small className="text-xs text-[#94a3b8]">
+										Disponível quando houver confirmados.
+									</small>
+								</>
+							)}
+						</div>
+					) : (
+						<div className="border border-white/[0.07] rounded-xl divide-y divide-white/[0.07] overflow-hidden">
+							{teams.map((t) => (
 								<Link
 									key={t.id_team}
 									href={`/teams/${t.id_team}`}
-									className="flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors text-sm text-main"
+									className="flex items-center justify-between gap-3 px-4 py-3.5 bg-white/[0.02] hover:bg-white/[0.05] transition-colors text-sm text-[#e6edf7]"
 								>
-									<span>{t.name}</span>
-									<span className="text-xs text-primary">
-										→
+									<div className="flex flex-col gap-1 min-w-0">
+										<span className="font-semibold">
+											{t.name}
+										</span>
+										{t.players && t.players.length > 0 && (
+											<span className="text-xs text-[#94a3b8] truncate">
+												{t.players
+													.map(
+														(p) =>
+															p.apelido || p.nome,
+													)
+													.join(', ')}
+											</span>
+										)}
+									</div>
+									<span className="text-xs text-[#60a5fa] shrink-0">
+										Editar / Ver →
 									</span>
 								</Link>
-							))
-						)}
-					</div>
+							))}
+						</div>
+					)}
 				</div>
 
 				{/* Partidas */}
-				<div className="flex-2 min-w-80">
-					<h3 className="text-base font-semibold mb-3">
-						Partidas ({matches.length})
-					</h3>
-					<div className="flex flex-col gap-3">
-						{matches.length === 0 ? (
-							<p className="text-sm text-muted">
-								Nenhuma partida criada.
-							</p>
-						) : (
-							matches.map((m) => {
+				<div className="bg-[#111a2e] border border-white/[0.07] rounded-[16px] p-6 flex flex-col gap-[18px]">
+					<div className="flex flex-wrap items-center justify-between gap-2">
+						<h2 className="m-0 text-lg font-semibold text-[#e6edf7]">
+							Partidas{' '}
+							<span className="text-[#94a3b8] font-normal">
+								({matches.length})
+							</span>
+						</h2>
+						{isAdmin && (
+							<div className="flex items-center gap-2">
+								<button
+									type="button"
+									disabled={
+										matches.length === 0 ||
+										calculateScoresMutation.isPending
+									}
+									onClick={() =>
+										calculateScoresMutation.mutate()
+									}
+									className="inline-flex items-center justify-center gap-2 min-h-[40px] px-4 rounded-[10px] border border-white/[0.14] bg-transparent hover:bg-white/[0.05] disabled:opacity-45 disabled:cursor-not-allowed text-[#e6edf7] font-medium text-sm transition-colors cursor-pointer"
+								>
+									{calculateScoresMutation.isPending
+										? 'Calculando...'
+										: 'Calcular pontuações'}
+								</button>
+								<button
+									type="button"
+									disabled={teams.length < 2}
+									onClick={() => setIsMatchModalOpen(true)}
+									className="inline-flex items-center justify-center gap-2 min-h-[40px] px-4 rounded-[10px] bg-[#2563eb] hover:bg-blue-500 disabled:opacity-45 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors cursor-pointer"
+								>
+									+ Partida
+								</button>
+							</div>
+						)}
+					</div>
+
+					{matches.length === 0 ? (
+						<div className="border border-dashed border-white/[0.14] rounded-xl py-7 px-5 text-center text-[#94a3b8] flex flex-col gap-3 items-center">
+							<div className="text-sm">
+								Nenhuma partida criada. Crie os times primeiro
+								para poder lançar partidas.
+							</div>
+						</div>
+					) : (
+						<div className="flex flex-col gap-2.5">
+							{matches.map((m) => {
 								const matchId = m.id_match ?? m.id;
-								const hScore = m.home_score ?? m.score_home ?? 0;
-								const aScore = m.away_score ?? m.score_away ?? 0;
+								const hScore =
+									m.home_score ?? m.score_home ?? 0;
+								const aScore =
+									m.away_score ?? m.score_away ?? 0;
 								return (
 									<Link
 										key={matchId}
 										href={`/matches/${matchId}`}
-										className="bg-surface border border-border rounded-xl p-4 flex items-center justify-between hover:border-primary transition-colors"
+										className="bg-white/[0.03] border border-white/[0.07] rounded-xl p-4 flex items-center justify-between hover:border-blue-500/40 hover:bg-white/[0.05] transition-colors"
 									>
-										<span className="text-sm font-medium text-main">
+										<span className="text-sm font-medium text-[#e6edf7]">
 											{teamMap.get(m.home_team_id) ??
 												`Time #${m.home_team_id}`}{' '}
-											vs{' '}
+											<span className="text-[#94a3b8]">
+												vs
+											</span>{' '}
 											{teamMap.get(m.away_team_id) ??
 												`Time #${m.away_team_id}`}
 										</span>
-										<span className="text-lg font-bold text-primary">
+										<span className="text-base font-bold text-[#60a5fa] bg-[#0b1220] border border-white/10 px-3 py-1 rounded-lg">
 											{hScore} x {aScore}
 										</span>
 									</Link>
 								);
-							})
-						)}
-					</div>
+							})}
+						</div>
+					)}
 				</div>
 			</div>
+
+			{/* Footer Danger Notice Banner */}
+			{isAdmin && (
+				<div className="bg-red-500/[0.05] border border-red-500/[0.22] rounded-[16px] px-6 py-4 flex flex-wrap gap-3 justify-between items-center">
+					<span className="text-[13px] text-[#94a3b8]">
+						Excluir rodada fica no menu ⋯ e pede confirmação.
+					</span>
+					<button
+						type="button"
+						disabled={deleteRoundMutation.isPending}
+						onClick={handleDeleteRound}
+						className="text-[#f87171] hover:underline font-medium text-[13px] cursor-pointer"
+					>
+						Ação irreversível
+					</button>
+				</div>
+			)}
 
 			{/* Modal Adicionar Time */}
 			<Modal
@@ -771,24 +1087,65 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 							placeholder="Filtrar jogador..."
 							className="mb-2"
 						/>
-						<div className="max-h-48 overflow-y-auto border border-border rounded-md divide-y divide-border/50">
-							{filteredPlayers.map((p) => (
-								<label
-									key={p.id_player}
-									className="flex items-center gap-2 px-3 py-2 text-sm text-main hover:bg-white/5 cursor-pointer"
-								>
-									<input
-										type="checkbox"
-										checked={selectedPlayerIds.has(
-											p.id_player,
-										)}
-										onChange={() =>
-											togglePlayer(p.id_player)
-										}
-									/>
-									<span>{p.apelido || p.nome}</span>
-								</label>
-							))}
+						{playerTeamInRoundMap.size > 0 && (
+							<p className="text-[11px] text-[#94a3b8] mb-2">
+								Jogadores já escalados em outro time desta
+								rodada exibem a tag do time e ficam bloqueados.
+								Para incluí-los aqui, remova-os primeiro do time
+								atual.
+							</p>
+						)}
+						<div className="max-h-56 overflow-y-auto border border-border rounded-md divide-y divide-border/50">
+							{filteredPlayers.map((p) => {
+								const assignedTeam = playerTeamInRoundMap.get(
+									p.id_player,
+								);
+								const isAssigned = Boolean(assignedTeam);
+								const isChecked =
+									!isAssigned &&
+									selectedPlayerIds.has(p.id_player);
+								return (
+									<label
+										key={p.id_player}
+										className={`flex items-center justify-between gap-2 px-3 py-2 text-sm ${
+											isAssigned
+												? 'opacity-60 cursor-not-allowed bg-white/[0.01] text-[#94a3b8]'
+												: 'text-main hover:bg-white/5 cursor-pointer'
+										}`}
+									>
+										<div className="flex items-center gap-2 min-w-0">
+											<input
+												type="checkbox"
+												disabled={isAssigned}
+												checked={isChecked}
+												onChange={() =>
+													togglePlayer(p.id_player)
+												}
+												className={
+													isAssigned
+														? 'cursor-not-allowed opacity-50'
+														: 'cursor-pointer'
+												}
+											/>
+											<span className="truncate">
+												{p.apelido || p.nome}
+											</span>
+										</div>
+										{assignedTeam ? (
+											<span
+												className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 text-[#facc15] border border-amber-500/30 shrink-0"
+												title={`Escalado em ${assignedTeam.name}. Remova-o de lá para selecionar aqui.`}
+											>
+												{assignedTeam.name}
+											</span>
+										) : p.potes ? (
+											<span className="text-xs text-[#94a3b8] shrink-0">
+												Pote {p.potes}
+											</span>
+										) : null}
+									</label>
+								);
+							})}
 						</div>
 					</FormField>
 
@@ -1255,8 +1612,7 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 						/>
 					</FormField>
 					<FormField label="Data">
-						<Input
-							type="date"
+						<DatePicker
 							value={editRoundDate}
 							onChange={(e) => setEditRoundDate(e.target.value)}
 							required

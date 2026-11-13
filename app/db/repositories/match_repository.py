@@ -22,8 +22,9 @@ class MatchRepository:
         """Busca uma partida pelo seu id."""
         stmt = (
             select(Match)
-            .options(selectinload(Match.events))
+            .options(selectinload(Match.events), selectinload(Match.filmed_by_user))
             .where(Match.id_match == match_id, Match.deleted_at.is_(None))
+            .execution_options(populate_existing=True)
         )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
@@ -31,7 +32,7 @@ class MatchRepository:
     async def get_all(self) -> Sequence[Match]:
         stmt = (
             select(Match)
-            .options(selectinload(Match.events))
+            .options(selectinload(Match.events), selectinload(Match.filmed_by_user))
             .where(Match.deleted_at.is_(None))
             .order_by(Match.id_match.desc())
         )
@@ -42,7 +43,7 @@ class MatchRepository:
         """Busca todas as partidas de um round."""
         stmt = (
             select(Match)
-            .options(selectinload(Match.events))
+            .options(selectinload(Match.events), selectinload(Match.filmed_by_user))
             .where(Match.round_id == round_id, Match.deleted_at.is_(None))
             .order_by(Match.id_match.asc())
         )
@@ -53,7 +54,7 @@ class MatchRepository:
         """Busca todas as partidas de uma temporada via Round."""
         stmt = (
             select(Match)
-            .options(selectinload(Match.events))
+            .options(selectinload(Match.events), selectinload(Match.filmed_by_user))
             .join(Round, Round.id_round == Match.round_id)
             .where(
                 Round.season_id == season_id,
@@ -69,7 +70,7 @@ class MatchRepository:
         """Busca todas as partidas de um time numa rodada."""
         stmt = (
             select(Match)
-            .options(selectinload(Match.events))
+            .options(selectinload(Match.events), selectinload(Match.filmed_by_user))
             .where(
                 Match.round_id == round_id,
                 Match.deleted_at.is_(None),
