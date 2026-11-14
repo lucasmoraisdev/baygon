@@ -60,6 +60,7 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 	const [showExtraPlayers, setShowExtraPlayers] = useState(false);
 	const [showExtraCameramen, setShowExtraCameramen] = useState(false);
 	const [cameramanSearch, setCameramanSearch] = useState('');
+	const [isEditing, setIsEditing] = useState(false);
 
 	const [matchQuery, eventsQuery, playersQuery] = useQueries({
 		queries: [
@@ -207,6 +208,15 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 	const activeTeam = selectedSide === 'home' ? homeTeam : awayTeam;
 	const opponentTeam = selectedSide === 'home' ? awayTeam : homeTeam;
 
+	// Jogadores do time adversário: um passe deles para o gol vira "ouro"
+	const opponentRoster: TeamPlayer[] = opponentTeam?.players ?? [];
+	const opponentPlayerIds = useMemo(
+		() => new Set(opponentRoster.map((p) => p.id_player)),
+		[opponentRoster],
+	);
+	const assistIsOuro =
+		selectedAssistId !== null && opponentPlayerIds.has(selectedAssistId);
+
 	const activeRoster = useMemo(() => {
 		if (activeTeam?.players && activeTeam.players.length > 0) {
 			return activeTeam.players;
@@ -262,16 +272,18 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 			teamSide,
 			playerId,
 			assistPlayerId,
+			assistType,
 		}: {
 			type:
-				| 'gol'
-				| 'gol_contra'
-				| 'cartao_amarelo'
-				| 'cartao_vermelho'
-				| 'ouro';
+			| 'gol'
+			| 'gol_contra'
+			| 'cartao_amarelo'
+			| 'cartao_vermelho'
+			| 'ouro';
 			teamSide: 'home' | 'away';
 			playerId: number;
 			assistPlayerId?: number | null;
+			assistType?: 'assistencia' | 'ouro';
 		}) => {
 			const playId = type === 'gol' ? nextPlayId : undefined;
 			await fetchAPI('/events/', {
@@ -289,11 +301,12 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 				assistPlayerId &&
 				assistPlayerId !== playerId
 			) {
+				// Assistência de companheiro = 'assistencia'; passe do adversário = 'ouro'
 				await fetchAPI('/events/', {
 					method: 'POST',
 					body: JSON.stringify({
 						match_id: parseInt(params.id, 10),
-						event_type: 'assistencia',
+						event_type: assistType ?? 'assistencia',
 						player_id: assistPlayerId,
 						play_id: playId ?? null,
 					}),
@@ -374,7 +387,7 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 	});
 
 	const finishMatchMutation = useMutation({
-		mutationFn: async () => {
+		mutationFn: async (_opts: { redirect: boolean }) => {
 			const currentHome = match.home_score ?? match.score_home ?? 0;
 			const currentAway = match.away_score ?? match.score_away ?? 0;
 			const outcome =
@@ -390,12 +403,16 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 					score_home: currentHome,
 					score_away: currentAway,
 					event_type: outcome,
+					is_finished: true,
 				}),
 			});
 		},
-		onSuccess: () => {
+		onSuccess: (_data, opts) => {
 			invalidateMatch();
-			router.push(`/rounds/${match.round_id}`);
+			setIsEditing(false);
+			if (opts.redirect) {
+				router.push(`/rounds/${match.round_id}`);
+			}
 		},
 		onError: (err: Error) => {
 			alert(`Erro ao encerrar partida: ${err.message}`);
@@ -425,7 +442,7 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 		const pairedAssistIds = new Set<number>();
 
 		for (const e of events) {
-			if (e.event_type === 'assistencia' && e.play_id) {
+			if ((e.event_type === 'assistencia' || e.event_type === 'ouro') && e.play_id) {
 				assistByPlayId.set(e.play_id, e);
 			}
 		}
@@ -438,7 +455,7 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 			const e = events[i];
 			const eid = e.id_event ?? e.id_match_event ?? i;
 
-			if (e.event_type === 'assistencia' && e.play_id) {
+			if ((e.event_type === 'assistencia' || e.event_type === 'ouro') && e.play_id) {
 				const hasMatchingGoal = events.some(
 					(g) => g.event_type === 'gol' && g.play_id === e.play_id,
 				);
@@ -487,6 +504,8 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 
 	const homeScore = match.home_score ?? match.score_home ?? 0;
 	const awayScore = match.away_score ?? match.score_away ?? 0;
+	const isFinished = Boolean(match.is_finished);
+	const readOnly = isFinished && !isEditing;
 	const homeTeamName = homeTeam?.name ?? `Time #${match.home_team_id}`;
 	const awayTeamName = awayTeam?.name ?? `Time #${match.away_team_id}`;
 	const opponentTeamName =
@@ -532,6 +551,7 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 			teamSide: selectedSide,
 			playerId: selectedPlayerId,
 			assistPlayerId: type === 'gol' ? selectedAssistId : null,
+			assistType: assistIsOuro ? 'ouro' : 'assistencia',
 		});
 	};
 
@@ -547,33 +567,78 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 						← Rodada #{match.round_id}
 					</Link>
 					<h1 className="m-0 text-2xl font-bold text-[#e6edf7]">
-						Cobertura ao vivo
+						{readOnly
+							? 'Resumo da partida'
+							: isEditing
+								? 'Editando partida'
+								: 'Cobertura ao vivo'}
 					</h1>
 				</div>
 
 				<div className="flex gap-3 items-center flex-wrap">
-					<span className="inline-flex items-center gap-2 text-[13px] font-semibold px-3 py-[5px] rounded-full bg-emerald-500/[0.14] text-[#4ade80]">
-						<span className="w-2 h-2 rounded-full bg-[#4ade80] animate-pulse" />
-						Ao vivo · Partida #{match.id_match ?? match.id}
-					</span>
-					<button
-						type="button"
-						disabled={finishMatchMutation.isPending}
-						onClick={() => {
-							if (
-								window.confirm(
-									`Encerrar partida com placar ${homeTeamName} ${homeScore} × ${awayScore} ${awayTeamName}?`,
-								)
-							) {
-								finishMatchMutation.mutate();
-							}
-						}}
-						className="min-h-[40px] px-4 rounded-[10px] border border-white/[0.14] bg-transparent hover:bg-white/[0.05] text-[#e6edf7] font-medium text-sm cursor-pointer transition-colors"
-					>
-						{finishMatchMutation.isPending
-							? 'Encerrando...'
-							: 'Encerrar partida'}
-					</button>
+					{isFinished ? (
+						<span className="inline-flex items-center gap-2 text-[13px] font-semibold px-3 py-[5px] rounded-full bg-zinc-500/15 border border-zinc-500/30 text-zinc-300">
+							<span className="w-2 h-2 rounded-full bg-zinc-400" />
+							Encerrada · Partida #{match.id_match ?? match.id}
+						</span>
+					) : (
+						<span className="inline-flex items-center gap-2 text-[13px] font-semibold px-3 py-[5px] rounded-full bg-emerald-500/[0.14] text-[#4ade80]">
+							<span className="w-2 h-2 rounded-full bg-[#4ade80] animate-pulse" />
+							Ao vivo · Partida #{match.id_match ?? match.id}
+						</span>
+					)}
+
+					{readOnly ? (
+						<button
+							type="button"
+							onClick={() => setIsEditing(true)}
+							className="min-h-[40px] px-4 rounded-[10px] border border-blue-500/40 bg-blue-500/10 hover:bg-blue-500/20 text-[#bfdbfe] font-medium text-sm cursor-pointer transition-colors"
+						>
+							Editar partida
+						</button>
+					) : isEditing ? (
+						<>
+							<button
+								type="button"
+								disabled={finishMatchMutation.isPending}
+								onClick={() => setIsEditing(false)}
+								className="min-h-[40px] px-4 rounded-[10px] border border-white/[0.14] bg-transparent hover:bg-white/[0.05] text-[#94a3b8] font-medium text-sm cursor-pointer transition-colors"
+							>
+								Cancelar
+							</button>
+							<button
+								type="button"
+								disabled={finishMatchMutation.isPending}
+								onClick={() =>
+									finishMatchMutation.mutate({ redirect: false })
+								}
+								className="min-h-[40px] px-4 rounded-[10px] border border-[#2563eb] bg-[#2563eb] hover:bg-blue-500 text-white font-medium text-sm cursor-pointer transition-colors disabled:opacity-50"
+							>
+								{finishMatchMutation.isPending
+									? 'Salvando...'
+									: 'Salvar alterações'}
+							</button>
+						</>
+					) : (
+						<button
+							type="button"
+							disabled={finishMatchMutation.isPending}
+							onClick={() => {
+								if (
+									window.confirm(
+										`Encerrar partida com placar ${homeTeamName} ${homeScore} × ${awayScore} ${awayTeamName}?`,
+									)
+								) {
+									finishMatchMutation.mutate({ redirect: true });
+								}
+							}}
+							className="min-h-[40px] px-4 rounded-[10px] border border-white/[0.14] bg-transparent hover:bg-white/[0.05] text-[#e6edf7] font-medium text-sm cursor-pointer transition-colors"
+						>
+							{finishMatchMutation.isPending
+								? 'Encerrando...'
+								: 'Encerrar partida'}
+						</button>
+					)}
 				</div>
 			</div>
 
@@ -633,26 +698,24 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 							<button
 								key={player.id_player}
 								type="button"
-								disabled={updateCameramanMutation.isPending}
+								disabled={readOnly || updateCameramanMutation.isPending}
 								onClick={() =>
 									updateCameramanMutation.mutate(
 										player.id_player,
 									)
 								}
-								className={`min-h-[38px] px-3.5 rounded-[10px] border inline-flex items-center gap-2 text-sm transition-colors cursor-pointer disabled:opacity-50 ${
-									isSelected
-										? 'bg-[#2563eb] border-[#2563eb] text-white font-semibold'
-										: 'border-white/[0.12] bg-white/[0.03] hover:bg-white/[0.06] text-[#e6edf7] font-medium'
-								}`}
+								className={`min-h-[38px] px-3.5 rounded-[10px] border inline-flex items-center gap-2 text-sm transition-colors cursor-pointer disabled:opacity-50 ${isSelected
+									? 'bg-[#2563eb] border-[#2563eb] text-white font-semibold'
+									: 'border-white/[0.12] bg-white/[0.03] hover:bg-white/[0.06] text-[#e6edf7] font-medium'
+									}`}
 							>
 								<span>{player.apelido || player.nome}</span>
 								{teamName && (
 									<span
-										className={`text-[11px] px-1.5 py-0.5 rounded ${
-											isSelected
-												? 'bg-white/20 text-white'
-												: 'bg-white/[0.06] text-[#94a3b8]'
-										}`}
+										className={`text-[11px] px-1.5 py-0.5 rounded ${isSelected
+											? 'bg-white/20 text-white'
+											: 'bg-white/[0.06] text-[#94a3b8]'
+											}`}
 									>
 										{teamName}
 									</span>
@@ -661,7 +724,7 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 						);
 					})}
 
-					{otherCameramen.length > 0 && (
+					{!readOnly && otherCameramen.length > 0 && (
 						<button
 							type="button"
 							onClick={() =>
@@ -691,19 +754,16 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 									<button
 										key={p.id_player}
 										type="button"
-										disabled={
-											updateCameramanMutation.isPending
-										}
+										disabled={readOnly || updateCameramanMutation.isPending}
 										onClick={() =>
 											updateCameramanMutation.mutate(
 												p.id_player,
 											)
 										}
-										className={`min-h-[34px] px-3 rounded-lg border inline-flex items-center text-xs transition-colors cursor-pointer disabled:opacity-50 ${
-											isSelected
-												? 'bg-[#2563eb] border-[#2563eb] text-white font-semibold'
-												: 'border-white/[0.12] bg-white/[0.02] hover:bg-white/[0.05] text-[#94a3b8]'
-										}`}
+										className={`min-h-[34px] px-3 rounded-lg border inline-flex items-center text-xs transition-colors cursor-pointer disabled:opacity-50 ${isSelected
+											? 'bg-[#2563eb] border-[#2563eb] text-white font-semibold'
+											: 'border-white/[0.12] bg-white/[0.02] hover:bg-white/[0.05] text-[#94a3b8]'
+											}`}
 									>
 										{p.apelido || p.nome}
 									</button>
@@ -715,92 +775,50 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 			</section>
 
 			{/* 2-Column Main Grid */}
-			<div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+			<div className={`grid grid-cols-1 gap-5 items-start ${readOnly ? '' : 'lg:grid-cols-2'}`}>
 				{/* Left Card: Registrar evento */}
-				<section className="bg-[#111a2e] border border-white/[0.07] rounded-[16px] p-6 flex flex-col gap-[22px]">
-					<h2 className="m-0 text-base font-semibold text-[#e6edf7]">
-						Registrar evento
-					</h2>
+				{!readOnly && (
+					<section className="bg-[#111a2e] border border-white/[0.07] rounded-[16px] p-6 flex flex-col gap-[22px]">
+						<h2 className="m-0 text-base font-semibold text-[#e6edf7]">
+							Registrar evento
+						</h2>
 
-					{/* TIME Segmented Control */}
-					<div>
-						<div className="text-xs tracking-[0.08em] text-[#64748b] font-semibold mb-2.5 uppercase">
-							TIME
-						</div>
-						<div className="flex bg-[#0b1220] border border-white/[0.12] rounded-[10px] p-[3px]">
-							<button
-								type="button"
-								onClick={() => handleSelectSide('home')}
-								className={`flex-1 text-center py-[9px] px-3 rounded-[7px] font-semibold text-sm transition-colors cursor-pointer truncate ${
-									selectedSide === 'home'
-										? 'bg-blue-500/20 text-[#bfdbfe]'
-										: 'text-[#94a3b8] hover:text-[#e6edf7]'
-								}`}
-							>
-								{homeTeamName}
-							</button>
-							<button
-								type="button"
-								onClick={() => handleSelectSide('away')}
-								className={`flex-1 text-center py-[9px] px-3 rounded-[7px] font-semibold text-sm transition-colors cursor-pointer truncate ${
-									selectedSide === 'away'
-										? 'bg-blue-500/20 text-[#bfdbfe]'
-										: 'text-[#94a3b8] hover:text-[#e6edf7]'
-								}`}
-							>
-								{awayTeamName}
-							</button>
-						</div>
-					</div>
-
-					{/* JOGADOR Pills */}
-					<div>
-						<div className="text-xs tracking-[0.08em] text-[#64748b] font-semibold mb-2.5 uppercase">
-							JOGADOR
-						</div>
-						<div className="flex flex-wrap gap-2">
-							{activeRoster.map((p) => {
-								const isSelected =
-									selectedPlayerId === p.id_player;
-								return (
-									<button
-										key={p.id_player}
-										type="button"
-										onClick={() => {
-											setSelectedPlayerId(p.id_player);
-											if (
-												selectedAssistId === p.id_player
-											) {
-												setSelectedAssistId(null);
-											}
-										}}
-										className={`min-h-[40px] px-4 rounded-[10px] border inline-flex items-center text-sm transition-colors cursor-pointer ${
-											isSelected
-												? 'bg-[#2563eb] border-[#2563eb] text-white font-semibold'
-												: 'border-white/[0.12] bg-white/[0.03] hover:bg-white/[0.06] text-[#e6edf7] font-medium'
-										}`}
-									>
-										{p.apelido || p.nome}
-									</button>
-								);
-							})}
-
-							{extraPlayers.length > 0 && (
+						{/* TIME Segmented Control */}
+						<div>
+							<div className="text-xs tracking-[0.08em] text-[#64748b] font-semibold mb-2.5 uppercase">
+								TIME
+							</div>
+							<div className="flex bg-[#0b1220] border border-white/[0.12] rounded-[10px] p-[3px]">
 								<button
 									type="button"
-									onClick={() =>
-										setShowExtraPlayers((prev) => !prev)
-									}
-									className="min-h-[40px] px-4 rounded-[10px] border border-dashed border-white/[0.18] bg-white/[0.02] hover:bg-white/[0.05] text-[#94a3b8] inline-flex items-center text-sm font-medium cursor-pointer transition-colors"
+									onClick={() => handleSelectSide('home')}
+									className={`flex-1 text-center py-[9px] px-3 rounded-[7px] font-semibold text-sm transition-colors cursor-pointer truncate ${selectedSide === 'home'
+										? 'bg-blue-500/20 text-[#bfdbfe]'
+										: 'text-[#94a3b8] hover:text-[#e6edf7]'
+										}`}
 								>
-									Outros jogadores {showExtraPlayers ? '⌃' : '⌄'}
+									{homeTeamName}
 								</button>
-							)}
+								<button
+									type="button"
+									onClick={() => handleSelectSide('away')}
+									className={`flex-1 text-center py-[9px] px-3 rounded-[7px] font-semibold text-sm transition-colors cursor-pointer truncate ${selectedSide === 'away'
+										? 'bg-blue-500/20 text-[#bfdbfe]'
+										: 'text-[#94a3b8] hover:text-[#e6edf7]'
+										}`}
+								>
+									{awayTeamName}
+								</button>
+							</div>
 						</div>
 
-						{showExtraPlayers && extraPlayers.length > 0 && (
-							<div className="mt-2.5 pt-2.5 border-t border-white/[0.07] flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
-								{extraPlayers.map((p) => {
+						{/* JOGADOR Pills */}
+						<div>
+							<div className="text-xs tracking-[0.08em] text-[#64748b] font-semibold mb-2.5 uppercase">
+								JOGADOR
+							</div>
+							<div className="flex flex-wrap gap-2">
+								{activeRoster.map((p) => {
 									const isSelected =
 										selectedPlayerId === p.id_player;
 									return (
@@ -808,154 +826,209 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 											key={p.id_player}
 											type="button"
 											onClick={() => {
-												setSelectedPlayerId(
-													p.id_player,
-												);
+												setSelectedPlayerId(p.id_player);
 												if (
-													selectedAssistId ===
-													p.id_player
+													selectedAssistId === p.id_player
 												) {
 													setSelectedAssistId(null);
 												}
 											}}
-											className={`min-h-[34px] px-3 rounded-lg border inline-flex items-center text-xs transition-colors cursor-pointer ${
-												isSelected
+											className={`min-h-[40px] px-4 rounded-[10px] border inline-flex items-center text-sm transition-colors cursor-pointer ${isSelected
+												? 'bg-[#2563eb] border-[#2563eb] text-white font-semibold'
+												: 'border-white/[0.12] bg-white/[0.03] hover:bg-white/[0.06] text-[#e6edf7] font-medium'
+												}`}
+										>
+											{p.apelido || p.nome}
+										</button>
+									);
+								})}
+
+								{extraPlayers.length > 0 && (
+									<button
+										type="button"
+										onClick={() =>
+											setShowExtraPlayers((prev) => !prev)
+										}
+										className="min-h-[40px] px-4 rounded-[10px] border border-dashed border-white/[0.18] bg-white/[0.02] hover:bg-white/[0.05] text-[#94a3b8] inline-flex items-center text-sm font-medium cursor-pointer transition-colors"
+									>
+										Outros jogadores {showExtraPlayers ? '⌃' : '⌄'}
+									</button>
+								)}
+							</div>
+
+							{showExtraPlayers && extraPlayers.length > 0 && (
+								<div className="mt-2.5 pt-2.5 border-t border-white/[0.07] flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
+									{extraPlayers.map((p) => {
+										const isSelected =
+											selectedPlayerId === p.id_player;
+										return (
+											<button
+												key={p.id_player}
+												type="button"
+												onClick={() => {
+													setSelectedPlayerId(
+														p.id_player,
+													);
+													if (
+														selectedAssistId ===
+														p.id_player
+													) {
+														setSelectedAssistId(null);
+													}
+												}}
+												className={`min-h-[34px] px-3 rounded-lg border inline-flex items-center text-xs transition-colors cursor-pointer ${isSelected
 													? 'bg-[#2563eb] border-[#2563eb] text-white font-semibold'
 													: 'border-white/[0.12] bg-white/[0.02] hover:bg-white/[0.05] text-[#94a3b8]'
-											}`}
-										>
-											{p.apelido || p.nome}
-										</button>
-									);
-								})}
-							</div>
-						)}
-					</div>
-
-					{/* ASSISTÊNCIA (OPCIONAL) Pills */}
-					<div>
-						<div className="text-xs tracking-[0.08em] text-[#64748b] font-semibold mb-2.5 uppercase">
-							ASSISTÊNCIA (OPCIONAL)
+													}`}
+											>
+												{p.apelido || p.nome}
+											</button>
+										);
+									})}
+								</div>
+							)}
 						</div>
-						<div className="flex flex-wrap gap-2">
-							<button
-								type="button"
-								onClick={() => setSelectedAssistId(null)}
-								className={`min-h-[40px] px-4 rounded-[10px] border inline-flex items-center text-sm transition-colors cursor-pointer ${
-									selectedAssistId === null
+
+						{/* ASSISTÊNCIA (OPCIONAL) Pills */}
+						<div>
+							<div className="text-xs tracking-[0.08em] text-[#64748b] font-semibold mb-2.5 uppercase">
+								ASSISTÊNCIA OU OURO (OPCIONAL)
+							</div>
+							<div className="flex flex-wrap gap-2">
+								<button
+									type="button"
+									onClick={() => setSelectedAssistId(null)}
+									className={`min-h-[40px] px-4 rounded-[10px] border inline-flex items-center text-sm transition-colors cursor-pointer ${selectedAssistId === null
 										? 'bg-blue-500/20 border-blue-500/40 text-[#bfdbfe] font-semibold'
 										: 'border-white/[0.12] bg-white/[0.03] hover:bg-white/[0.06] text-[#e6edf7] font-medium'
-								}`}
-							>
-								Sem assistência
-							</button>
+										}`}
+								>
+									Sem assistência
+								</button>
 
-							{activeRoster
-								.filter((p) => p.id_player !== selectedPlayerId)
-								.map((p) => {
-									const isAssistSelected =
-										selectedAssistId === p.id_player;
-									return (
-										<button
-											key={p.id_player}
-											type="button"
-											onClick={() =>
-												setSelectedAssistId(
-													isAssistSelected
-														? null
-														: p.id_player,
-												)
-											}
-											className={`min-h-[40px] px-4 rounded-[10px] border inline-flex items-center text-sm transition-colors cursor-pointer ${
-												isAssistSelected
+								{activeRoster
+									.filter((p) => p.id_player !== selectedPlayerId)
+									.map((p) => {
+										const isAssistSelected =
+											selectedAssistId === p.id_player;
+										return (
+											<button
+												key={p.id_player}
+												type="button"
+												onClick={() =>
+													setSelectedAssistId(
+														isAssistSelected
+															? null
+															: p.id_player,
+													)
+												}
+												className={`min-h-[40px] px-4 rounded-[10px] border inline-flex items-center text-sm transition-colors cursor-pointer ${isAssistSelected
 													? 'bg-blue-500/20 border-blue-500/40 text-[#bfdbfe] font-semibold'
 													: 'border-white/[0.12] bg-white/[0.03] hover:bg-white/[0.06] text-[#e6edf7] font-medium'
-											}`}
-										>
-											{p.apelido || p.nome}
-										</button>
-									);
-								})}
+													}`}
+											>
+												{p.apelido || p.nome}
+											</button>
+										);
+									})}
+							</div>
+							{opponentRoster.length > 0 && (
+								<div className="mt-3">
+									<div className="text-[11px] text-[#94a3b8] mb-2 flex items-center gap-1.5">
+										<span className="w-[9px] h-3 rounded-[2px] bg-[#3b82f6] inline-block" />
+										Ouro — passe de um jogador do adversário ({opponentTeam?.name ?? 'adversário'})
+									</div>
+									<div className="flex flex-wrap gap-2">
+										{opponentRoster.map((p) => {
+											const isOuroSelected = selectedAssistId === p.id_player;
+											return (
+												<button
+													key={`ouro-${p.id_player}`}
+													type="button"
+													onClick={() =>
+														setSelectedAssistId(isOuroSelected ? null : p.id_player)
+													}
+													className={`min-h-[40px] px-4 rounded-[10px] border inline-flex items-center gap-2 text-sm transition-colors cursor-pointer ${isOuroSelected
+														? 'bg-[#3b82f6]/25 border-[#3b82f6]/60 text-[#bfdbfe] font-semibold'
+														: 'border-dashed border-white/[0.14] bg-white/[0.02] hover:bg-white/[0.05] text-[#94a3b8] font-medium'
+														}`}
+												>
+													<span className="w-[9px] h-3 rounded-[2px] bg-[#3b82f6] inline-block" />
+													{p.apelido || p.nome}
+												</button>
+											);
+										})}
+									</div>
+								</div>
+							)}
 						</div>
-					</div>
 
-					{/* EVENTO PARA JOGADOR */}
-					<div>
-						<div className="text-xs tracking-[0.08em] text-[#64748b] font-semibold mb-2.5 uppercase">
-							EVENTO PARA {selectedPlayerLabel}
-						</div>
-
-						<button
-							type="button"
-							disabled={
-								!selectedPlayerId || eventMutation.isPending
-							}
-							onClick={() => handleRegisterEvent('gol')}
-							className="w-full min-h-[52px] rounded-[10px] border border-[#16a34a] bg-[#16a34a] hover:bg-green-500 disabled:opacity-45 disabled:cursor-not-allowed text-white font-semibold text-base flex items-center justify-center gap-2 cursor-pointer transition-colors"
-						>
-							Registrar gol
-						</button>
-
-						<div className="grid grid-cols-2 gap-2.5 mt-2.5">
-							<button
-								type="button"
-								disabled={
-									!selectedPlayerId || eventMutation.isPending
-								}
-								onClick={() =>
-									handleRegisterEvent('cartao_amarelo')
-								}
-								className="min-h-[48px] rounded-[10px] border border-white/[0.14] bg-transparent hover:bg-white/[0.05] disabled:opacity-45 disabled:cursor-not-allowed text-[#e6edf7] font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
-							>
-								<span className="w-[11px] h-[15px] rounded-[2px] bg-[#facc15] inline-block" />
-								Amarelo
-							</button>
-
-							<button
-								type="button"
-								disabled={
-									!selectedPlayerId || eventMutation.isPending
-								}
-								onClick={() =>
-									handleRegisterEvent('cartao_vermelho')
-								}
-								className="min-h-[48px] rounded-[10px] border border-white/[0.14] bg-transparent hover:bg-white/[0.05] disabled:opacity-45 disabled:cursor-not-allowed text-[#e6edf7] font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
-							>
-								<span className="w-[11px] h-[15px] rounded-[2px] bg-[#ef4444] inline-block" />
-								Vermelho
-							</button>
+						{/* EVENTO PARA JOGADOR */}
+						<div>
+							<div className="text-xs tracking-[0.08em] text-[#64748b] font-semibold mb-2.5 uppercase">
+								EVENTO PARA {selectedPlayerLabel}
+							</div>
 
 							<button
 								type="button"
 								disabled={
 									!selectedPlayerId || eventMutation.isPending
 								}
-								onClick={() => handleRegisterEvent('ouro')}
-								className="min-h-[48px] rounded-[10px] border border-white/[0.14] bg-transparent hover:bg-white/[0.05] disabled:opacity-45 disabled:cursor-not-allowed text-[#e6edf7] font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
+								onClick={() => handleRegisterEvent('gol')}
+								className="w-full min-h-[52px] rounded-[10px] border border-[#16a34a] bg-[#16a34a] hover:bg-green-500 disabled:opacity-45 disabled:cursor-not-allowed text-white font-semibold text-base flex items-center justify-center gap-2 cursor-pointer transition-colors"
 							>
-								<span className="w-[11px] h-[15px] rounded-[2px] bg-[#3b82f6] inline-block" />
-								Ouro
+								{assistIsOuro ? 'Registrar gol (com ouro)' : 'Registrar gol'}
 							</button>
 
-							<button
-								type="button"
-								disabled={
-									!selectedPlayerId || eventMutation.isPending
-								}
-								onClick={() =>
-									handleRegisterEvent('gol_contra')
-								}
-								className="min-h-[48px] rounded-[10px] border border-white/[0.14] bg-transparent hover:bg-white/[0.05] disabled:opacity-45 disabled:cursor-not-allowed text-[#e6edf7] font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
-							>
-								Gol contra
-							</button>
-						</div>
+							<div className="grid grid-cols-3 gap-3.5 mt-3.5">
+								<button
+									type="button"
+									disabled={
+										!selectedPlayerId || eventMutation.isPending
+									}
+									onClick={() =>
+										handleRegisterEvent('cartao_amarelo')
+									}
+									className="min-h-[48px] rounded-[10px] border border-white/[0.14] bg-transparent hover:bg-white/[0.05] disabled:opacity-45 disabled:cursor-not-allowed text-[#e6edf7] font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
+								>
+									<span className="w-[11px] h-[15px] rounded-[2px] bg-[#facc15] inline-block" />
+									Amarelo
+								</button>
 
-						<div className="text-[#94a3b8] mt-2.5 text-xs">
-							Gol contra conta para {opponentTeamName}.
+								<button
+									type="button"
+									disabled={
+										!selectedPlayerId || eventMutation.isPending
+									}
+									onClick={() =>
+										handleRegisterEvent('cartao_vermelho')
+									}
+									className="min-h-[48px] rounded-[10px] border border-white/[0.14] bg-transparent hover:bg-white/[0.05] disabled:opacity-45 disabled:cursor-not-allowed text-[#e6edf7] font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
+								>
+									<span className="w-[11px] h-[15px] rounded-[2px] bg-[#ef4444] inline-block" />
+									Vermelho
+								</button>
+
+								<button
+									type="button"
+									disabled={
+										!selectedPlayerId || eventMutation.isPending
+									}
+									onClick={() =>
+										handleRegisterEvent('gol_contra')
+									}
+									className="min-h-[48px] rounded-[10px] border border-white/[0.14] bg-transparent hover:bg-white/[0.05] disabled:opacity-45 disabled:cursor-not-allowed text-[#e6edf7] font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
+								>
+									Gol contra
+								</button>
+							</div>
+
+							<div className="text-[#94a3b8] mt-2.5 text-xs">
+								Gol contra conta para {opponentTeamName}.
+							</div>
 						</div>
-					</div>
-				</section>
+					</section>
+				)}
 
 				{/* Right Card: Linha do tempo */}
 				<section className="bg-[#111a2e] border border-white/[0.07] rounded-[16px] p-6 flex flex-col">
@@ -1050,7 +1123,8 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 									) {
 										const scorePart = `${homeTeamName} ${entry.runningHome} × ${entry.runningAway} ${awayTeamName}`;
 										if (assistLabel) {
-											return `Assistência: ${assistLabel} · ${scorePart}`;
+											const assistKind = entry.assistEvent?.event_type === 'ouro' ? 'Ouro' : 'Assistência';
+											return `${assistKind}: ${assistLabel} · ${scorePart}`;
 										}
 										return scorePart;
 									}
@@ -1060,11 +1134,10 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 								return (
 									<div
 										key={entry.key}
-										className={`flex gap-3 py-3 items-start ${
-											idx > 0
-												? 'border-t border-white/[0.06]'
-												: ''
-										}`}
+										className={`flex gap-3 py-3 items-start ${idx > 0
+											? 'border-t border-white/[0.06]'
+											: ''
+											}`}
 									>
 										{renderBadge()}
 										<div className="min-w-0 flex-1">
@@ -1077,20 +1150,20 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 												{subtitle}
 											</div>
 										</div>
-										<button
-											type="button"
-											disabled={
-												deleteEntryMutation.isPending
-											}
-											onClick={() =>
-												deleteEntryMutation.mutate(
-													entry,
-												)
-											}
-											className="ml-auto bg-transparent border-0 text-[#94a3b8] hover:text-[#f87171] font-medium text-xs cursor-pointer px-1.5 py-1 underline shrink-0 transition-colors"
-										>
-											Desfazer
-										</button>
+										{!readOnly && (
+											<button
+												type="button"
+												disabled={deleteEntryMutation.isPending}
+												onClick={() =>
+													deleteEntryMutation.mutate(
+														entry,
+													)
+												}
+												className="ml-auto bg-transparent border-0 text-[#94a3b8] hover:text-[#f87171] font-medium text-xs cursor-pointer px-1.5 py-1 underline shrink-0 transition-colors"
+											>
+												Desfazer
+											</button>
+										)}
 									</div>
 								);
 							})}

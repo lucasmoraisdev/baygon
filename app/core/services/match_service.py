@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Optional, Sequence
 from sqlalchemy import select
 
@@ -126,6 +127,13 @@ class MatchService:
         new_home = updates.get("score_home", existing.score_home)
         new_away = updates.get("score_away", existing.score_away)
         updates["event_type"] = match_data.get("event_type") or _compute_outcome(new_home, new_away)
+
+        if match_data.get("is_finished") is True:
+            updates["is_finished"] = True
+            if not existing.is_finished:
+                updates["finished_at"] = datetime.now(timezone.utc)
+        elif match_data.get("is_finished") is False:
+            updates["is_finished"] = False
 
         return await self.repo.update(match_id=match_id, updates=updates)
 

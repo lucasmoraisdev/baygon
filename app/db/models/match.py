@@ -2,7 +2,9 @@ from typing import TYPE_CHECKING, Optional
 
 from app.core.enum.events_enum import EventTypeEnum
 from app.db.base import Base, Timestamp
-from sqlalchemy import Enum, ForeignKey, Integer
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.models.user import User
@@ -25,6 +27,9 @@ class Match(Base, Timestamp):
 
     score_home: Mapped[int] = mapped_column(Integer, default=0)
     score_away: Mapped[int] = mapped_column(Integer, default=0)
+
+    is_finished: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="0")
+    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     round: Mapped["Round"] = relationship(
         "Round", 
@@ -51,4 +56,4 @@ class Match(Base, Timestamp):
     
 
     def __repr__(self):
-        return f"<Match(id={self.id_match}, round={self.round_id}, home={self.home_team_id}, away={self.away_team_id}, result={self.result})>"
+        return f"<Match(id={self.id_match}, round={self.round_id}, home={self.home_team_id}, away={self.away_team_id}, result={self.event_type}, finished={self.is_finished})>"

@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
@@ -36,6 +37,7 @@ class MatchUpdate(BaseModel):
     filmed_by: Optional[int] = None
     filmed_by_player_id: Optional[int] = None
     event_type: Optional[EventTypeEnum] = None
+    is_finished: Optional[bool] = None
     events: Optional[list[MatchEventUpdate]] = []
 
 
@@ -48,6 +50,8 @@ class MatchRead(BaseModel):
     event_type: EventTypeEnum
     score_home: int = 0
     score_away: int = 0
+    is_finished: bool = False
+    finished_at: Optional[datetime] = None
     events: Optional[list[MatchEventRead]] = []
     filmed_by_user: Optional[object] = Field(default=None, exclude=True)
 

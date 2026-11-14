@@ -201,7 +201,7 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 				method: 'POST',
 				body: JSON.stringify(body),
 			}),
-		onSuccess: () => {
+		onSuccess: (created: any) => {
 			queryClient.invalidateQueries({
 				queryKey: ['matches', 'round', params.id],
 			});
@@ -209,6 +209,11 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 			setIsMatchModalOpen(false);
 			setHomeTeamId('');
 			setAwayTeamId('');
+
+			const newMatchId = created?.id_match ?? created?.id;
+			if (newMatchId) {
+				router.push(`/matches/${newMatchId}`);
+			}
 		},
 		onError: (err: Error) =>
 			alert(`Erro ao criar partida: ${err.message}`),
@@ -526,12 +531,7 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 	const hasTeams = teams.length > 0;
 	const hasMatches = matches.length > 0;
 	const isFinished =
-		hasMatches &&
-		matches.every(
-			(m) =>
-				(m.home_score ?? m.score_home ?? 0) > 0 ||
-				(m.away_score ?? m.score_away ?? 0) > 0,
-		);
+		hasMatches && matches.every((m) => Boolean(m.is_finished));
 
 	const statusBadge = (() => {
 		if (isFinished) {
@@ -1031,8 +1031,19 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 											{teamMap.get(m.away_team_id) ??
 												`Time #${m.away_team_id}`}
 										</span>
-										<span className="text-base font-bold text-[#60a5fa] bg-[#0b1220] border border-white/10 px-3 py-1 rounded-lg">
-											{hScore} x {aScore}
+										<span className="flex items-center gap-2.5">
+											<span
+												className={`text-[11px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider border ${
+													m.is_finished
+														? 'bg-zinc-500/15 text-zinc-300 border-zinc-500/30'
+														: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+												}`}
+											>
+												{m.is_finished ? 'Encerrada' : 'Em andamento'}
+											</span>
+											<span className="text-base font-bold text-[#60a5fa] bg-[#0b1220] border border-white/10 px-3 py-1 rounded-lg">
+												{hScore} x {aScore}
+											</span>
 										</span>
 									</Link>
 								);
