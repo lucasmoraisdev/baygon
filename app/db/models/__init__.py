@@ -11,6 +11,8 @@ from app.db.models.player_score import PlayerScore
 from app.db.models.player_season_score import PlayerSeasonScore
 from app.db.models.player_admin_action import PlayerAdminAction
 from app.db.models.round_attendance import RoundAttendance
+from app.db.models.roulette_prize import RoulettePrize
+from app.db.models.round_roulette_winner import RoundRouletteWinner
 
 __all__ = [
     "User",
@@ -26,4 +28,6 @@ __all__ = [
     "PlayerSeasonScore",
     "PlayerAdminAction",
     "RoundAttendance",
+    "RoulettePrize",
+    "RoundRouletteWinner",
 ]

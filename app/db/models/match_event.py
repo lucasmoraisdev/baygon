@@ -8,12 +8,14 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 if TYPE_CHECKING:
     from app.db.models.match import Match
     from app.db.models.player import Player
+    from app.db.models.team import Teams
 
 class MatchEvent(Base, Timestamp):
     __tablename__ = "match_events"
 
     id_event: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     match_id: Mapped[int] = mapped_column(ForeignKey("matches.id_match"), nullable=False)
+    team_id: Mapped[Optional[int]] = mapped_column(ForeignKey("teams.id_team"), nullable=True)
     player_id: Mapped[int] = mapped_column(ForeignKey("players.id_player"), nullable=False)
     event_type: Mapped[EventTypeEnum] = mapped_column(Enum(EventTypeEnum), nullable=False)
 
@@ -22,6 +24,10 @@ class MatchEvent(Base, Timestamp):
     match: Mapped["Match"] = relationship(
         "Match",
         back_populates="events"
+        )
+    team: Mapped[Optional["Teams"]] = relationship(
+        "Teams",
+        lazy="selectin"
         )
     player: Mapped["Player"] = relationship(
         "Player",

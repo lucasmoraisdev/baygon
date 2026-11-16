@@ -6,6 +6,8 @@ import { Input } from '@/components/Input';
 import { Loading } from '@/components/Loading';
 import { Modal } from '@/components/Modal';
 import { Select } from '@/components/Select';
+import { TeamColorTag } from '@/components/TeamColorTag';
+import { TEAM_COLORS } from '@/lib/teamColors';
 import { useAuth } from '@/context/AuthContext';
 import { fetchAPI } from '@/lib/api';
 import {
@@ -36,10 +38,12 @@ export default function TeamsPage() {
 
 	const [newTeam, setNewTeam] = useState<{
 		name: string;
+		color?: string;
 		round_id: string;
 		player_ids: number[];
 	}>({
 		name: '',
+		color: 'blue',
 		round_id: '',
 		player_ids: [],
 	});
@@ -174,6 +178,7 @@ export default function TeamsPage() {
 			setIsTeamModalOpen(false);
 			setNewTeam({
 				name: '',
+				color: 'blue',
 				round_id: activeRound?.id_round?.toString() ?? '',
 				player_ids: [],
 			});
@@ -202,6 +207,7 @@ export default function TeamsPage() {
 		);
 		createTeamMutation.mutate({
 			name: newTeam.name.trim(),
+			color: newTeam.color || undefined,
 			round_id: parseInt(newTeam.round_id, 10),
 			player_ids: validPlayerIds,
 		});
@@ -317,8 +323,9 @@ export default function TeamsPage() {
 						className="bg-surface border border-border rounded-xl p-5 hover:border-primary transition-colors"
 					>
 						<div className="flex items-center justify-between mb-2">
-							<span className="font-semibold text-main">
-								{team.name}
+							<span className="font-semibold text-main flex items-center gap-2">
+								<span>{team.name}</span>
+								<TeamColorTag color={team.color} />
 							</span>
 							<span>⚽</span>
 						</div>
@@ -431,6 +438,32 @@ export default function TeamsPage() {
 							required
 							placeholder="Ex: Time Azul"
 						/>
+					</FormField>
+
+					<FormField label="Cor do Colete / Camisa">
+						<div className="flex flex-wrap gap-2 pt-1">
+							{TEAM_COLORS.map((c) => {
+								const isSelected = (newTeam.color || 'blue') === c.id;
+								return (
+									<button
+										key={`color-pick-new-${c.id}`}
+										type="button"
+										onClick={() => setNewTeam({ ...newTeam, color: c.id })}
+										className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
+											isSelected
+												? `${c.badgeBg} ${c.badgeBorder} ${c.badgeText} ring-2 ring-blue-500/50 shadow-sm`
+												: 'border-white/[0.1] bg-white/[0.02] text-[#94a3b8] hover:bg-white/[0.06]'
+										}`}
+									>
+										<span
+											className="w-2.5 h-2.5 rounded-full shrink-0"
+											style={{ backgroundColor: c.hex }}
+										/>
+										<span>{c.label}</span>
+									</button>
+								);
+							})}
+						</div>
 					</FormField>
 					<FormField label="Rodada Alvo">
 						<Select

@@ -130,8 +130,10 @@ class TeamService:
                 )
                 for p in team_players
             ]
+            DEFAULT_COLORS = ['blue', 'red', 'yellow', 'green', 'orange', 'black', 'white', 'purple']
+            slot_color = DEFAULT_COLORS[slot_idx % len(DEFAULT_COLORS)]
             drawn_teams.append(
-                DrawnTeamSuggestion(slot=slot_idx + 1, name=team_name, players=summaries)
+                DrawnTeamSuggestion(slot=slot_idx + 1, name=team_name, color=slot_color, players=summaries)
             )
 
         return TeamDrawResponse(teams=drawn_teams, unassigned_player_ids=[])
@@ -157,7 +159,7 @@ class TeamService:
                     "A rodada já possui times cadastrados. Marque 'Substituir times existentes' para sobrescrever."
                 )
 
-        payload = [(t.name, t.player_ids) for t in teams]
+        payload = [(t.name, t.player_ids, t.color) for t in teams]
         return await self.repo.replace_round_teams(
             round_id=round_id,
             teams_payload=payload,

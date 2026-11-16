@@ -86,7 +86,12 @@ class RuleService:
             created.append(await self.repo.create(event_score_rule=rule))
         return list(await self.repo.list_by_season(season_id))
 
-    async def calculate_round_scores(self, round_id: int) -> Dict[str, int]:
+    async def calculate_round_scores(
+        self,
+        round_id: int,
+        collaboration_points: Optional[Dict[int, int]] = None,
+        extra_player_stats: Optional[Dict[int, Dict[str, int]]] = None,
+    ) -> Dict[str, int]:
         db: AsyncSession = self.repo.db
         round_obj = (
             await db.execute(
@@ -184,13 +189,33 @@ class RuleService:
                 for pid in team_players_map.get(tm.id_team, []):
                     player_team[pid] = player_team.get(pid, 0) + pts
 
+        if collaboration_points:
+            for c_pid in collaboration_points.keys():
+                try:
+                    participating_players.add(int(c_pid))
+                except (ValueError, TypeError):
+                    pass
+
+        if extra_player_stats:
+            win_pts = rule_points.get(EventTypeEnum.HOME_WIN, 3)
+            draw_pts = rule_points.get(EventTypeEnum.DRAW, 1)
+            for ex_pid, stats_dict in extra_player_stats.items():
+                try:
+                    pid_int = int(ex_pid)
+                    participating_players.add(pid_int)
+                    w = int(stats_dict.get("wins", 0) or 0)
+                    d = int(stats_dict.get("draws", 0) or 0)
+                    extra_pts = (w * win_pts) + (d * draw_pts)
+                    player_team[pid_int] = player_team.get(pid_int, 0) + extra_pts
+                except (ValueError, TypeError):
+                    pass
+
         # Upsert PlayerScore for this round
         now = datetime.now(timezone.utc)
         scores_updated = 0
         for pid in participating_players:
             ind_pts = player_ind.get(pid, 0)
             tm_pts = player_team.get(pid, 0)
-            tot_pts = ind_pts + tm_pts
 
             existing_ps = (
                 await db.execute(
@@ -201,9 +226,31 @@ class RuleService:
                     )
                 )
             ).scalars().first()
+
+            if collaboration_points is not None:
+                colab_pts = int(collaboration_points.get(pid, collaboration_points.get(str(pid), 0)) or 0)
+            else:
+                colab_pts = getattr(existing_ps, "points_collaboration", 0) or 0
+
+            if extra_player_stats is not None:
+                st = extra_player_stats.get(pid, extra_player_stats.get(str(pid), {}))
+                extra_w = int(st.get("wins", 0) or 0)
+                extra_d = int(st.get("draws", 0) or 0)
+                extra_l = int(st.get("losses", 0) or 0)
+            else:
+                extra_w = getattr(existing_ps, "extra_matches_won", 0) or 0
+                extra_d = getattr(existing_ps, "extra_matches_drawn", 0) or 0
+                extra_l = getattr(existing_ps, "extra_matches_lost", 0) or 0
+
+            tot_pts = ind_pts + tm_pts + colab_pts
+
             if existing_ps:
                 existing_ps.points_individual = ind_pts
                 existing_ps.points_team = tm_pts
+                existing_ps.points_collaboration = colab_pts
+                existing_ps.extra_matches_won = extra_w
+                existing_ps.extra_matches_drawn = extra_d
+                existing_ps.extra_matches_lost = extra_l
                 existing_ps.total_points = tot_pts
                 existing_ps.updated_at = now
             else:
@@ -214,6 +261,10 @@ class RuleService:
                         season_id=round_obj.season_id,
                         points_individual=ind_pts,
                         points_team=tm_pts,
+                        points_collaboration=colab_pts,
+                        extra_matches_won=extra_w,
+                        extra_matches_drawn=extra_d,
+                        extra_matches_lost=extra_l,
                         total_points=tot_pts,
                     )
                 )

@@ -22,6 +22,7 @@ class MatchCreate(BaseModel):
     score_home: Optional[int] = Field(None, ge=0)
     score_away: Optional[int] = Field(None, ge=0)
     event_type: Optional[EventTypeEnum] = None
+    is_finished: Optional[bool] = None
     events: Optional[list[MatchEventCreate]] = []
 
 

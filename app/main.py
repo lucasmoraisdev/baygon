@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.v1 import auth, users, matches, rankings, rounds, teams, players, events, awards, rules, seasons, sumulas, attendance
+from app.api.v1 import auth, users, matches, rankings, rounds, teams, players, events, awards, rules, seasons, sumulas, attendance, roulette_prizes
 
 app = FastAPI(title="Baygon API", version="1.0.0")
 
@@ -25,6 +25,7 @@ app.include_router(rankings.router, prefix="/api/v1")
 app.include_router(seasons.router, prefix="/api/v1")
 app.include_router(sumulas.router, prefix="/api/v1")
 app.include_router(attendance.router, prefix="/api/v1")
+app.include_router(roulette_prizes.router, prefix="/api/v1")
 
 @app.get("/")
 async def root():

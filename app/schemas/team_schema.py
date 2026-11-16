@@ -22,6 +22,7 @@ class TeamAwardSummary(BaseModel):
 class TeamBase(BaseModel):
     name: str
     round_id: int
+    color: Optional[str] = None
 
 
 class TeamCreate(TeamBase):
@@ -31,6 +32,7 @@ class TeamCreate(TeamBase):
 class TeamUpdate(BaseModel):
     name: Optional[str] = None
     round_id: Optional[int] = None
+    color: Optional[str] = None
     player_ids: Optional[list[int]] = None
 
 
@@ -51,6 +53,7 @@ class TeamDrawRequest(BaseModel):
 class DrawnTeamSuggestion(BaseModel):
     slot: int
     name: str
+    color: Optional[str] = None
     players: list[TeamPlayerSummary]
 
 
@@ -61,6 +64,7 @@ class TeamDrawResponse(BaseModel):
 
 class RoundTeamInput(BaseModel):
     name: str
+    color: Optional[str] = None
     player_ids: list[int] = []
 
 

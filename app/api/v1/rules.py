@@ -1,4 +1,5 @@
-from typing import List
+from typing import Dict, List, Optional
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies.auth_dependencies import user_has_permission
@@ -80,13 +81,38 @@ async def seed_default_rules(
     return await service.seed_default_rules(season_id)
 
 
+class ExtraPlayerStatsItem(BaseModel):
+    wins: int = 0
+    draws: int = 0
+    losses: int = 0
+
+
+class CalculateScoresPayload(BaseModel):
+    collaboration_points: Optional[Dict[str, int]] = None
+    extra_player_stats: Optional[Dict[str, ExtraPlayerStatsItem]] = None
+
+
 @router.post("/round/{round_id}/calculate-scores", status_code=status.HTTP_200_OK)
 async def calculate_round_scores(
     round_id: int,
+    payload: Optional[CalculateScoresPayload] = None,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(user_has_permission),
 ):
     """Calcula e atualiza PlayerScore e PlayerSeasonScore de uma rodada com base nas regras da temporada."""
     repo = EventScoreRuleRepository(db)
     service = RuleService(repo)
-    return await service.calculate_round_scores(round_id)
+    colab = None
+    if payload and payload.collaboration_points:
+        colab = {int(k): v for k, v in payload.collaboration_points.items() if k.isdigit() or isinstance(k, int)}
+    extra_stats = None
+    if payload and payload.extra_player_stats:
+        extra_stats = {}
+        for k, v in payload.extra_player_stats.items():
+            try:
+                extra_stats[int(k)] = v.model_dump()
+            except (ValueError, TypeError):
+                pass
+    return await service.calculate_round_scores(
+        round_id, collaboration_points=colab, extra_player_stats=extra_stats
+    )

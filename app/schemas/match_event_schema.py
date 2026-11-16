@@ -5,6 +5,7 @@ from app.core.enum.events_enum import EventTypeEnum
 
 class MatchEventBase(BaseModel):
     match_id: int
+    team_id: Optional[int] = None
     player_id: Optional[int] = None
     event_type: EventTypeEnum
     play_id: Optional[int] = None
@@ -17,6 +18,7 @@ class MatchEventCreate(MatchEventBase):
 
 class MatchEventUpdate(BaseModel):
     """Schema para atualização de evento em uma partida."""
+    team_id: Optional[int] = None
     event_type: Optional[EventTypeEnum] = None
     player_id: Optional[int] = None
     play_id: Optional[int] = None

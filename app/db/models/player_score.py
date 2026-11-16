@@ -19,6 +19,10 @@ class PlayerScore(Base, Timestamp):
 
     points_individual: Mapped[int] = mapped_column(Integer, default=0)
     points_team: Mapped[int] = mapped_column(Integer, default=0)
+    points_collaboration: Mapped[int] = mapped_column(Integer, default=0)
+    extra_matches_won: Mapped[int] = mapped_column(Integer, default=0)
+    extra_matches_drawn: Mapped[int] = mapped_column(Integer, default=0)
+    extra_matches_lost: Mapped[int] = mapped_column(Integer, default=0)
     total_points: Mapped[int] = mapped_column(Integer, default=0)
 
     player: Mapped["Player"] = relationship(

@@ -69,6 +69,8 @@ class MatchService:
             filmed_by = match_data.get("filmed_by") or match_data.get("filmed_by_id") or fallback_user_id
 
         event_type = match_data.get("event_type") or _compute_outcome(score_home, score_away)
+        is_finished = bool(match_data.get("is_finished", False))
+        finished_at = datetime.now(timezone.utc) if is_finished else None
 
         match_obj = Match(
             round_id=match_data["round_id"],
@@ -78,6 +80,8 @@ class MatchService:
             event_type=event_type,
             score_home=score_home,
             score_away=score_away,
+            is_finished=is_finished,
+            finished_at=finished_at,
         )
         return await self.repo.create(match=match_obj)
 

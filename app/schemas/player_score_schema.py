@@ -11,6 +11,10 @@ class PlayerScoreBase(BaseModel):
     season_id: int
     points_individual: int
     points_team: int
+    points_collaboration: int = 0
+    extra_matches_won: int = 0
+    extra_matches_drawn: int = 0
+    extra_matches_lost: int = 0
     total_points: int
 
 class PlayerScoreCreate(PlayerScoreBase):
@@ -26,6 +30,10 @@ class PlayerScoreUpdate(BaseModel):
     """
     points_individual: Optional[int] = None
     points_team: Optional[int] = None
+    points_collaboration: Optional[int] = None
+    extra_matches_won: Optional[int] = None
+    extra_matches_drawn: Optional[int] = None
+    extra_matches_lost: Optional[int] = None
     total_points: Optional[int] = None
 
 class PlayerScoreRead(PlayerScoreBase):

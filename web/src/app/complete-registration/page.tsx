@@ -4,7 +4,7 @@ import { Button } from '@/components/Button';
 import { FormField } from '@/components/FormField';
 import { Input } from '@/components/Input';
 import { useMutation } from '@tanstack/react-query';
-import { CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
@@ -176,9 +176,9 @@ function CompleteRegistrationForm() {
 			<div className="mt-5 pt-4 border-t border-border text-center">
 				<Link
 					href="/login"
-					className="text-xs text-muted hover:text-primary transition-colors"
+					className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-primary transition-colors"
 				>
-					← Voltar para o Login
+					<ArrowLeft size={16} /> Voltar para o Login
 				</Link>
 			</div>
 		</div>

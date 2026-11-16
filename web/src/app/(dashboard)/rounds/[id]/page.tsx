@@ -7,10 +7,13 @@ import { Input } from '@/components/Input';
 import { Loading } from '@/components/Loading';
 import { Modal } from '@/components/Modal';
 import { Select } from '@/components/Select';
+import { TeamColorTag } from '@/components/TeamColorTag';
+import { TEAM_COLORS } from '@/lib/teamColors';
 import { useAuth } from '@/context/AuthContext';
 import { fetchAPI } from '@/lib/api';
-import { Player, Round, Team } from '@/types/types';
+import { Player, PlayerScore, Round, RoundRouletteWinner, Team } from '@/types/types';
 import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, Award, CheckCircle2, ExternalLink, Gift, Medal, Sparkles, Trophy, Users, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -49,6 +52,7 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 	const [editRoundNumber, setEditRoundNumber] = useState('1');
 
 	const [teamName, setTeamName] = useState('');
+	const [teamColor, setTeamColor] = useState('blue');
 	const [selectedPlayerIds, setSelectedPlayerIds] = useState<Set<number>>(
 		new Set(),
 	);
@@ -78,44 +82,77 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 	>({});
 	const [attendanceSearch, setAttendanceSearch] = useState('');
 
-	const [roundQuery, teamsQuery, matchesQuery, playersQuery, attendanceQuery] =
-		useQueries({
-			queries: [
-				{
-					queryKey: ['round', params.id],
-					queryFn: () => fetchAPI(`/rounds/${params.id}`),
-				},
-				{
-					queryKey: ['teams', 'round', params.id],
-					queryFn: () =>
-						fetchAPI(`/teams/round/${params.id}`).catch(() => []),
-				},
-				{
-					queryKey: ['matches', 'round', params.id],
-					queryFn: () =>
-						fetchAPI(`/matches/round/${params.id}`).catch(() => []),
-				},
-				{
-					queryKey: ['players'],
-					queryFn: () => fetchAPI('/players/').catch(() => []),
-				},
-				{
-					queryKey: ['attendance', 'round', params.id],
-					queryFn: () =>
-						fetchAPI(`/attendance/round/${params.id}`).catch(() => ({
-							round_id: parseInt(params.id, 10),
-							confirmed_count: 0,
-							declined_count: 0,
-							waiting_count: 0,
-							items: [],
-						})),
-				},
-			],
-		});
+	const [
+		roundQuery,
+		teamsQuery,
+		matchesQuery,
+		playersQuery,
+		attendanceQuery,
+		awardsQuery,
+		scoresQuery,
+		rouletteWinnersQuery,
+		ourosQuery,
+	] = useQueries({
+		queries: [
+			{
+				queryKey: ['round', params.id],
+				queryFn: () => fetchAPI(`/rounds/${params.id}`),
+			},
+			{
+				queryKey: ['teams', 'round', params.id],
+				queryFn: () =>
+					fetchAPI(`/teams/round/${params.id}`).catch(() => []),
+			},
+			{
+				queryKey: ['matches', 'round', params.id],
+				queryFn: () =>
+					fetchAPI(`/matches/round/${params.id}`).catch(() => []),
+			},
+			{
+				queryKey: ['players'],
+				queryFn: () => fetchAPI('/players/').catch(() => []),
+			},
+			{
+				queryKey: ['attendance', 'round', params.id],
+				queryFn: () =>
+					fetchAPI(`/attendance/round/${params.id}`).catch(() => ({
+						round_id: parseInt(params.id, 10),
+						confirmed_count: 0,
+						declined_count: 0,
+						waiting_count: 0,
+						items: [],
+					})),
+			},
+			{
+				queryKey: ['awards', 'round', params.id],
+				queryFn: () =>
+					fetchAPI(`/awards/round/${params.id}`).catch(() => []),
+			},
+			{
+				queryKey: ['rankings', 'round', params.id],
+				queryFn: () =>
+					fetchAPI(`/rankings/round/${params.id}`).catch(() => []),
+			},
+			{
+				queryKey: ['round-roulette', params.id],
+				queryFn: () =>
+					fetchAPI(`/roulette-prizes/round/${params.id}`).catch(() => []),
+			},
+			{
+				queryKey: ['round-ouros', params.id],
+				queryFn: () =>
+					fetchAPI(`/events/round/${params.id}/ouros`).catch(() => []),
+			},
+		],
+	});
 
 	const teams: Team[] = teamsQuery.data ?? [];
 	const matches: any[] = matchesQuery.data ?? [];
 	const allPlayers: Player[] = playersQuery.data ?? [];
+	const awards: any[] = awardsQuery.data ?? [];
+	const scores: any[] = scoresQuery.data ?? [];
+	const rouletteWinners: RoundRouletteWinner[] = rouletteWinnersQuery.data ?? [];
+	const roundOuros: Array<{ player_id: number; count: number }> = ourosQuery.data ?? [];
 	const attendance: {
 		confirmed_count: number;
 		declined_count: number;
@@ -146,6 +183,12 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 		return m;
 	}, [teams]);
 
+	const teamObjMap = useMemo(() => {
+		const m = new Map<number, Team>();
+		for (const t of teams) m.set(t.id_team, t);
+		return m;
+	}, [teams]);
+
 	const playerTeamInRoundMap = useMemo(() => {
 		const m = new Map<number, { id_team: number; name: string }>();
 		for (const t of teams) {
@@ -156,15 +199,145 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 		return m;
 	}, [teams]);
 
+	const playerMap = useMemo(() => {
+		const m = new Map<number, Player>();
+		allPlayers.forEach((p) => m.set(p.id_player, p));
+		return m;
+	}, [allPlayers]);
+
+	const teamStandings = useMemo(() => {
+		interface Standing {
+			team: Team;
+			matchesPlayed: number;
+			wins: number;
+			draws: number;
+			losses: number;
+			goalsFor: number;
+			goalsAgainst: number;
+			goalDifference: number;
+			points: number;
+		}
+
+		const statsMap = new Map<number, Standing>();
+		teams.forEach((t) => {
+			statsMap.set(t.id_team, {
+				team: t,
+				matchesPlayed: 0,
+				wins: 0,
+				draws: 0,
+				losses: 0,
+				goalsFor: 0,
+				goalsAgainst: 0,
+				goalDifference: 0,
+				points: 0,
+			});
+		});
+
+		matches.forEach((m) => {
+			if (!m.is_finished) return;
+			const hId = m.home_team_id;
+			const aId = m.away_team_id;
+			const hScore = Number(m.home_score ?? m.score_home ?? 0);
+			const aScore = Number(m.away_score ?? m.score_away ?? 0);
+
+			const hStats = statsMap.get(hId);
+			const aStats = statsMap.get(aId);
+
+			if (hStats) {
+				hStats.matchesPlayed += 1;
+				hStats.goalsFor += hScore;
+				hStats.goalsAgainst += aScore;
+				hStats.goalDifference = hStats.goalsFor - hStats.goalsAgainst;
+				if (hScore > aScore) {
+					hStats.wins += 1;
+					hStats.points += 3;
+				} else if (hScore === aScore) {
+					hStats.draws += 1;
+					hStats.points += 1;
+				} else {
+					hStats.losses += 1;
+				}
+			}
+
+			if (aStats) {
+				aStats.matchesPlayed += 1;
+				aStats.goalsFor += aScore;
+				aStats.goalsAgainst += hScore;
+				aStats.goalDifference = aStats.goalsFor - aStats.goalsAgainst;
+				if (aScore > hScore) {
+					aStats.wins += 1;
+					aStats.points += 3;
+				} else if (hScore === aScore) {
+					aStats.draws += 1;
+					aStats.points += 1;
+				} else {
+					aStats.losses += 1;
+				}
+			}
+		});
+
+		const standings: Standing[] = [];
+		statsMap.forEach((s) => standings.push(s));
+
+		return standings.sort((a, b) => {
+			if (b.points !== a.points) return b.points - a.points;
+			if (b.wins !== a.wins) return b.wins - a.wins;
+			if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
+			return b.goalsFor - a.goalsFor;
+		});
+	}, [teams, matches]);
+
+	const playerLeaderboard = useMemo(() => {
+		if (!scores || scores.length === 0) return [];
+
+		interface LeaderboardRow {
+			player_id: number;
+			name: string;
+			nickname?: string | null;
+			teamName?: string;
+			teamColor?: string | null;
+			pointsTeam: number;
+			pointsIndividual: number;
+			pointsCollaboration: number;
+			pointsExtraWon: number;
+			pointsExtraDrawn: number;
+			pointsExtraLost: number;
+			totalPoints: number;
+		}
+
+		const list: LeaderboardRow[] = scores.map((s: PlayerScore) => {
+			const p = playerMap.get(s.player_id);
+			const assignedTeam = playerTeamInRoundMap.get(s.player_id);
+			const teamObj = assignedTeam ? teamObjMap.get(assignedTeam.id_team) : undefined;
+
+			return {
+				player_id: s.player_id,
+				name: p?.nome || `Jogador #${s.player_id}`,
+				nickname: p?.apelido,
+				teamName: assignedTeam?.name || teamObj?.name,
+				teamColor: teamObj?.color,
+				pointsTeam: Number(s.points_team ?? 0),
+				pointsIndividual: Number(s.points_individual ?? 0),
+				pointsCollaboration: Number(s.points_collaboration ?? 0),
+				pointsExtraWon: Number(s.extra_matches_won ?? 0),
+				pointsExtraDrawn: Number(s.extra_matches_drawn ?? 0),
+				pointsExtraLost: Number(s.extra_matches_lost ?? 0),
+				totalPoints: Number(s.total_points ?? 0),
+			};
+		});
+
+		return list.sort((a, b) => b.totalPoints - a.totalPoints);
+	}, [scores, playerMap, playerTeamInRoundMap, teamObjMap]);
+
 	const filteredPlayers = useMemo(() => {
 		const q = playerSearch.toLowerCase().trim();
 		const base = !q
 			? allPlayers
 			: allPlayers.filter(
-					(p) =>
-						p.nome.toLowerCase().includes(q) ||
-						p.apelido?.toLowerCase().includes(q),
-				);
+				(p) =>
+					p.nome.toLowerCase().includes(q) ||
+					p.apelido?.toLowerCase().includes(q),
+			);
 		return [...base].sort((a, b) => {
 			const aAssigned = playerTeamInRoundMap.has(a.id_player) ? 1 : 0;
 			const bAssigned = playerTeamInRoundMap.has(b.id_player) ? 1 : 0;
@@ -189,6 +362,7 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 			queryClient.invalidateQueries({ queryKey: ['teams'] });
 			setIsTeamModalOpen(false);
 			setTeamName('');
+			setTeamColor('blue');
 			setSelectedPlayerIds(new Set());
 			setPlayerSearch('');
 		},
@@ -226,6 +400,10 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 			}),
 		onSuccess: (res: { players_scored: number }) => {
 			queryClient.invalidateQueries({ queryKey: ['rankings'] });
+			queryClient.invalidateQueries({ queryKey: ['rankings', 'round', params.id] });
+			queryClient.invalidateQueries({ queryKey: ['awards', 'round', params.id] });
+			queryClient.invalidateQueries({ queryKey: ['round-roulette', params.id] });
+			queryClient.invalidateQueries({ queryKey: ['round-ouros', params.id] });
 			alert(
 				`Pontuações calculadas para ${res.players_scored} jogador(es) com sucesso!`,
 			);
@@ -281,12 +459,6 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 		onError: (err: Error) =>
 			alert(`Erro ao salvar times: ${err.message}`),
 	});
-
-	const playerMap = useMemo(() => {
-		const m = new Map<number, Player>();
-		for (const p of allPlayers) m.set(p.id_player, p);
-		return m;
-	}, [allPlayers]);
 
 	const filteredDrawPlayers = useMemo(() => {
 		const q = drawSearch.toLowerCase().trim();
@@ -462,6 +634,7 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 		e.preventDefault();
 		createTeamMutation.mutate({
 			name: teamName.trim(),
+			color: teamColor || undefined,
 			round_id: parseInt(params.id, 10),
 			player_ids: Array.from(selectedPlayerIds),
 		});
@@ -532,9 +705,24 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 	const hasMatches = matches.length > 0;
 	const isFinished =
 		hasMatches && matches.every((m) => Boolean(m.is_finished));
+	const isConcluida = isFinished || Boolean(scores && scores.length > 0);
+
+	const pizzaAward = awards.find(
+		(a) => a.event_type === 'pizza' || a.event_type === 'time_vencedor_rodada',
+	);
+	const bolaCheia = awards.find((a) => a.event_type === 'bola_cheia');
+	const bolaMurcha = awards.find((a) => a.event_type === 'bola_murcha');
+	const golRodada = awards.find((a) => a.event_type === 'gol_rodada');
+	const defesaRodada = awards.find((a) => a.event_type === 'defesa_rodada');
+	const dribleRodada = awards.find((a) => a.event_type === 'drible_rodada');
+	const inacreditavel = awards.find((a) => a.event_type === 'inacreditavel');
+	const goleiro = awards.find((a) => a.event_type === 'goleiro_menos_vazado');
+	const roleta1 = rouletteWinners.find((r) => r.roulette_number === 1);
+	const roleta2 = rouletteWinners.find((r) => r.roulette_number === 2);
+	const ourosWinners = roundOuros.filter((o) => o.count > 0);
 
 	const statusBadge = (() => {
-		if (isFinished) {
+		if (isConcluida) {
 			return {
 				label: 'Concluída',
 				className: 'bg-emerald-500/15 text-[#4ade80]',
@@ -562,7 +750,7 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 		{ num: 1, label: 'Presença', active: true },
 		{ num: 2, label: 'Times', active: hasTeams },
 		{ num: 3, label: 'Partidas', active: hasMatches },
-		{ num: 4, label: 'Pontuação', active: isFinished },
+		{ num: 4, label: 'Pontuação', active: isConcluida },
 	];
 
 	const noResponseCount = Math.max(
@@ -611,9 +799,9 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 									: '/seasons',
 							)
 						}
-						className="text-[13px] text-[#94a3b8] hover:text-[#e6edf7] transition-colors mb-1.5 inline-flex items-center gap-1 cursor-pointer"
+						className="text-[13px] text-[#94a3b8] hover:text-[#e6edf7] transition-colors mb-1.5 inline-flex items-center gap-1.5 cursor-pointer"
 					>
-						← Rodadas
+						<ArrowLeft size={16} /> Rodadas
 					</button>
 					<div className="flex items-center gap-3 flex-wrap">
 						<h1 className="m-0 text-[28px] font-bold tracking-[-0.01em] text-[#e6edf7]">
@@ -702,18 +890,16 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 				{steps.map((step) => (
 					<div
 						key={step.num}
-						className={`flex-1 min-w-[150px] flex items-center gap-2.5 px-3.5 py-3 rounded-xl font-medium text-sm transition-colors ${
-							step.active
-								? 'bg-blue-500/16 text-[#bfdbfe]'
-								: 'bg-white/[0.03] text-[#94a3b8]'
-						}`}
+						className={`flex-1 min-w-[150px] flex items-center gap-2.5 px-3.5 py-3 rounded-xl font-medium text-sm transition-colors ${step.active
+							? 'bg-blue-500/16 text-[#bfdbfe]'
+							: 'bg-white/[0.03] text-[#94a3b8]'
+							}`}
 					>
 						<span
-							className={`w-6 h-6 rounded-full inline-flex items-center justify-center text-xs font-bold ${
-								step.active
-									? 'bg-[#2563eb] text-white'
-									: 'bg-white/[0.08] text-[#94a3b8]'
-							}`}
+							className={`w-6 h-6 rounded-full inline-flex items-center justify-center text-xs font-bold ${step.active
+								? 'bg-[#2563eb] text-white'
+								: 'bg-white/[0.08] text-[#94a3b8]'
+								}`}
 						>
 							{step.num}
 						</span>
@@ -940,9 +1126,12 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 									className="flex items-center justify-between gap-3 px-4 py-3.5 bg-white/[0.02] hover:bg-white/[0.05] transition-colors text-sm text-[#e6edf7]"
 								>
 									<div className="flex flex-col gap-1 min-w-0">
-										<span className="font-semibold">
-											{t.name}
-										</span>
+										<div className="flex items-center gap-2">
+											<span className="font-semibold">
+												{t.name}
+											</span>
+											<TeamColorTag color={t.color} />
+										</div>
 										{t.players && t.players.length > 0 && (
 											<span className="text-xs text-[#94a3b8] truncate">
 												{t.players
@@ -974,6 +1163,13 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 						</h2>
 						{isAdmin && (
 							<div className="flex items-center gap-2">
+								<Link
+									href={`/rounds/${params.id}/mass`}
+									className="inline-flex items-center justify-center gap-2 min-h-[40px] px-4 rounded-[10px] border border-blue-500/40 bg-blue-500/10 hover:bg-blue-500/20 text-[#bfdbfe] text-sm font-semibold transition-colors cursor-pointer"
+								>
+									<Zap size={15} />
+									<span>⚡ Cadastro em Massa</span>
+								</Link>
 								<button
 									type="button"
 									disabled={
@@ -1016,28 +1212,27 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 									m.home_score ?? m.score_home ?? 0;
 								const aScore =
 									m.away_score ?? m.score_away ?? 0;
+								const homeTeam = teamObjMap.get(m.home_team_id);
+								const awayTeam = teamObjMap.get(m.away_team_id);
 								return (
 									<Link
 										key={matchId}
 										href={`/matches/${matchId}`}
 										className="bg-white/[0.03] border border-white/[0.07] rounded-xl p-4 flex items-center justify-between hover:border-blue-500/40 hover:bg-white/[0.05] transition-colors"
 									>
-										<span className="text-sm font-medium text-[#e6edf7]">
-											{teamMap.get(m.home_team_id) ??
-												`Time #${m.home_team_id}`}{' '}
-											<span className="text-[#94a3b8]">
-												vs
-											</span>{' '}
-											{teamMap.get(m.away_team_id) ??
-												`Time #${m.away_team_id}`}
+										<span className="text-sm font-medium text-[#e6edf7] flex items-center gap-1.5 flex-wrap">
+											<span>{homeTeam?.name ?? `Time #${m.home_team_id}`}</span>
+											{homeTeam && <TeamColorTag showLabel={false} color={homeTeam.color} />}
+											<span className="text-[#94a3b8] px-1">vs</span>
+											<span>{awayTeam?.name ?? `Time #${m.away_team_id}`}</span>
+											{awayTeam && <TeamColorTag showLabel={false} color={awayTeam.color} />}
 										</span>
 										<span className="flex items-center gap-2.5">
 											<span
-												className={`text-[11px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider border ${
-													m.is_finished
-														? 'bg-zinc-500/15 text-zinc-300 border-zinc-500/30'
-														: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-												}`}
+												className={`text-[11px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider border ${m.is_finished
+													? 'bg-zinc-500/15 text-zinc-300 border-zinc-500/30'
+													: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+													}`}
 											>
 												{m.is_finished ? 'Encerrada' : 'Em andamento'}
 											</span>
@@ -1052,6 +1247,579 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 					)}
 				</div>
 			</div>
+
+			{/* Seção de Rodada Concluída: Premiações & Pontuações */}
+			{isConcluida && (
+				<div className="flex flex-col gap-6">
+					{/* Banner Informativo de Conclusão */}
+					<div className="bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10 border border-emerald-500/30 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
+						<div className="flex items-center gap-3.5">
+							<div className="w-11 h-11 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+								<CheckCircle2 size={24} />
+							</div>
+							<div>
+								<h2 className="text-lg font-bold text-[#e6edf7] flex items-center gap-2">
+									Resultados da Rodada
+									<span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+										Rodada Concluída
+									</span>
+								</h2>
+								<p className="text-xs text-[#94a3b8] mt-0.5">
+									Premiações oficiais, classificação final dos times e pontuações individuais dos jogadores.
+								</p>
+							</div>
+						</div>
+
+						<div className="flex items-center gap-2 flex-wrap">
+							{isAdmin && (
+								<button
+									type="button"
+									disabled={calculateScoresMutation.isPending}
+									onClick={() => calculateScoresMutation.mutate()}
+									className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors shadow-sm cursor-pointer disabled:opacity-50"
+								>
+									<Zap size={14} />
+									{calculateScoresMutation.isPending ? 'Calculando...' : 'Recalcular Pontuações'}
+								</button>
+							)}
+							<Link
+								href={`/awards?round=${round.id_round}`}
+								className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-xs font-medium text-[#e6edf7] transition-colors"
+							>
+								<Award size={14} />
+								Gerenciar Prêmios
+							</Link>
+						</div>
+					</div>
+
+					{/* 1. Vencedores das Premiações */}
+					<div className="bg-[#111a2e] border border-white/[0.09] rounded-2xl p-6 flex flex-col gap-5">
+						<div className="flex items-center justify-between gap-3 flex-wrap">
+							<div className="flex items-center gap-2.5">
+								<div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400">
+									<Trophy size={18} />
+								</div>
+								<div>
+									<h3 className="text-base font-semibold text-[#e6edf7]">
+										Premiações da Rodada
+									</h3>
+									<p className="text-xs text-[#94a3b8]">
+										Vencedores de destaques, time campeão e contemplados nos sorteios da roleta
+									</p>
+								</div>
+							</div>
+						</div>
+
+						{/* Grid de Cards de Premiação */}
+						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+							{/* Card Campeão da Rodada (Pizza) */}
+							<div className="bg-gradient-to-br from-amber-500/10 via-amber-500/[0.03] to-transparent border border-amber-500/30 rounded-xl p-4 flex flex-col gap-2.5 relative overflow-hidden">
+								<div className="flex items-center justify-between">
+									<span className="text-xl">🍕</span>
+									<span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+										Campeão
+									</span>
+								</div>
+								<div>
+									<h4 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">
+										Campeão da Rodada (Pizza)
+									</h4>
+									<div className="flex items-center gap-2 mt-1">
+										<p className="text-base font-bold text-[#e6edf7]">
+											{pizzaAward?.teams?.length
+												? pizzaAward.teams.map((t: any) => t.name).join(', ')
+												: teamStandings[0]?.team.name || 'A definir'}
+										</p>
+										{(() => {
+											const championTeam = pizzaAward?.teams?.length
+												? teamObjMap.get(pizzaAward.teams[0].id_team)
+												: teamStandings[0]?.team;
+											return championTeam ? (
+												<TeamColorTag color={championTeam.color} showLabel={false} />
+											) : null;
+										})()}
+									</div>
+								</div>
+								<p className="text-[11px] text-amber-300/80 mt-auto">
+									Levou a melhor na rodada e garantiu a pizza!
+								</p>
+							</div>
+
+							{/* Card Bola Cheia */}
+							<div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-4 flex flex-col gap-2.5">
+								<div className="flex items-center justify-between">
+									<span className="text-xl">🌟</span>
+									<span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-yellow-500/15 text-yellow-300 border border-yellow-500/30">
+										Destaque
+									</span>
+								</div>
+								<div>
+									<h4 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">
+										Bola Cheia (MVP)
+									</h4>
+									<p className="text-base font-bold text-[#e6edf7] mt-1">
+										{bolaCheia?.players?.length
+											? bolaCheia.players.map((p: any) => p.apelido || p.nome).join(', ')
+											: 'Não definido'}
+									</p>
+								</div>
+								<p className="text-[11px] text-[#94a3b8] mt-auto">
+									Melhor atuação geral da rodada.
+								</p>
+							</div>
+
+							{/* Card Bola Murcha */}
+							<div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-4 flex flex-col gap-2.5">
+								<div className="flex items-center justify-between">
+									<span className="text-xl">💩</span>
+									<span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-stone-500/15 text-stone-300 border border-stone-500/30">
+										Zoeira
+									</span>
+								</div>
+								<div>
+									<h4 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">
+										Bola Murcha
+									</h4>
+									<p className="text-base font-bold text-[#e6edf7] mt-1">
+										{bolaMurcha?.players?.length
+											? bolaMurcha.players.map((p: any) => p.apelido || p.nome).join(', ')
+											: 'Não definido'}
+									</p>
+								</div>
+								<p className="text-[11px] text-[#94a3b8] mt-auto">
+									Pior em campo / destaque negativo.
+								</p>
+							</div>
+
+							{/* Card Gol da Rodada */}
+							<div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-4 flex flex-col gap-2.5">
+								<div className="flex items-center justify-between">
+									<span className="text-xl">⚽</span>
+									<span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/30">
+										Pintura
+									</span>
+								</div>
+								<div>
+									<h4 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">
+										Gol da Rodada
+									</h4>
+									<p className="text-base font-bold text-[#e6edf7] mt-1">
+										{golRodada?.players?.length
+											? golRodada.players.map((p: any) => p.apelido || p.nome).join(', ')
+											: 'Não definido'}
+									</p>
+								</div>
+								<p className="text-[11px] text-[#94a3b8] mt-auto">
+									O gol mais bonito do dia.
+								</p>
+							</div>
+
+							{/* Card Defesa da Rodada */}
+							<div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-4 flex flex-col gap-2.5">
+								<div className="flex items-center justify-between">
+									<span className="text-xl">🧤</span>
+									<span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+										Milagre
+									</span>
+								</div>
+								<div>
+									<h4 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">
+										Defesa da Rodada
+									</h4>
+									<p className="text-base font-bold text-[#e6edf7] mt-1">
+										{defesaRodada?.players?.length
+											? defesaRodada.players.map((p: any) => p.apelido || p.nome).join(', ')
+											: 'Não definido'}
+									</p>
+								</div>
+								<p className="text-[11px] text-[#94a3b8] mt-auto">
+									A defesa mais espetacular da rodada.
+								</p>
+							</div>
+
+							{/* Card Drible da Rodada */}
+							<div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-4 flex flex-col gap-2.5">
+								<div className="flex items-center justify-between">
+									<span className="text-xl">🌀</span>
+									<span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30">
+										Habilidade
+									</span>
+								</div>
+								<div>
+									<h4 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">
+										Drible da Rodada
+									</h4>
+									<p className="text-base font-bold text-[#e6edf7] mt-1">
+										{dribleRodada?.players?.length
+											? dribleRodada.players.map((p: any) => p.apelido || p.nome).join(', ')
+											: 'Não definido'}
+									</p>
+								</div>
+								<p className="text-[11px] text-[#94a3b8] mt-auto">
+									O drible mais desconcertante.
+								</p>
+							</div>
+
+							{/* Card Inacreditável */}
+							<div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-4 flex flex-col gap-2.5">
+								<div className="flex items-center justify-between">
+									<span className="text-xl">😱</span>
+									<span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-300 border border-rose-500/30">
+										Inacreditável
+									</span>
+								</div>
+								<div>
+									<h4 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">
+										Inacreditável
+									</h4>
+									<p className="text-base font-bold text-[#e6edf7] mt-1">
+										{inacreditavel?.players?.length
+											? inacreditavel.players.map((p: any) => p.apelido || p.nome).join(', ')
+											: 'Não definido'}
+									</p>
+								</div>
+								<p className="text-[11px] text-[#94a3b8] mt-auto">
+									O gol mais fácil perdido do dia.
+								</p>
+							</div>
+
+							{/* Card Goleiro Menos Vazado */}
+							<div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-4 flex flex-col gap-2.5">
+								<div className="flex items-center justify-between">
+									<span className="text-xl">🥅</span>
+									<span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
+										Paredão
+									</span>
+								</div>
+								<div>
+									<h4 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">
+										Goleiro Menos Vazado
+									</h4>
+									<p className="text-base font-bold text-[#e6edf7] mt-1">
+										{goleiro?.players?.length
+											? goleiro.players.map((p: any) => p.apelido || p.nome).join(', ')
+											: 'Não definido'}
+									</p>
+								</div>
+								<p className="text-[11px] text-[#94a3b8] mt-auto">
+									Goleiro mais consistente e com menos gols sofridos.
+								</p>
+							</div>
+
+							{/* Card Roleta 1 */}
+							<div className="bg-white/[0.02] border border-emerald-500/25 rounded-xl p-4 flex flex-col gap-2.5 relative">
+								<div className="flex items-center justify-between">
+									<span className="text-xl">🎰</span>
+									<span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+										Roleta 1
+									</span>
+								</div>
+								<div>
+									<h4 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">
+										Contemplado Roleta 1
+									</h4>
+									<p className="text-base font-bold text-[#e6edf7] mt-1">
+										{roleta1?.player_name ||
+											(roleta1?.player_id
+												? (playerMap.get(roleta1.player_id)?.apelido || playerMap.get(roleta1.player_id)?.nome)
+												: 'Não definido')}
+									</p>
+								</div>
+								<div className="mt-auto pt-1">
+									{roleta1?.prize_name ? (
+										<span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-md">
+											<Gift size={12} /> {roleta1.prize_name}
+										</span>
+									) : (
+										<span className="text-[11px] text-[#94a3b8]">
+											Prêmio a registrar
+										</span>
+									)}
+								</div>
+							</div>
+
+							{/* Card Roleta 2 */}
+							<div className="bg-white/[0.02] border border-teal-500/25 rounded-xl p-4 flex flex-col gap-2.5 relative">
+								<div className="flex items-center justify-between">
+									<span className="text-xl">🎰</span>
+									<span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-500/15 text-teal-300 border border-teal-500/30">
+										Roleta 2
+									</span>
+								</div>
+								<div>
+									<h4 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">
+										Contemplado Roleta 2
+									</h4>
+									<p className="text-base font-bold text-[#e6edf7] mt-1">
+										{roleta2?.player_name ||
+											(roleta2?.player_id
+												? (playerMap.get(roleta2.player_id)?.apelido || playerMap.get(roleta2.player_id)?.nome)
+												: 'Não definido')}
+									</p>
+								</div>
+								<div className="mt-auto pt-1">
+									{roleta2?.prize_name ? (
+										<span className="inline-flex items-center gap-1 text-[11px] font-semibold text-teal-300 bg-teal-500/10 border border-teal-500/25 px-2 py-0.5 rounded-md">
+											<Gift size={12} /> {roleta2.prize_name}
+										</span>
+									) : (
+										<span className="text-[11px] text-[#94a3b8]">
+											Prêmio a registrar
+										</span>
+									)}
+								</div>
+							</div>
+						</div>
+
+						{/* Ouros da Rodada */}
+						{ourosWinners.length > 0 && (
+							<div className="bg-amber-500/[0.04] border border-amber-500/20 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3">
+								<div className="flex items-center gap-2">
+									<span className="text-lg">🥇</span>
+									<span className="text-xs font-semibold text-amber-300">
+										Ouros da Rodada:
+									</span>
+								</div>
+								<div className="flex flex-wrap gap-2">
+									{ourosWinners.map((o) => {
+										const pl = playerMap.get(o.player_id);
+										return (
+											<span
+												key={`ouro-tag-${o.player_id}`}
+												className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-xs text-amber-200 font-medium"
+											>
+												<span>{pl?.apelido || pl?.nome || `Jogador #${o.player_id}`}</span>
+												<span className="bg-amber-400 text-black text-[10px] font-bold px-1.5 py-0.2 rounded-full">
+													{o.count}x
+												</span>
+											</span>
+										);
+									})}
+								</div>
+							</div>
+						)}
+					</div>
+
+					{/* 2. Classificação dos Times na Rodada */}
+					<div className="bg-[#111a2e] border border-white/[0.09] rounded-2xl p-6 flex flex-col gap-5">
+						<div className="flex items-center justify-between gap-3 flex-wrap">
+							<div className="flex items-center gap-2.5">
+								<div className="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400">
+									<Medal size={18} />
+								</div>
+								<div>
+									<h3 className="text-base font-semibold text-[#e6edf7]">
+										Classificação dos Times
+									</h3>
+									<p className="text-xs text-[#94a3b8]">
+										Desempenho final dos times na rodada (vitórias, empates, gols e saldo)
+									</p>
+								</div>
+							</div>
+						</div>
+
+						{teamStandings.length === 0 ? (
+							<div className="border border-dashed border-white/[0.14] rounded-xl py-6 px-4 text-center text-[#94a3b8] text-xs">
+								Nenhum time ou partida computada nesta rodada.
+							</div>
+						) : (
+							<div className="overflow-x-auto">
+								<table className="w-full text-left border-collapse text-xs">
+									<thead>
+										<tr className="border-b border-white/[0.08] text-[#94a3b8] uppercase tracking-wider text-[11px]">
+											<th className="py-2.5 px-3">#</th>
+											<th className="py-2.5 px-3">Time</th>
+											<th className="py-2.5 px-3 text-center font-bold text-[#e6edf7]">PTS</th>
+											<th className="py-2.5 px-3 text-center">J</th>
+											<th className="py-2.5 px-3 text-center">V</th>
+											<th className="py-2.5 px-3 text-center">E</th>
+											<th className="py-2.5 px-3 text-center">D</th>
+											<th className="py-2.5 px-3 text-center">GP</th>
+											<th className="py-2.5 px-3 text-center">GC</th>
+											<th className="py-2.5 px-3 text-center">SG</th>
+										</tr>
+									</thead>
+									<tbody className="divide-y divide-white/[0.05]">
+										{teamStandings.map((st, idx) => {
+											const isChampion = idx === 0 && st.points > 0;
+											return (
+												<tr
+													key={`standing-team-${st.team.id_team}`}
+													className={`transition-colors hover:bg-white/[0.03] ${
+														isChampion ? 'bg-amber-500/[0.06] font-semibold' : ''
+													}`}
+												>
+													<td className="py-3 px-3">
+														<span
+															className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
+																idx === 0
+																	? 'bg-amber-400 text-black'
+																	: idx === 1
+																	? 'bg-zinc-300 text-black'
+																	: idx === 2
+																	? 'bg-amber-700/60 text-amber-100'
+																	: 'text-[#94a3b8]'
+															}`}
+														>
+															{idx + 1}
+														</span>
+													</td>
+													<td className="py-3 px-3">
+														<div className="flex items-center gap-2">
+															<span className="text-[#e6edf7] font-medium">
+																{st.team.name}
+															</span>
+															<TeamColorTag color={st.team.color} showLabel={false} />
+															{isChampion && (
+																<span className="inline-flex items-center gap-1 text-[10px] bg-amber-400/20 text-amber-300 border border-amber-400/30 px-2 py-0.5 rounded-full font-bold">
+																	🍕 Campeão
+																</span>
+															)}
+														</div>
+													</td>
+													<td className="py-3 px-3 text-center font-bold text-sm text-[#60a5fa]">
+														{st.points}
+													</td>
+													<td className="py-3 px-3 text-center text-[#94a3b8]">{st.matchesPlayed}</td>
+													<td className="py-3 px-3 text-center text-emerald-400 font-medium">{st.wins}</td>
+													<td className="py-3 px-3 text-center text-amber-400 font-medium">{st.draws}</td>
+													<td className="py-3 px-3 text-center text-red-400 font-medium">{st.losses}</td>
+													<td className="py-3 px-3 text-center text-[#e6edf7]">{st.goalsFor}</td>
+													<td className="py-3 px-3 text-center text-[#94a3b8]">{st.goalsAgainst}</td>
+													<td className="py-3 px-3 text-center font-semibold text-[#e6edf7]">
+														{st.goalDifference > 0 ? `+${st.goalDifference}` : st.goalDifference}
+													</td>
+												</tr>
+											);
+										})}
+									</tbody>
+								</table>
+							</div>
+						)}
+					</div>
+
+					{/* 3. Pontuações dos Jogadores na Rodada */}
+					<div className="bg-[#111a2e] border border-white/[0.09] rounded-2xl p-6 flex flex-col gap-5">
+						<div className="flex items-center justify-between gap-3 flex-wrap">
+							<div className="flex items-center gap-2.5">
+								<div className="w-8 h-8 rounded-lg bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400">
+									<Users size={18} />
+								</div>
+								<div>
+									<h3 className="text-base font-semibold text-[#e6edf7]">
+										Pontuação dos Jogadores
+									</h3>
+									<p className="text-xs text-[#94a3b8]">
+										Pontuação individual consolidada de cada atleta nesta rodada
+									</p>
+								</div>
+							</div>
+						</div>
+
+						{playerLeaderboard.length === 0 ? (
+							<div className="border border-dashed border-white/[0.14] rounded-xl py-6 px-4 text-center text-[#94a3b8] flex flex-col items-center gap-3">
+								<p className="text-xs">As pontuações ainda não foram processadas para esta rodada.</p>
+								{isAdmin && (
+									<button
+										type="button"
+										disabled={calculateScoresMutation.isPending}
+										onClick={() => calculateScoresMutation.mutate()}
+										className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
+									>
+										<Zap size={14} />
+										{calculateScoresMutation.isPending ? 'Calculando...' : 'Calcular Agora'}
+									</button>
+								)}
+							</div>
+						) : (
+							<div className="overflow-x-auto">
+								<table className="w-full text-left border-collapse text-xs">
+									<thead>
+										<tr className="border-b border-white/[0.08] text-[#94a3b8] uppercase tracking-wider text-[11px]">
+											<th className="py-2.5 px-3">#</th>
+											<th className="py-2.5 px-3">Jogador</th>
+											<th className="py-2.5 px-3">Time</th>
+											<th className="py-2.5 px-3 text-center">Pts Time</th>
+											<th className="py-2.5 px-3 text-center">Pts Indiv.</th>
+											<th className="py-2.5 px-3 text-center">Pts Colab.</th>
+											<th className="py-2.5 px-3 text-center font-bold text-[#e6edf7]">Total</th>
+										</tr>
+									</thead>
+									<tbody className="divide-y divide-white/[0.05]">
+										{playerLeaderboard.map((row, idx) => {
+											return (
+												<tr
+													key={`leaderboard-${row.player_id}`}
+													className={`transition-colors hover:bg-white/[0.03] ${
+														idx === 0
+															? 'bg-amber-500/[0.05]'
+															: idx === 1
+															? 'bg-zinc-400/[0.04]'
+															: idx === 2
+															? 'bg-amber-700/[0.04]'
+															: ''
+													}`}
+												>
+													<td className="py-2.5 px-3">
+														<span
+															className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
+																idx === 0
+																	? 'bg-amber-400 text-black shadow-sm'
+																	: idx === 1
+																	? 'bg-zinc-300 text-black'
+																	: idx === 2
+																	? 'bg-amber-700/70 text-amber-100'
+																	: 'text-[#94a3b8]'
+															}`}
+														>
+															{idx + 1}
+														</span>
+													</td>
+													<td className="py-2.5 px-3">
+														<div className="flex flex-col">
+															<span className="font-semibold text-[#e6edf7]">
+																{row.nickname || row.name}
+															</span>
+															{row.nickname && row.nickname !== row.name && (
+																<span className="text-[11px] text-[#94a3b8]">
+																	{row.name}
+																</span>
+															)}
+														</div>
+													</td>
+													<td className="py-2.5 px-3">
+														{row.teamName ? (
+															<div className="inline-flex items-center gap-1.5">
+																<span className="text-[#cbd5e1]">{row.teamName}</span>
+																<TeamColorTag color={row.teamColor} showLabel={false} />
+															</div>
+														) : (
+															<span className="text-[#94a3b8] italic">Avulso / Extra</span>
+														)}
+													</td>
+													<td className="py-2.5 px-3 text-center text-[#cbd5e1]">
+														{row.pointsTeam}
+													</td>
+													<td className="py-2.5 px-3 text-center text-blue-400 font-medium">
+														{row.pointsIndividual > 0 ? `+${row.pointsIndividual}` : row.pointsIndividual}
+													</td>
+													<td className="py-2.5 px-3 text-center text-emerald-400 font-medium">
+														{row.pointsCollaboration > 0 ? `+${row.pointsCollaboration}` : row.pointsCollaboration}
+													</td>
+													<td className="py-2.5 px-3 text-center font-bold text-sm text-[#60a5fa]">
+														{row.totalPoints}
+													</td>
+												</tr>
+											);
+										})}
+									</tbody>
+								</table>
+							</div>
+						)}
+					</div>
+				</div>
+			)}
+
 
 			{/* Footer Danger Notice Banner */}
 			{isAdmin && (
@@ -1089,6 +1857,31 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 						/>
 					</FormField>
 
+					<FormField label="Cor do Colete / Camisa">
+						<div className="flex flex-wrap gap-2 pt-1">
+							{TEAM_COLORS.map((c) => {
+								const isSelected = teamColor === c.id;
+								return (
+									<button
+										key={`color-pick-${c.id}`}
+										type="button"
+										onClick={() => setTeamColor(c.id)}
+										className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${isSelected
+											? `${c.badgeBg} ${c.badgeBorder} ${c.badgeText} ring-2 ring-blue-500/50 shadow-sm`
+											: 'border-white/[0.1] bg-white/[0.02] text-[#94a3b8] hover:bg-white/[0.06]'
+											}`}
+									>
+										<span
+											className="w-2.5 h-2.5 rounded-full shrink-0"
+											style={{ backgroundColor: c.hex }}
+										/>
+										<span>{c.label}</span>
+									</button>
+								);
+							})}
+						</div>
+					</FormField>
+
 					<FormField
 						label={`Jogadores (${selectedPlayerIds.size} selecionados)`}
 					>
@@ -1118,11 +1911,10 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 								return (
 									<label
 										key={p.id_player}
-										className={`flex items-center justify-between gap-2 px-3 py-2 text-sm ${
-											isAssigned
-												? 'opacity-60 cursor-not-allowed bg-white/[0.01] text-[#94a3b8]'
-												: 'text-main hover:bg-white/5 cursor-pointer'
-										}`}
+										className={`flex items-center justify-between gap-2 px-3 py-2 text-sm ${isAssigned
+											? 'opacity-60 cursor-not-allowed bg-white/[0.01] text-[#94a3b8]'
+											: 'text-main hover:bg-white/5 cursor-pointer'
+											}`}
 									>
 										<div className="flex items-center gap-2 min-w-0">
 											<input
@@ -1250,11 +2042,10 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 						<button
 							type="button"
 							onClick={() => setDrawMode('draw')}
-							className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium border transition-colors ${
-								drawMode === 'draw'
-									? 'bg-primary/15 border-primary text-primary'
-									: 'border-border text-muted hover:text-main'
-							}`}
+							className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium border transition-colors ${drawMode === 'draw'
+								? 'bg-primary/15 border-primary text-primary'
+								: 'border-border text-muted hover:text-main'
+								}`}
 						>
 							🎲 Sorteio por Potes (Sugestão)
 						</button>
@@ -1266,11 +2057,10 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 									initManualTeams(numTeams);
 								}
 							}}
-							className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium border transition-colors ${
-								drawMode === 'manual'
-									? 'bg-primary/15 border-primary text-primary'
-									: 'border-border text-muted hover:text-main'
-							}`}
+							className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium border transition-colors ${drawMode === 'manual'
+								? 'bg-primary/15 border-primary text-primary'
+								: 'border-border text-muted hover:text-main'
+								}`}
 						>
 							✍️ Informar Times Já Prontos
 						</button>

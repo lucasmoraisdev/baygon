@@ -7,14 +7,14 @@ import { Modal } from '@/components/Modal';
 import { Select } from '@/components/Select';
 import { useAuth } from '@/context/AuthContext';
 import { fetchAPI } from '@/lib/api';
-import { Player, Round, Season, Team } from '@/types/types';
+import { Player, Round, RoulettePrize, RoundRouletteWinner, Season, Team } from '@/types/types';
 import {
 	useMutation,
 	useQueries,
 	useQuery,
 	useQueryClient,
 } from '@tanstack/react-query';
-import { Award as AwardIcon, Trash2, Trophy } from 'lucide-react';
+import { Award as AwardIcon, Gift, Plus, Trash2, Trophy } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -100,7 +100,7 @@ export default function AwardsPage() {
 	const selectedRoundId =
 		selectedRoundOverride || rounds[0]?.id_round?.toString() || '';
 
-	const [awardsQuery, roundTeamsQuery] = useQueries({
+	const [awardsQuery, roundTeamsQuery, roulettePrizesQuery, rouletteWinnersQuery] = useQueries({
 		queries: [
 			{
 				queryKey: ['awards', 'round', selectedRoundId],
@@ -114,12 +114,53 @@ export default function AwardsPage() {
 					fetchAPI(`/teams/round/${selectedRoundId}`).catch(() => []),
 				enabled: Boolean(selectedRoundId),
 			},
+			{
+				queryKey: ['roulette-prizes'],
+				queryFn: () => fetchAPI('/roulette-prizes/').catch(() => []),
+			},
+			{
+				queryKey: ['round-roulette', selectedRoundId],
+				queryFn: () =>
+					fetchAPI(`/roulette-prizes/round/${selectedRoundId}`).catch(() => []),
+				enabled: Boolean(selectedRoundId),
+			},
 		],
 	});
 
 	const awards: AwardItem[] = awardsQuery.data ?? [];
 	const roundTeams: (Team & { players?: Player[] })[] =
 		roundTeamsQuery.data ?? [];
+	const roulettePrizes: RoulettePrize[] = roulettePrizesQuery.data ?? [];
+	const rouletteWinners: RoundRouletteWinner[] = rouletteWinnersQuery.data ?? [];
+
+	const [isPrizeModalOpen, setIsPrizeModalOpen] = useState(false);
+	const [newPrizeName, setNewPrizeName] = useState('');
+	const [newPrizeDesc, setNewPrizeDesc] = useState('');
+
+	const createPrizeMutation = useMutation({
+		mutationFn: async ({ name, description }: { name: string; description?: string }) => {
+			return await fetchAPI('/roulette-prizes/', {
+				method: 'POST',
+				body: JSON.stringify({ name, description }),
+			});
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['roulette-prizes'] });
+			setNewPrizeName('');
+			setNewPrizeDesc('');
+		},
+		onError: (err: Error) => alert(`Erro ao cadastrar prêmio: ${err.message}`),
+	});
+
+	const deletePrizeMutation = useMutation({
+		mutationFn: async (prizeId: number) => {
+			await fetchAPI(`/roulette-prizes/${prizeId}`, { method: 'DELETE' });
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['roulette-prizes'] });
+		},
+		onError: (err: Error) => alert(`Erro ao excluir prêmio: ${err.message}`),
+	});
 
 	const roundPlayers = useMemo(() => {
 		const map = new Map<number, Player>();
@@ -254,6 +295,17 @@ export default function AwardsPage() {
 						)}
 					</Select>
 
+					{isAdmin && (
+						<Button
+							variant="ghost"
+							onClick={() => setIsPrizeModalOpen(true)}
+							className="w-auto flex items-center gap-2 border-yellow-500/30 text-yellow-300 hover:bg-yellow-500/10"
+						>
+							<Gift className="w-4 h-4 text-yellow-400" />
+							Prêmios da Roleta
+						</Button>
+					)}
+
 					{isAdmin && selectedRoundId && (
 						<Button
 							onClick={openBatchModal}
@@ -310,16 +362,28 @@ export default function AwardsPage() {
 										a.event_type}
 								</h2>
 
-								<div className="flex flex-wrap gap-1.5">
-									{a.players?.map((p) => (
-										<Link
-											key={p.id_player}
-											href={`/players/${p.id_player}`}
-											className="text-xs bg-white/5 border border-border hover:border-primary px-2.5 py-1 rounded-full text-main"
-										>
-											{p.apelido || p.nome}
-										</Link>
-									))}
+								<div className="flex flex-wrap gap-2">
+									{a.players?.map((p) => {
+										const winnerDetail = a.event_type === 'roleta'
+											? rouletteWinners.find((rw) => rw.player_id === p.id_player)
+											: null;
+
+										return (
+											<div key={p.id_player} className="flex items-center gap-1.5 flex-wrap">
+												<Link
+													href={`/players/${p.id_player}`}
+													className="text-xs bg-white/5 border border-border hover:border-primary px-2.5 py-1 rounded-full text-main font-semibold"
+												>
+													{p.apelido || p.nome}
+												</Link>
+												{winnerDetail?.prize_name && (
+													<span className="text-[11px] bg-yellow-500/10 border border-yellow-500/30 text-yellow-300 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+														🎁 {winnerDetail.prize_name}
+													</span>
+												)}
+											</div>
+										);
+									})}
 									{a.teams?.map((t) => (
 										<Link
 											key={t.id_team}
@@ -418,6 +482,111 @@ export default function AwardsPage() {
 						</Button>
 					</div>
 				</form>
+			</Modal>
+
+			{/* Modal de Cadastro de Prêmios da Roleta */}
+			<Modal
+				isOpen={isPrizeModalOpen}
+				onClose={() => setIsPrizeModalOpen(false)}
+				title="Prêmios da Roleta 🎰"
+			>
+				<div className="flex flex-col gap-4">
+					<p className="text-xs text-muted">
+						Cadastre os prêmios possíveis que os vencedores da roleta podem ganhar (ex.: Camisa, Pix R$ 50, Cerveja, etc.).
+					</p>
+
+					<div className="flex flex-col gap-2 p-3 rounded-lg bg-surface border border-border">
+						<span className="text-xs font-bold text-yellow-300 uppercase">
+							+ Novo Prêmio
+						</span>
+						<div className="flex gap-2">
+							<input
+								type="text"
+								placeholder="Nome do prêmio..."
+								value={newPrizeName}
+								onChange={(e) => setNewPrizeName(e.target.value)}
+								className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-xs text-main focus:outline-none focus:border-yellow-500"
+							/>
+							<Button
+								type="button"
+								disabled={!newPrizeName.trim() || createPrizeMutation.isPending}
+								onClick={() => {
+									if (newPrizeName.trim()) {
+										createPrizeMutation.mutate({
+											name: newPrizeName.trim(),
+											description: newPrizeDesc.trim() || undefined,
+										});
+									}
+								}}
+								className="w-auto text-xs"
+							>
+								{createPrizeMutation.isPending ? 'Salvando...' : 'Cadastrar'}
+							</Button>
+						</div>
+						<input
+							type="text"
+							placeholder="Descrição / patrocinador (opcional)..."
+							value={newPrizeDesc}
+							onChange={(e) => setNewPrizeDesc(e.target.value)}
+							className="bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-muted focus:outline-none focus:border-yellow-500"
+						/>
+					</div>
+
+					<div className="flex flex-col gap-2">
+						<span className="text-xs font-semibold text-muted uppercase">
+							Prêmios Atuais ({roulettePrizes.length})
+						</span>
+						<div className="flex flex-col gap-1.5 max-h-[220px] overflow-y-auto pr-1">
+							{roulettePrizes.length === 0 ? (
+								<div className="py-6 text-center text-xs text-muted border border-dashed border-border rounded-lg">
+									Nenhum prêmio cadastrado.
+								</div>
+							) : (
+								roulettePrizes.map((prz) => (
+									<div
+										key={prz.id_roulette_prize}
+										className="flex items-center justify-between gap-2 p-2 rounded-lg bg-background/50 border border-border"
+									>
+										<div className="min-w-0">
+											<div className="text-xs font-bold text-main truncate flex items-center gap-1.5">
+												<span>🎁</span>
+												<span>{prz.name}</span>
+											</div>
+											{prz.description && (
+												<div className="text-[10px] text-muted truncate">
+													{prz.description}
+												</div>
+											)}
+										</div>
+										<button
+											type="button"
+											title="Excluir prêmio"
+											onClick={() => {
+												if (confirm(`Deseja excluir o prêmio "${prz.name}"?`)) {
+													deletePrizeMutation.mutate(prz.id_roulette_prize);
+												}
+											}}
+											className="p-1.5 text-red-400 hover:bg-red-500/10 rounded cursor-pointer"
+										>
+											<Trash2 className="w-3.5 h-3.5" />
+										</button>
+									</div>
+								))
+							)}
+						</div>
+					</div>
+
+					<div className="flex justify-end pt-2 border-t border-border">
+						<Button
+							type="button"
+							variant="ghost"
+							onClick={() => setIsPrizeModalOpen(false)}
+							className="w-auto"
+						>
+							Fechar
+						</Button>
+					</div>
+				</div>
 			</Modal>
 		</div>
 	);

@@ -303,7 +303,17 @@ class AssociationRankingService:
             for sc in scores:
                 if sc.player_id in stats_by_player:
                     stats_by_player[sc.player_id]["ranking_geral"] += int(sc.total_points or 0)
+                    stats_by_player[sc.player_id]["pontos_colaboracao"] += int(getattr(sc, "points_collaboration", 0) or 0)
+                    stats_by_player[sc.player_id]["babas_conquistados"] += int(getattr(sc, "extra_matches_won", 0) or 0)
+                    stats_by_player[sc.player_id]["empates"] += int(getattr(sc, "extra_matches_drawn", 0) or 0)
+                    stats_by_player[sc.player_id]["babas_perdidos"] += int(getattr(sc, "extra_matches_lost", 0) or 0)
                     stats_by_player[sc.player_id]["presenca_rounds"].add(sc.round_id)
+                    r_obj = round_map.get(sc.round_id)
+                    r_num = r_obj.round_number if r_obj else 0
+                    if r_num > stats_by_player[sc.player_id]["max_round_num"]:
+                        stats_by_player[sc.player_id]["max_round_num"] = r_num
+                    if int(getattr(sc, "extra_matches_won", 0) or 0) > 0 and r_num > stats_by_player[sc.player_id]["max_win_round_num"]:
+                        stats_by_player[sc.player_id]["max_win_round_num"] = r_num
 
         rows = [
             AssociationRankingRow(

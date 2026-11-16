@@ -93,13 +93,16 @@ class TeamRepository:
                 existing_team.deleted_at = now
             await self.db.flush()
 
-        all_player_ids = list({pid for _, pids in teams_payload for pid in pids})
+        all_player_ids = list({pid for item in teams_payload for pid in item[1]})
         players = await self.get_players_by_ids(all_player_ids)
         players_map = {p.id_player: p for p in players}
 
         created: list[Teams] = []
-        for name, pids in teams_payload:
-            team = Teams(name=name.strip() or "Time", round_id=round_id)
+        for item in teams_payload:
+            name = item[0]
+            pids = item[1]
+            color = item[2] if len(item) > 2 else None
+            team = Teams(name=name.strip() or "Time", round_id=round_id, color=color)
             team.players = [players_map[pid] for pid in dict.fromkeys(pids) if pid in players_map]
             self.db.add(team)
             created.append(team)

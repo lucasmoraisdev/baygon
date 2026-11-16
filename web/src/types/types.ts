@@ -39,6 +39,7 @@ export interface RoundStatsItem {
 export interface Team {
 	id_team: number;
 	name: string;
+	color?: string | null;
 	round_id?: number;
 	season_id?: number;
 	season_name?: string | null;
@@ -145,3 +146,36 @@ export interface Match {
 	home_score: number;
 	away_score: number;
 }
+
+export interface RoulettePrize {
+	id_roulette_prize: number;
+	name: string;
+	description?: string | null;
+	is_active: boolean;
+	created_at?: string;
+}
+
+export interface RoundRouletteWinner {
+	id_round_roulette?: number;
+	round_id: number;
+	player_id: number;
+	prize_id?: number | null;
+	roulette_number: number;
+	player_name?: string | null;
+	prize_name?: string | null;
+}
+
+export interface PlayerScore {
+	id_player_score?: number;
+	player_id: number;
+	round_id: number;
+	season_id: number;
+	points_individual: number;
+	points_team: number;
+	points_collaboration?: number;
+	extra_matches_won?: number;
+	extra_matches_drawn?: number;
+	extra_matches_lost?: number;
+	total_points: number;
+}
+

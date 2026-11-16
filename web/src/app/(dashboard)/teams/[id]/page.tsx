@@ -5,10 +5,13 @@ import { FormField } from '@/components/FormField';
 import { Input } from '@/components/Input';
 import { Loading } from '@/components/Loading';
 import { Modal } from '@/components/Modal';
+import { TeamColorTag } from '@/components/TeamColorTag';
+import { TEAM_COLORS } from '@/lib/teamColors';
 import { useAuth } from '@/context/AuthContext';
 import { fetchAPI } from '@/lib/api';
 import { Player } from '@/types/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
@@ -24,6 +27,7 @@ interface TeamPlayerItem {
 interface TeamDetail {
 	id_team: number;
 	name: string;
+	color?: string | null;
 	round_id: number;
 	players: TeamPlayerItem[];
 	awards: { id_award: number; event_type: string }[];
@@ -37,6 +41,7 @@ export default function TeamDetailPage({ params }: { params: { id: string } }) {
 
 	const [isEditOpen, setIsEditOpen] = useState(false);
 	const [editName, setEditName] = useState('');
+	const [editColor, setEditColor] = useState('blue');
 	const [editPlayerIds, setEditPlayerIds] = useState<Set<number>>(new Set());
 	const [playerSearch, setPlayerSearch] = useState('');
 
@@ -94,7 +99,7 @@ export default function TeamDetailPage({ params }: { params: { id: string } }) {
 	}, [allPlayers, playerSearch, otherTeamByPlayerId]);
 
 	const updateTeamMutation = useMutation({
-		mutationFn: (body: { name: string; player_ids: number[] }) =>
+		mutationFn: (body: { name: string; color?: string; player_ids: number[] }) =>
 			fetchAPI(`/teams/${params.id}`, {
 				method: 'PUT',
 				body: JSON.stringify(body),
@@ -137,6 +142,7 @@ export default function TeamDetailPage({ params }: { params: { id: string } }) {
 
 	const openEditModal = () => {
 		setEditName(team.name);
+		setEditColor(team.color || 'blue');
 		setEditPlayerIds(
 			new Set((team.players ?? []).map((p) => p.id_player)),
 		);
@@ -157,6 +163,7 @@ export default function TeamDetailPage({ params }: { params: { id: string } }) {
 			.map((p) => p.id_player);
 		updateTeamMutation.mutate({
 			name: team.name,
+			color: team.color || undefined,
 			player_ids: remainingIds,
 		});
 	};
@@ -165,12 +172,15 @@ export default function TeamDetailPage({ params }: { params: { id: string } }) {
 		<div className="flex flex-col gap-6 animate-slide-down">
 			<div className="flex items-center justify-between flex-wrap gap-3">
 				<div>
-					<h1 className="text-3xl text-main">{team.name}</h1>
+					<div className="flex items-center gap-2.5">
+						<h1 className="text-3xl text-main font-bold m-0">{team.name}</h1>
+						<TeamColorTag color={team.color} size="md" />
+					</div>
 					<Link
 						href={`/rounds/${team.round_id}`}
-						className="text-xs text-primary hover:underline"
+						className="text-xs text-primary hover:underline mt-1 inline-flex items-center gap-1.5"
 					>
-						← Voltar para Rodada #{team.round_id}
+						<ArrowLeft size={16} /> Voltar para Rodada #{team.round_id}
 					</Link>
 				</div>
 				<div className="flex items-center gap-2 flex-wrap">
@@ -290,6 +300,7 @@ export default function TeamDetailPage({ params }: { params: { id: string } }) {
 						e.preventDefault();
 						updateTeamMutation.mutate({
 							name: editName.trim(),
+							color: editColor || undefined,
 							player_ids: Array.from(editPlayerIds),
 						});
 					}}
@@ -302,6 +313,32 @@ export default function TeamDetailPage({ params }: { params: { id: string } }) {
 							required
 							placeholder="Ex: Time Azul"
 						/>
+					</FormField>
+
+					<FormField label="Cor do Colete / Camisa">
+						<div className="flex flex-wrap gap-2 pt-1">
+							{TEAM_COLORS.map((c) => {
+								const isSelected = editColor === c.id;
+								return (
+									<button
+										key={`color-pick-${c.id}`}
+										type="button"
+										onClick={() => setEditColor(c.id)}
+										className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
+											isSelected
+												? `${c.badgeBg} ${c.badgeBorder} ${c.badgeText} ring-2 ring-blue-500/50 shadow-sm`
+												: 'border-white/[0.1] bg-white/[0.02] text-[#94a3b8] hover:bg-white/[0.06]'
+										}`}
+									>
+										<span
+											className="w-2.5 h-2.5 rounded-full shrink-0"
+											style={{ backgroundColor: c.hex }}
+										/>
+										<span>{c.label}</span>
+									</button>
+								);
+							})}
+						</div>
 					</FormField>
 					<FormField label={`Jogadores (${editPlayerIds.size} selecionados)`}>
 						<div className="flex flex-col gap-2">

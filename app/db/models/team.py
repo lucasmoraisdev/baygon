@@ -1,3 +1,4 @@
+from typing import Optional
 from git import TYPE_CHECKING
 from sqlalchemy import ForeignKey, Column, Integer, String, Boolean, DateTime, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -15,6 +16,7 @@ class Teams(Base, Timestamp):
 
     id_team: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    color: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     round_id: Mapped[int] = mapped_column(ForeignKey("round.id_round"), nullable=False)
 
     round: Mapped["Round"] = relationship(
