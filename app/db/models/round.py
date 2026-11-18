@@ -1,6 +1,6 @@
 from datetime import datetime
 from git import TYPE_CHECKING
-from sqlalchemy import Date, ForeignKey, Integer, String, DateTime, func
+from sqlalchemy import Boolean, Date, ForeignKey, Integer, String, DateTime, func
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.orm import relationship
 from app.db.base import Base, Timestamp
@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from app.db.models.match import Match
     from app.db.models.award import Awards
     from app.db.models.player_score import PlayerScore
+    from app.db.models.round_award_vote import RoundAwardVoter, RoundAwardVote
 
 class Round(Base, Timestamp):
     __tablename__ = "round"
@@ -23,6 +24,7 @@ class Round(Base, Timestamp):
     end_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     round_number: Mapped[int] = mapped_column(Integer, nullable=False)
     season_id: Mapped[int] = mapped_column(ForeignKey("seasons.id_season"), nullable=False)
+    is_voting_open: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0", nullable=False)
 
     teams: Mapped[list["Teams"]] = relationship(
         "Teams", 
@@ -51,6 +53,20 @@ class Round(Base, Timestamp):
         "PlayerScore",
         back_populates="round", 
         cascade="all, delete-orphan"
+    )
+
+    voters: Mapped[list["RoundAwardVoter"]] = relationship(
+        "RoundAwardVoter",
+        back_populates="round",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+    votes: Mapped[list["RoundAwardVote"]] = relationship(
+        "RoundAwardVote",
+        back_populates="round",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )
 
     @property

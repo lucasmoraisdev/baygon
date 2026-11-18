@@ -37,6 +37,21 @@ class MatchService:
         if player.user_id:
             return player.user_id
 
+        # If a User with the same email already exists, link to it instead of creating a duplicate/placeholder
+        if player.email:
+            existing_user = (
+                await db.execute(
+                    select(User).where(
+                        User.email == player.email,
+                        User.deleted_at.is_(None),
+                    )
+                )
+            ).scalar_one_or_none()
+            if existing_user:
+                player.user_id = existing_user.id_user
+                await db.flush()
+                return existing_user.id_user
+
         # Create a lightweight User record linked to this Player so matches.filmed_by FK is satisfied
         new_user = User(
             name=player.nome,

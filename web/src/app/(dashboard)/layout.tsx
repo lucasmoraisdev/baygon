@@ -12,20 +12,20 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 	const { isCollapsed, toggleMobileSidebar } = useSidebar();
 
 	return (
-		<div className="min-h-screen bg-[#070b14] flex flex-col">
+		<div className="min-h-screen bg-background text-main flex flex-col transition-colors duration-200">
 			{/* Barra superior móvel com botão de menu */}
-			<header className="h-14 md:hidden border-b border-white/[0.08] bg-[#0d1527]/90 px-4 flex items-center justify-between sticky top-0 z-30 backdrop-blur-md">
+			<header className="h-14 md:hidden border-b border-border bg-surface/90 px-4 flex items-center justify-between sticky top-0 z-30 backdrop-blur-md">
 				<div className="flex items-center gap-2">
-					<span className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center font-black text-white text-sm shadow-md shadow-blue-500/30">
+					<span className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#635bff] to-[#533afd] flex items-center justify-center font-black text-white text-sm shadow-sm shadow-[#635bff]/25">
 						B
 					</span>
-					<span className="font-bold text-white tracking-tight">Baygon API</span>
+					<span className="font-bold text-main tracking-tight">Baygon API</span>
 				</div>
 				<button
 					type="button"
 					onClick={toggleMobileSidebar}
 					aria-label="Abrir menu"
-					className="p-2 rounded-lg bg-white/[0.05] border border-white/[0.1] text-white hover:bg-white/[0.1] transition-colors cursor-pointer"
+					className="p-2 rounded-lg bg-surface border border-border text-main hover:bg-hover-nav transition-colors cursor-pointer"
 				>
 					<Menu size={18} />
 				</button>

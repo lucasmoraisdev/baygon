@@ -6,6 +6,9 @@ import { Input } from '@/components/Input';
 import { Loading } from '@/components/Loading';
 import { Modal } from '@/components/Modal';
 import { Select } from '@/components/Select';
+import { SeasonSelector } from '@/components/SeasonSelector';
+import { SearchableSelect } from '@/components/SearchableSelect';
+import { Plus, Play } from 'lucide-react';
 import { fetchAPI } from '@/lib/api';
 import { DEFAULT_MATCH, DEFAULT_ROUND } from '@/utils/helpers';
 import {
@@ -98,24 +101,70 @@ export default function MatchesPage() {
 		return (Math.max(...rounds.map((r) => r.round_number)) + 1).toString();
 	}, [rounds]);
 
+	const matchOrderMap = useMemo(() => {
+		const map = new Map<number, number>();
+		const countersByRound = new Map<number, number>();
+		const sortedAsc = [...matches].sort(
+			(a, b) => (a.id ?? a.id_match ?? 0) - (b.id ?? b.id_match ?? 0),
+		);
+		for (const m of sortedAsc) {
+			const matchId = m.id ?? m.id_match;
+			const nextNum = (countersByRound.get(m.round_id) ?? 0) + 1;
+			countersByRound.set(m.round_id, nextNum);
+			map.set(matchId, nextNum);
+		}
+		return map;
+	}, [matches]);
+
 	const filteredMatches = useMemo(() => {
-		return matches.filter((m) => {
-			const byRound = filters.round_id
-				? m.round_id.toString() === filters.round_id
-				: true;
-			const byTeam = filters.team_id
-				? m.home_team_id.toString() === filters.team_id ||
+		return [...matches]
+			.sort((a, b) => {
+				if (b.round_id !== a.round_id) return b.round_id - a.round_id;
+				return (a.id ?? a.id_match ?? 0) - (b.id ?? b.id_match ?? 0);
+			})
+			.filter((m) => {
+				const byRound = filters.round_id
+					? m.round_id.toString() === filters.round_id
+					: true;
+				const byTeam = filters.team_id
+					? m.home_team_id.toString() === filters.team_id ||
 					m.away_team_id.toString() === filters.team_id
-				: true;
-			const byPlayer = filters.player_id
-				? m.events?.some(
+					: true;
+				const byPlayer = filters.player_id
+					? m.events?.some(
 						(e: any) =>
 							e.player_id.toString() === filters.player_id,
 					)
-				: true;
-			return byRound && byTeam && byPlayer;
-		});
+					: true;
+				return byRound && byTeam && byPlayer;
+			});
 	}, [matches, filters]);
+
+	const roundOptions = useMemo(() => {
+		return rounds.map((r) => ({
+			value: r.id_round.toString(),
+			label: `Rodada ${r.round_number}`,
+			sublabel: new Date(r.date).toLocaleDateString('pt-BR'),
+			badge: !r.end_time ? 'Ativa' : undefined,
+			badgeVariant: (!r.end_time ? 'success' : 'default') as 'success' | 'default',
+		}));
+	}, [rounds]);
+
+	const teamOptions = useMemo(() => {
+		return allTeams.map((t) => ({
+			value: t.id_team.toString(),
+			label: t.name,
+			sublabel: t.color ? `Cor: ${t.color}` : undefined,
+		}));
+	}, [allTeams]);
+
+	const playerOptions = useMemo(() => {
+		return allPlayers.map((p) => ({
+			value: p.id_player.toString(),
+			label: p.apelido ? `${p.apelido} (${p.nome})` : p.nome,
+			sublabel: p.posicao ? `Posição: ${p.posicao}` : undefined,
+		}));
+	}, [allPlayers]);
 
 	const getTeamName = (id: number) =>
 		allTeams.find((t) => t.id_team === id)?.name ?? `Time ${id}`;
@@ -190,95 +239,103 @@ export default function MatchesPage() {
 
 	return (
 		<div className="flex flex-col gap-6 animate-slide-down">
-			<div className="flex items-center justify-between flex-wrap gap-4">
+			{/* Top Header */}
+			<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 				<div>
-					<h1 className="text-3xl text-main">Central de Partidas</h1>
-					<p className="text-sm text-muted mt-1">
+					<h1 className="text-2xl sm:text-3xl font-bold text-main">Central de Partidas</h1>
+					<p className="text-xs sm:text-sm text-muted mt-0.5">
 						{activeRound
 							? `Rodada ${activeRound.round_number} em andamento`
 							: 'Nenhuma rodada ativa no momento'}
 					</p>
 				</div>
 				<div className="flex items-center gap-3 flex-wrap">
-					<Select
-						value={selectedSeason}
-						onChange={(e) => handleSeasonChange(e.target.value)}
-						className="w-auto"
-					>
-						{seasons.map((s) => (
-							<option key={s.id_season} value={s.id_season}>
-								Temporada {s.number}{' '}
-								{s.is_active ? '(Atual)' : ''}
-							</option>
-						))}
-					</Select>
+					<SeasonSelector
+						seasons={seasons}
+						selectedSeasonId={selectedSeason}
+						onSelectSeason={(s) =>
+							handleSeasonChange(s.id_season.toString())
+						}
+					/>
 					{!activeRound && (
 						<Button
+							variant="ghost"
 							onClick={() => setIsRoundModalOpen(true)}
-							className="w-auto"
+							className="!w-auto flex items-center gap-1.5 px-3.5 py-2 text-sm self-start sm:self-auto"
 						>
-							▶ Iniciar Rodada
+							<Play className="w-4 h-4" />
+							<span>Iniciar Rodada</span>
 						</Button>
 					)}
 					<Button
 						onClick={() => setIsMatchModalOpen(true)}
-						className="w-auto"
+						className="!w-auto flex items-center gap-1.5 px-3.5 py-2 text-sm self-start sm:self-auto"
 					>
-						+ Nova Partida
+						<Plus className="w-4 h-4" />
+						<span>Nova Partida</span>
 					</Button>
 				</div>
 			</div>
 
-			<div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3">
-				<FormField label="Filtrar por Rodada">
-					<Select
+			{/* Barra de Filtros */}
+			<div className="bg-surface border border-border rounded-xl p-3 sm:px-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+				<div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1">
+					<SearchableSelect
+						label="Rodada"
+						placeholder="Todas as Rodadas"
+						allOptionLabel={`Todas as Rodadas (${rounds.length})`}
+						showAllOption
+						searchPlaceholder="Buscar rodada..."
+						options={roundOptions}
 						value={filters.round_id}
-						onChange={(e) =>
-							setFilters({ ...filters, round_id: e.target.value })
+						onChange={(val) =>
+							setFilters({ ...filters, round_id: val })
 						}
-					>
-						<option value="">Todas as Rodadas</option>
-						{rounds.map((r) => (
-							<option key={r.id_round} value={r.id_round}>
-								Rodada {r.round_number} (
-								{new Date(r.date).toLocaleDateString('pt-BR')})
-							</option>
-						))}
-					</Select>
-				</FormField>
-				<FormField label="Filtrar por Time">
-					<Select
+					/>
+
+					<SearchableSelect
+						label="Time"
+						placeholder="Todos os Times"
+						allOptionLabel={`Todos os Times (${allTeams.length})`}
+						showAllOption
+						searchPlaceholder="Buscar time..."
+						options={teamOptions}
 						value={filters.team_id}
-						onChange={(e) =>
-							setFilters({ ...filters, team_id: e.target.value })
+						onChange={(val) =>
+							setFilters({ ...filters, team_id: val })
 						}
-					>
-						<option value="">Todos os Times</option>
-						{allTeams.map((t) => (
-							<option key={t.id_team} value={t.id_team}>
-								{t.name}
-							</option>
-						))}
-					</Select>
-				</FormField>
-				<FormField label="Filtrar por Jogador">
-					<Select
+					/>
+
+					<SearchableSelect
+						label="Jogador"
+						placeholder="Todos os Jogadores"
+						allOptionLabel={`Todos os Jogadores (${allPlayers.length})`}
+						showAllOption
+						searchPlaceholder="Buscar jogador..."
+						options={playerOptions}
 						value={filters.player_id}
-						onChange={(e) =>
-							setFilters({
-								...filters,
-								player_id: e.target.value,
-							})
+						onChange={(val) =>
+							setFilters({ ...filters, player_id: val })
 						}
-					>
-						<option value="">Todos os Jogadores</option>
-						{allPlayers.map((p) => (
-							<option key={p.id_player} value={p.id_player}>
-								{p.nome}
-							</option>
-						))}
-					</Select>
-				</FormField>
+					/>
+				</div>
+
+				<div className="flex items-center justify-between lg:justify-end gap-3 pt-2 lg:pt-0 border-t lg:border-t-0 border-border/40 text-xs sm:text-sm text-muted">
+					{(filters.round_id || filters.team_id || filters.player_id) && (
+						<button
+							type="button"
+							onClick={() =>
+								setFilters({ round_id: '', team_id: '', player_id: '' })
+							}
+							className="text-xs text-primary hover:underline font-medium cursor-pointer"
+						>
+							Limpar filtros
+						</button>
+					)}
+					<span>
+						<strong className="text-main font-semibold">{filteredMatches.length}</strong> partidas encontradas
+					</span>
+				</div>
 			</div>
 
 			{matchesQuery.isLoading ? (
@@ -289,7 +346,7 @@ export default function MatchesPage() {
 				</div>
 			) : (
 				<div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
-					{filteredMatches.map((m) => (
+					{filteredMatches.map((m, index) => (
 						<Link
 							href={`/matches/${m.id}`}
 							key={m.id}
@@ -308,7 +365,7 @@ export default function MatchesPage() {
 							</div>
 							<div className="flex items-center justify-between text-xs text-muted">
 								<span>
-									#P{m.id} · Rodada {m.round_id}
+									#P{matchOrderMap.get(m.id ?? m.id_match) ?? index + 1} · Rodada {m.round_id}
 								</span>
 								<span className="text-primary">
 									Ver Detalhes →

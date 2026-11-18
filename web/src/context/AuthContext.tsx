@@ -9,6 +9,7 @@ export interface User {
   email: string;
   is_admin: boolean;
   role: string;
+  is_associate?: boolean;
 }
 
 interface AuthContextType {
@@ -29,10 +30,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const token = localStorage.getItem("auth_token");
     const storedUser = localStorage.getItem("user_data");
     if (token && storedUser) {
-      setUser(JSON.parse(storedUser));
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch {
+        setUser(null);
+      }
     } else {
-      // Se não há token ou dados do usuário, redirecionar para login
-      router.push("/login");
+      setUser(null);
     }
     setLoading(false);
   }, []);

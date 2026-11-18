@@ -7,6 +7,7 @@ import { fetchAPI } from '@/lib/api';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { FormField } from '@/components/FormField';
+import Link from 'next/link';
 
 export default function LoginPage() {
 	const { login } = useAuth();
@@ -158,6 +159,15 @@ export default function LoginPage() {
 								Esqueci minha senha
 							</button>
 						</form>
+
+						<div className="mt-6 pt-4 border-t border-border text-center">
+							<Link
+								href="/public"
+								className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-primary hover:text-primary-hover hover:underline transition-colors"
+							>
+								⚽ Acompanhar partidas e classificação pública →
+							</Link>
+						</div>
 					</>
 				)}
 			</div>

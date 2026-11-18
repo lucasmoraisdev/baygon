@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, computed_field
 from typing import Optional, List
 from datetime import datetime
 
@@ -7,10 +7,11 @@ from app.schemas.player_schema import PlayerRead
 
 class UserBase(BaseModel):
     name: str
-    email: EmailStr
+    email: str
     username: str
     phone_number: str
     is_admin: bool = False
+    skip_email: Optional[bool] = False
 
 
 class UserCreate(UserBase):
@@ -38,6 +39,15 @@ class UserRead(UserBase):
     role: str
 
     players: Optional[List[PlayerRead]] = None
+
+    @computed_field
+    @property
+    def is_associate(self) -> bool:
+        if self.is_admin:
+            return True
+        if self.players:
+            return any(bool(getattr(p, 'is_associate', False)) for p in self.players)
+        return False
 
     model_config = ConfigDict(from_attributes=True)
 

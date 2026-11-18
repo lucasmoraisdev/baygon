@@ -6,6 +6,9 @@ import { Input } from '@/components/Input';
 import { Loading } from '@/components/Loading';
 import { Modal } from '@/components/Modal';
 import { Select } from '@/components/Select';
+import { SeasonSelector } from '@/components/SeasonSelector';
+import { SearchableSelect } from '@/components/SearchableSelect';
+import { Plus, Play } from 'lucide-react';
 import { TeamColorTag } from '@/components/TeamColorTag';
 import { TEAM_COLORS } from '@/lib/teamColors';
 import { useAuth } from '@/context/AuthContext';
@@ -133,6 +136,16 @@ export default function TeamsPage() {
 		[rounds],
 	);
 
+	const roundOptions = useMemo(() => {
+		return rounds.map((r) => ({
+			value: r.id_round.toString(),
+			label: `Rodada ${r.round_number}`,
+			sublabel: new Date(r.date).toLocaleDateString('pt-BR'),
+			badge: !r.end_time ? 'Ativa' : undefined,
+			badgeVariant: (!r.end_time ? 'success' : 'default') as 'success' | 'default',
+		}));
+	}, [rounds]);
+
 	const filteredTeams = useMemo(() => {
 		return allTeams.filter((team) => {
 			if (filterRoundId)
@@ -223,78 +236,79 @@ export default function TeamsPage() {
 
 	return (
 		<div className="flex flex-col gap-6 animate-slide-down">
-			<div className="flex items-center justify-between flex-wrap gap-4">
+			{/* Top Header */}
+			<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 				<div>
-					<h1 className="text-3xl text-main">Times</h1>
-					<p className="text-sm text-muted mt-1">
+					<h1 className="text-2xl sm:text-3xl font-bold text-main">Times</h1>
+					<p className="text-xs sm:text-sm text-muted mt-0.5">
 						Gerencie os times de cada rodada
 					</p>
 				</div>
-				<div className="flex items-center gap-3">
-					<Select
-						value={selectedSeason}
-						onChange={(e) =>
-							setSelectedSeasonOverride(e.target.value)
+				<div className="flex items-center gap-3 flex-wrap">
+					<SeasonSelector
+						seasons={seasons}
+						selectedSeasonId={selectedSeason}
+						onSelectSeason={(s) =>
+							setSelectedSeasonOverride(s.id_season.toString())
 						}
-						className="w-auto"
-					>
-						{seasons.map((s) => (
-							<option key={s.id_season} value={s.id_season}>
-								Temporada {s.number}{' '}
-								{s.is_active ? '(Atual)' : ''}
-							</option>
-						))}
-					</Select>
+					/>
 					{isAdmin && (
 						<Button
 							onClick={() => setIsTeamModalOpen(true)}
-							className="w-auto"
+							className="!w-auto flex items-center gap-1.5 px-3.5 py-2 text-sm self-start sm:self-auto"
 						>
-							+ Novo Time
+							<Plus className="w-4 h-4" />
+							<span>Novo Time</span>
 						</Button>
 					)}
 				</div>
 			</div>
 
-			<Select
-				value={filterRoundId}
-				onChange={(e) => setFilterRoundId(e.target.value)}
-			>
-				<option value="">Toda a Temporada</option>
-				{rounds.map((r) => (
-					<option key={r.id_round} value={r.id_round}>
-						Rodada {r.round_number} (
-						{new Date(r.date).toLocaleDateString('pt-BR')}){' '}
-						{!r.end_time ? '[Ativa]' : ''}
-					</option>
-				))}
-			</Select>
+			{/* Barra de Filtro de Rodadas */}
+			<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface border border-border rounded-xl p-3 sm:px-4">
+				<div className="w-full sm:w-80">
+					<SearchableSelect
+						label="Filtrar por rodada"
+						placeholder="Toda a Temporada"
+						allOptionLabel={`Toda a Temporada (${rounds.length} rodadas)`}
+						showAllOption
+						searchPlaceholder="Buscar rodada..."
+						options={roundOptions}
+						value={filterRoundId}
+						onChange={(val) => setFilterRoundId(val)}
+					/>
+				</div>
+				<div className="text-xs sm:text-sm text-muted self-end sm:self-auto">
+					Exibindo <span className="font-semibold text-main">{filteredTeams.length}</span> times
+				</div>
+			</div>
 
 			{!activeRound ? (
 				<div className="bg-surface border border-border rounded-xl p-6 flex flex-col items-center gap-3 text-center">
-					<h3 className="text-lg font-semibold">
+					<h3 className="text-lg font-semibold text-main">
 						Nenhuma Rodada Ativa
 					</h3>
-					<p className="text-muted text-sm">
+					<p className="text-muted text-sm max-w-md">
 						Para interagir com os times desta semana, inicie uma
 						nova rodada.
 					</p>
 					{isAdmin && (
 						<Button
 							onClick={() => setIsRoundModalOpen(true)}
-							className="w-auto"
+							className="!w-auto flex items-center gap-1.5 px-3.5 py-2 text-sm"
 						>
-							▶ Iniciar Nova Rodada
+							<Play className="w-4 h-4" />
+							<span>Iniciar Nova Rodada</span>
 						</Button>
 					)}
 				</div>
 			) : currentRoundTeams.length === 0 &&
 			  filterRoundId === activeRound.id_round.toString() ? (
 				<div className="bg-surface border border-border rounded-xl p-6 flex flex-col items-center gap-3 text-center">
-					<h3 className="text-lg font-semibold">
+					<h3 className="text-lg font-semibold text-main">
 						Nenhum time cadastrado ainda
 					</h3>
-					<p className="text-muted text-sm">
+					<p className="text-muted text-sm max-w-md">
 						A rodada {activeRound.round_number} está em andamento,
 						mas não há times cadastrados.
 					</p>
@@ -307,9 +321,10 @@ export default function TeamsPage() {
 								}));
 								setIsTeamModalOpen(true);
 							}}
-							className="w-auto"
+							className="!w-auto flex items-center gap-1.5 px-3.5 py-2 text-sm"
 						>
-							+ Cadastrar Novo Time
+							<Plus className="w-4 h-4" />
+							<span>Cadastrar Novo Time</span>
 						</Button>
 					)}
 				</div>

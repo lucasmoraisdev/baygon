@@ -42,6 +42,7 @@ class RoundBase(BaseModel):
     end_time: Optional[datetime] = None
     round_number: int
     season_id: int
+    is_voting_open: bool = False
 
 
 class RoundCreate(RoundBase):

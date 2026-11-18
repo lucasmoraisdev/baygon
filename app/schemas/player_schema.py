@@ -1,6 +1,6 @@
 from typing import Optional, List
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from app.core.enum.events_enum import PosicaoEnum, PeEnum
 
 class PlayerBase(BaseModel):
@@ -14,6 +14,8 @@ class PlayerBase(BaseModel):
     user_id: Optional[int] = None
     is_associate: bool = True
     is_guest: bool = False
+
+    model_config = ConfigDict(from_attributes=True)
 
 class PlayerCreate(PlayerBase):
     posicao: Optional[PosicaoEnum] = None
@@ -37,8 +39,7 @@ class PlayerRead(PlayerBase):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 class TeamSummary(BaseModel):
     id_team: int
@@ -48,8 +49,7 @@ class TeamSummary(BaseModel):
     season_name: Optional[str] = None
     round_number: Optional[int] = None
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AwardSummary(BaseModel):
@@ -61,8 +61,7 @@ class AwardSummary(BaseModel):
     round_number: Optional[int] = None
     date: Optional[str] = None
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PlayerScoreSummary(BaseModel):
@@ -70,8 +69,7 @@ class PlayerScoreSummary(BaseModel):
     total_points: int
     round_id: int
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PlayerSeasonScoreSummary(BaseModel):
@@ -79,8 +77,7 @@ class PlayerSeasonScoreSummary(BaseModel):
     total_points: int
     season_id: int
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 class PlayerWithTeamsRead(PlayerRead):
     teams: List[TeamSummary] = []

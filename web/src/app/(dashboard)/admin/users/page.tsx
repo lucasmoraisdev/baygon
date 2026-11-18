@@ -15,16 +15,26 @@ import {
 } from '@tanstack/react-query';
 import {
 	Check,
+	CheckCircle2,
+	ChevronLeft,
+	ChevronRight,
+	Clock,
 	Copy,
+	ExternalLink,
 	Link2,
 	Mail,
+	Pencil,
+	Search,
 	ShieldAlert,
+	ShieldCheck,
 	Trash2,
 	Unlink,
 	UserPlus,
+	Users,
+	X,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 interface LinkedPlayer {
 	id_player: number;
@@ -48,10 +58,12 @@ interface UserItem {
 
 interface InviteResult {
 	id_user: number;
+	name?: string;
 	username: string;
 	email: string;
-	invite_link: string;
+	invite_link?: string | null;
 	temporary_password?: string | null;
+	setup_token?: string | null;
 }
 
 export default function AdminUsersPage() {
@@ -61,6 +73,9 @@ export default function AdminUsersPage() {
 
 	const [search, setSearch] = useState('');
 	const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'admin'>('all');
+	const [playerFilter, setPlayerFilter] = useState<'all' | 'linked' | 'unlinked'>('all');
+	const [currentPage, setCurrentPage] = useState<number>(1);
+	const pageSize = 10;
 
 	const [isInviteOpen, setIsInviteOpen] = useState(false);
 	const [inviteForm, setInviteForm] = useState({
@@ -69,6 +84,7 @@ export default function AdminUsersPage() {
 		username: '',
 		phone_number: '',
 		is_admin: false,
+		skip_email: true,
 		player_id: '',
 	});
 
@@ -111,38 +127,79 @@ export default function AdminUsersPage() {
 		[players],
 	);
 
+	const sortedPlayersForLink = useMemo(() => {
+		return [...players].sort((a, b) => {
+			if (!a.user_id && b.user_id) return -1;
+			if (a.user_id && !b.user_id) return 1;
+			return (a.apelido || a.nome).localeCompare(b.apelido || b.nome);
+		});
+	}, [players]);
+
+	useEffect(() => {
+		setCurrentPage(1);
+	}, [search, statusFilter, playerFilter]);
+
+	const stats = useMemo(() => {
+		const total = users.length;
+		const active = users.filter((u) => u.is_active).length;
+		const pending = users.filter((u) => !u.is_active).length;
+		const admins = users.filter((u) => u.is_admin).length;
+		return { total, active, pending, admins };
+	}, [users]);
+
 	const filteredUsers = useMemo(() => {
 		const q = search.toLowerCase().trim();
 		return users.filter((u) => {
 			if (statusFilter === 'active' && !u.is_active) return false;
 			if (statusFilter === 'pending' && u.is_active) return false;
 			if (statusFilter === 'admin' && !u.is_admin) return false;
+			if (playerFilter === 'linked' && (!u.players || u.players.length === 0)) return false;
+			if (playerFilter === 'unlinked' && u.players && u.players.length > 0) return false;
 			if (!q) return true;
 			return (
 				u.name.toLowerCase().includes(q) ||
 				u.username.toLowerCase().includes(q) ||
-				u.email.toLowerCase().includes(q)
+				u.email.toLowerCase().includes(q) ||
+				(u.phone_number && u.phone_number.includes(q))
 			);
 		});
-	}, [users, search, statusFilter]);
+	}, [users, search, statusFilter, playerFilter]);
+
+	const totalPages = Math.ceil(filteredUsers.length / pageSize) || 1;
+	const paginatedUsers = useMemo(() => {
+		const start = (currentPage - 1) * pageSize;
+		return filteredUsers.slice(start, start + pageSize);
+	}, [filteredUsers, currentPage, pageSize]);
 
 	const invalidateUsersAndPlayers = () => {
 		queryClient.invalidateQueries({ queryKey: ['users'] });
 		queryClient.invalidateQueries({ queryKey: ['players'] });
 	};
 
-	const normalizeInviteLink = (rawLink: string) => {
-		if (typeof window === 'undefined') return rawLink;
-		try {
-			const url = new URL(rawLink);
-			const token = url.searchParams.get('setup_token');
-			if (token) {
-				return `${window.location.origin}/complete-registration?setup_token=${encodeURIComponent(token)}`;
+	const normalizeInviteLink = (rawLink?: string | null, fallbackToken?: string | null) => {
+		if (typeof window === 'undefined') return rawLink || '';
+		const origin = window.location.origin;
+
+		if (rawLink) {
+			try {
+				const url = new URL(rawLink, origin);
+				const token = url.searchParams.get('setup_token') || fallbackToken;
+				if (token) {
+					return `${origin}/complete-registration?setup_token=${encodeURIComponent(token)}`;
+				}
+				if (url.pathname) {
+					return `${origin}${url.pathname}${url.search}`;
+				}
+			} catch {
+				// fallback
 			}
-		} catch {
-			// fallback
 		}
-		return rawLink;
+
+		if (fallbackToken) {
+			return `${origin}/complete-registration?setup_token=${encodeURIComponent(fallbackToken)}`;
+		}
+
+		return rawLink || '';
 	};
 
 	const copyText = async (key: string, text: string) => {
@@ -161,6 +218,7 @@ export default function AdminUsersPage() {
 					username: inviteForm.username.trim(),
 					phone_number: inviteForm.phone_number.trim(),
 					is_admin: inviteForm.is_admin,
+					skip_email: inviteForm.skip_email,
 				}),
 			});
 			if (inviteForm.player_id) {
@@ -180,11 +238,12 @@ export default function AdminUsersPage() {
 				username: '',
 				phone_number: '',
 				is_admin: false,
+				skip_email: true,
 				player_id: '',
 			});
 			setInviteInfo({
 				...created,
-				invite_link: normalizeInviteLink(created.invite_link),
+				invite_link: normalizeInviteLink(created.invite_link, created.setup_token),
 			});
 		},
 		onError: (err: Error) =>
@@ -198,7 +257,7 @@ export default function AdminUsersPage() {
 			invalidateUsersAndPlayers();
 			setInviteInfo({
 				...res,
-				invite_link: normalizeInviteLink(res.invite_link),
+				invite_link: normalizeInviteLink(res.invite_link, res.setup_token),
 			});
 		},
 		onError: (err: Error) =>
@@ -284,126 +343,277 @@ export default function AdminUsersPage() {
 
 	return (
 		<div className="flex flex-col gap-6 animate-slide-down pb-12">
-			<div className="flex items-center justify-between flex-wrap gap-4">
+			{/* Header Principal */}
+			<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 				<div>
-					<h1 className="text-3xl text-main">
-						Gestão de Usuários (Admin)
+					<h1 className="text-2xl sm:text-3xl font-bold text-main tracking-tight">
+						Gestão de Usuários
 					</h1>
-					<p className="text-sm text-muted mt-1">
-						Convide novos usuários, gerencie permissões e vincule
-						contas aos jogadores do baba.
+					<p className="text-xs sm:text-sm text-muted mt-0.5">
+						Gerencie contas, permissões de acesso e vínculos com os jogadores da associação.
 					</p>
 				</div>
 
 				<Button
 					onClick={() => setIsInviteOpen(true)}
-					className="w-auto flex items-center gap-2"
+					className="!w-auto flex items-center gap-1.5 px-3.5 py-2 text-sm self-start sm:self-auto"
 				>
 					<UserPlus className="w-4 h-4" />
-					Convidar Usuário
+					<span>Convidar Usuário</span>
 				</Button>
 			</div>
 
-			{/* Filtros */}
-			<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-				<Input
-					value={search}
-					onChange={(e) => setSearch(e.target.value)}
-					placeholder="Buscar por nome, username ou e-mail..."
-				/>
-				<Select
-					value={statusFilter}
-					onChange={(e) =>
-						setStatusFilter(e.target.value as typeof statusFilter)
-					}
+			{/* Cards de Métricas e Filtros Rápidos */}
+			<div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+				<button
+					type="button"
+					onClick={() => setStatusFilter('all')}
+					className={`p-4 rounded-xl border text-left transition-all cursor-pointer ${
+						statusFilter === 'all'
+							? 'bg-primary/10 border-primary ring-1 ring-primary'
+							: 'bg-surface border-border hover:border-border-hover'
+					}`}
 				>
-					<option value="all">Todos ({users.length})</option>
-					<option value="active">
-						Ativos ({users.filter((u) => u.is_active).length})
-					</option>
-					<option value="pending">
-						Pendentes ({users.filter((u) => !u.is_active).length})
-					</option>
-					<option value="admin">
-						Administradores ({users.filter((u) => u.is_admin).length})
-					</option>
-				</Select>
+					<div className="flex items-center justify-between mb-2">
+						<span className="text-xs font-semibold text-muted uppercase tracking-wider">
+							Total
+						</span>
+						<div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+							<Users className="w-4 h-4" />
+						</div>
+					</div>
+					<div className="text-2xl font-bold text-main">
+						{stats.total}
+					</div>
+					<span className="text-xs text-muted">Contas cadastradas</span>
+				</button>
+
+				<button
+					type="button"
+					onClick={() => setStatusFilter('active')}
+					className={`p-4 rounded-xl border text-left transition-all cursor-pointer ${
+						statusFilter === 'active'
+							? 'bg-emerald-500/10 border-emerald-500 ring-1 ring-emerald-500'
+							: 'bg-surface border-border hover:border-border-hover'
+					}`}
+				>
+					<div className="flex items-center justify-between mb-2">
+						<span className="text-xs font-semibold text-muted uppercase tracking-wider">
+							Ativos
+						</span>
+						<div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+							<CheckCircle2 className="w-4 h-4" />
+						</div>
+					</div>
+					<div className="text-2xl font-bold text-main">
+						{stats.active}
+					</div>
+					<span className="text-xs text-muted">Cadastro concluído</span>
+				</button>
+
+				<button
+					type="button"
+					onClick={() => setStatusFilter('pending')}
+					className={`p-4 rounded-xl border text-left transition-all cursor-pointer ${
+						statusFilter === 'pending'
+							? 'bg-amber-500/10 border-amber-500 ring-1 ring-amber-500'
+							: 'bg-surface border-border hover:border-border-hover'
+					}`}
+				>
+					<div className="flex items-center justify-between mb-2">
+						<span className="text-xs font-semibold text-muted uppercase tracking-wider">
+							Pendentes
+						</span>
+						<div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
+							<Clock className="w-4 h-4" />
+						</div>
+					</div>
+					<div className="text-2xl font-bold text-main">
+						{stats.pending}
+					</div>
+					<span className="text-xs text-muted">Aguardando ativação</span>
+				</button>
+
+				<button
+					type="button"
+					onClick={() => setStatusFilter('admin')}
+					className={`p-4 rounded-xl border text-left transition-all cursor-pointer ${
+						statusFilter === 'admin'
+							? 'bg-blue-500/10 border-blue-500 ring-1 ring-blue-500'
+							: 'bg-surface border-border hover:border-border-hover'
+					}`}
+				>
+					<div className="flex items-center justify-between mb-2">
+						<span className="text-xs font-semibold text-muted uppercase tracking-wider">
+							Administradores
+						</span>
+						<div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center">
+							<ShieldCheck className="w-4 h-4" />
+						</div>
+					</div>
+					<div className="text-2xl font-bold text-main">
+						{stats.admins}
+					</div>
+					<span className="text-xs text-muted">Acesso total</span>
+				</button>
 			</div>
 
-			{/* Lista de Usuários */}
-			{filteredUsers.length === 0 ? (
-				<div className="bg-surface border border-border rounded-xl p-8 text-center text-sm text-muted">
-					Nenhum usuário encontrado.
-				</div>
-			) : (
-				<div className="flex flex-col gap-3">
-					{filteredUsers.map((u) => (
-						<div
-							key={u.id_user}
-							className="bg-surface border border-border rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4"
+			{/* Barra de Busca e Filtros */}
+			<div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+				{/* Campo de Busca */}
+				<div className="relative flex-1 max-w-md">
+					<Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+					<input
+						type="text"
+						value={search}
+						onChange={(e) => setSearch(e.target.value)}
+						placeholder="Buscar por nome, @username, e-mail ou telefone..."
+						className="w-full pl-10 pr-9 py-2 bg-surface border border-border rounded-xl text-sm text-main placeholder:text-muted focus:outline-none focus:border-primary transition-colors"
+					/>
+					{search && (
+						<button
+							type="button"
+							onClick={() => setSearch('')}
+							className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-main cursor-pointer"
+							title="Limpar busca"
 						>
-							<div className="flex flex-col gap-1">
-								<div className="flex items-center gap-2 flex-wrap">
-									<strong className="text-base text-main">
-										{u.name}
-									</strong>
-									<span className="text-xs text-muted">
-										@{u.username}
-									</span>
-									<span
-										className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-											u.is_admin
-												? 'bg-primary/20 text-primary'
-												: 'bg-white/10 text-muted'
-										}`}
-									>
-										{u.is_admin ? 'Admin' : 'Usuário'}
-									</span>
-									<span
-										className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-											u.is_active
-												? 'bg-green-500/15 text-green-400'
-												: 'bg-yellow-500/15 text-yellow-300'
-										}`}
-									>
-										{u.is_active
-											? 'Ativo'
-											: 'Aguardando Cadastro'}
-									</span>
-								</div>
-								<p className="text-xs text-muted">
-									{u.email} · {u.phone_number}
-								</p>
+							<X className="w-4 h-4" />
+						</button>
+					)}
+				</div>
 
-								{/* Jogadores vinculados */}
-								<div className="flex items-center gap-2 flex-wrap mt-1">
-									<span className="text-xs text-muted">
-										Jogador vinculado:
-									</span>
+				{/* Filtro por vínculo de jogador */}
+				<div className="flex items-center gap-2">
+					<span className="text-xs text-muted font-medium hidden md:inline">Vínculo:</span>
+					<div className="inline-flex bg-surface border border-border rounded-xl p-1 text-xs">
+						<button
+							type="button"
+							onClick={() => setPlayerFilter('all')}
+							className={`px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer ${
+								playerFilter === 'all'
+									? 'bg-primary/20 text-primary font-semibold'
+									: 'text-muted hover:text-main hover:bg-hover-nav'
+							}`}
+						>
+							Todos
+						</button>
+						<button
+							type="button"
+							onClick={() => setPlayerFilter('linked')}
+							className={`px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer ${
+								playerFilter === 'linked'
+									? 'bg-primary/20 text-primary font-semibold'
+									: 'text-muted hover:text-main hover:bg-hover-nav'
+							}`}
+						>
+							Vinculados
+						</button>
+						<button
+							type="button"
+							onClick={() => setPlayerFilter('unlinked')}
+							className={`px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer ${
+								playerFilter === 'unlinked'
+									? 'bg-primary/20 text-primary font-semibold'
+									: 'text-muted hover:text-main hover:bg-hover-nav'
+							}`}
+						>
+							Sem Vínculo
+						</button>
+					</div>
+				</div>
+			</div>
+
+			{/* Tabela de Usuários */}
+			<section className="bg-surface border border-border rounded-2xl overflow-hidden shadow-sm">
+				{/* Cabeçalho da Tabela (Desktop) */}
+				<div className="hidden lg:grid lg:grid-cols-[2fr_1.8fr_1.8fr_1.4fr_120px] gap-4 items-center px-5 py-3.5 text-xs font-semibold text-muted tracking-wider uppercase border-b border-border bg-hover-nav/40">
+					<span>USUÁRIO</span>
+					<span>CONTATO</span>
+					<span>JOGADOR VINCULADO</span>
+					<span>STATUS & FUNÇÃO</span>
+					<span className="text-right">AÇÕES</span>
+				</div>
+
+				{filteredUsers.length === 0 ? (
+					<div className="px-5 py-12 text-center text-sm text-muted flex flex-col items-center gap-2">
+						<Users className="w-8 h-8 text-muted/50 mb-1" />
+						<p className="font-medium text-main">Nenhum usuário encontrado</p>
+						<p className="text-xs text-muted max-w-sm">
+							Tente ajustar os termos da busca ou os filtros selecionados acima.
+						</p>
+					</div>
+				) : (
+					paginatedUsers.map((u) => {
+						const isSelf = u.id_user === user?.id_user;
+						const initial = (u.name || u.username || 'U').charAt(0).toUpperCase();
+
+						return (
+							<div
+								key={u.id_user}
+								className="grid grid-cols-1 lg:grid-cols-[2fr_1.8fr_1.8fr_1.4fr_120px] gap-4 items-center px-5 py-4 border-t first:border-t-0 lg:first:border-t border-border hover:bg-hover-nav/40 transition-colors"
+							>
+								{/* Coluna 1: Usuário */}
+								<div className="flex items-center gap-3 min-w-0">
+									<div
+										className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${
+											u.is_admin
+												? 'bg-blue-500/15 text-blue-500 border border-blue-500/30'
+												: 'bg-primary/10 text-primary border border-primary/20'
+										}`}
+									>
+										{initial}
+									</div>
+									<div className="min-w-0">
+										<div className="flex items-center gap-2 flex-wrap">
+											<span className="font-semibold text-main text-sm truncate">
+												{u.name}
+											</span>
+											{isSelf && (
+												<span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary/20 text-primary">
+													Você
+												</span>
+											)}
+										</div>
+										<span className="text-xs text-muted truncate block">
+											@{u.username}
+										</span>
+									</div>
+								</div>
+
+								{/* Coluna 2: Contato */}
+								<div className="min-w-0 text-sm">
+									<div className="text-main truncate text-xs sm:text-sm">
+										{u.email}
+									</div>
+									<div className="text-xs text-muted truncate mt-0.5">
+										{u.phone_number || 'Sem telefone'}
+									</div>
+								</div>
+
+								{/* Coluna 3: Jogador Vinculado */}
+								<div className="flex items-center gap-1.5 flex-wrap min-w-0">
 									{u.players && u.players.length > 0 ? (
 										u.players.map((pl) => (
 											<span
 												key={pl.id_player}
-												className="inline-flex items-center gap-1.5 text-xs bg-primary/10 border border-primary/30 text-main px-2.5 py-0.5 rounded-full"
+												className="inline-flex items-center gap-1.5 text-xs bg-primary/10 border border-primary/25 text-primary px-2.5 py-1 rounded-lg"
 											>
 												<Link
 													href={`/players/${pl.id_player}`}
-													className="hover:underline"
+													className="hover:underline font-medium truncate max-w-[140px]"
+													title={pl.nome}
 												>
-													{pl.apelido || pl.nome}
+													⚽ {pl.apelido || pl.nome}
 												</Link>
 												<button
 													type="button"
 													onClick={() =>
-														unlinkPlayerMutation.mutate(
-															{
-																userId: u.id_user,
-																playerId:
-																	pl.id_player,
-															},
-														)
+														unlinkPlayerMutation.mutate({
+															userId: u.id_user,
+															playerId: pl.id_player,
+														})
 													}
-													className="text-red-400 hover:text-red-300 cursor-pointer"
+													className="text-muted hover:text-red-400 cursor-pointer transition-colors p-0.5 rounded"
 													title="Desvincular jogador"
 												>
 													<Unlink className="w-3 h-3" />
@@ -411,82 +621,161 @@ export default function AdminUsersPage() {
 											</span>
 										))
 									) : (
-										<span className="text-xs text-muted italic">
-											Nenhum
-										</span>
+										<button
+											type="button"
+											onClick={() => {
+												setLinkingUser(u);
+												setSelectedPlayerId('');
+											}}
+											className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-primary border border-dashed border-border hover:border-primary/50 px-2.5 py-1 rounded-lg transition-colors cursor-pointer bg-surface/50"
+										>
+											<Link2 className="w-3 h-3" />
+											Vincular Jogador
+										</button>
+									)}
+								</div>
+
+								{/* Coluna 4: Status e Função */}
+								<div className="flex items-center gap-2 flex-wrap">
+									<span
+										className={`text-xs font-medium px-2.5 py-0.5 rounded-full border ${
+											u.is_admin
+												? 'bg-blue-500/10 text-blue-500 border-blue-500/25'
+												: 'bg-hover-nav text-muted border-border'
+										}`}
+									>
+										{u.is_admin ? 'Admin' : 'Membro'}
+									</span>
+									<span
+										className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-0.5 rounded-full border ${
+											u.is_active
+												? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/25'
+												: 'bg-amber-500/10 text-amber-500 border-amber-500/25'
+										}`}
+									>
+										<span
+											className={`w-1.5 h-1.5 rounded-full ${
+												u.is_active ? 'bg-emerald-500' : 'bg-amber-500'
+											}`}
+										/>
+										{u.is_active ? 'Ativo' : 'Pendente'}
+									</span>
+								</div>
+
+								{/* Coluna 5: Ações */}
+								<div className="flex items-center gap-1 justify-end">
+									{!u.is_active && (
+										<button
+											type="button"
+											onClick={() => resendMutation.mutate(u.id_user)}
+											disabled={resendMutation.isPending}
+											className="p-2 rounded-lg text-primary hover:text-primary-hover hover:bg-hover-nav border border-transparent hover:border-border transition-colors cursor-pointer"
+											title="Gerar / Obter Link de Ativação Direto"
+										>
+											<Link2 className="w-4 h-4" />
+										</button>
 									)}
 									<button
 										type="button"
 										onClick={() => {
-											setLinkingUser(u);
-											setSelectedPlayerId('');
+											setEditingUser(u);
+											setEditForm({
+												name: u.name,
+												email: u.email,
+												username: u.username,
+												phone_number: u.phone_number,
+												is_admin: u.is_admin,
+												is_active: u.is_active,
+											});
 										}}
-										className="text-xs text-primary hover:underline inline-flex items-center gap-1 cursor-pointer"
+										className="p-2 rounded-lg text-muted hover:text-main hover:bg-hover-nav border border-transparent hover:border-border transition-colors cursor-pointer"
+										title="Editar Usuário"
 									>
-										<Link2 className="w-3 h-3" />
-										Vincular
+										<Pencil className="w-4 h-4" />
 									</button>
+									{!isSelf && (
+										<button
+											type="button"
+											onClick={() => {
+												if (
+													confirm(
+														`Tem certeza que deseja excluir o usuário "${u.username}"?`,
+													)
+												) {
+													deleteMutation.mutate(u.id_user);
+												}
+											}}
+											className="p-2 rounded-lg text-muted hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-colors cursor-pointer"
+											title="Excluir Usuário"
+										>
+											<Trash2 className="w-4 h-4" />
+										</button>
+									)}
 								</div>
 							</div>
+						);
+					})
+				)}
 
-							<div className="flex items-center gap-2 shrink-0 flex-wrap">
-								{!u.is_active && (
-									<Button
-										size="sm"
-										variant="ghost"
-										onClick={() =>
-											resendMutation.mutate(u.id_user)
-										}
-										disabled={resendMutation.isPending}
-										className="w-auto flex items-center gap-1"
-									>
-										<Mail className="w-3.5 h-3.5" />
-										Reenviar Convite
-									</Button>
+				{/* Paginação */}
+				{filteredUsers.length > pageSize && (
+					<div className="flex items-center justify-between border-t border-border p-4 px-5 flex-wrap gap-3 bg-surface">
+						<span className="text-xs text-muted">
+							Mostrando{' '}
+							<strong className="text-main">
+								{Math.min(
+									(currentPage - 1) * pageSize + 1,
+									filteredUsers.length,
 								)}
-								<Button
-									size="sm"
-									variant="ghost"
-									onClick={() => {
-										setEditingUser(u);
-										setEditForm({
-											name: u.name,
-											email: u.email,
-											username: u.username,
-											phone_number: u.phone_number,
-											is_admin: u.is_admin,
-											is_active: u.is_active,
-										});
-									}}
-									className="w-auto"
-								>
-									Editar
-								</Button>
-								{u.id_user !== user?.id_user && (
-									<button
-										type="button"
-										onClick={() => {
-											if (
-												confirm(
-													`Deseja remover o usuário "${u.username}"?`,
-												)
-											) {
-												deleteMutation.mutate(
-													u.id_user,
-												);
-											}
-										}}
-										className="p-2 text-red-400 hover:bg-red-500/10 rounded cursor-pointer"
-										title="Excluir usuário"
-									>
-										<Trash2 className="w-4 h-4" />
-									</button>
+							</strong>{' '}
+							a{' '}
+							<strong className="text-main">
+								{Math.min(
+									currentPage * pageSize,
+									filteredUsers.length,
 								)}
-							</div>
+							</strong>{' '}
+							de{' '}
+							<strong className="text-main">
+								{filteredUsers.length}
+							</strong>{' '}
+							usuários
+						</span>
+
+						<div className="flex items-center gap-1.5">
+							<button
+								type="button"
+								onClick={() =>
+									setCurrentPage((p) => Math.max(1, p - 1))
+								}
+								disabled={currentPage === 1}
+								className="p-1.5 rounded-lg border border-border bg-surface text-main hover:bg-hover-nav disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+								title="Página anterior"
+							>
+								<ChevronLeft className="w-4 h-4" />
+							</button>
+
+							<span className="px-3 py-1 text-xs font-medium text-main bg-surface border border-border rounded-lg">
+								{currentPage} / {totalPages}
+							</span>
+
+							<button
+								type="button"
+								onClick={() =>
+									setCurrentPage((p) =>
+										Math.min(totalPages, p + 1),
+									)
+								}
+								disabled={currentPage === totalPages}
+								className="p-1.5 rounded-lg border border-border bg-surface text-main hover:bg-hover-nav disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+								title="Próxima página"
+							>
+								<ChevronRight className="w-4 h-4" />
+							</button>
 						</div>
-					))}
-				</div>
-			)}
+					</div>
+				)}
+			</section>
 
 			{/* Modal Convidar Usuário */}
 			<Modal
@@ -564,11 +853,15 @@ export default function AdminUsersPage() {
 							}
 						>
 							<option value="">Não vincular agora</option>
-							{unlinkedPlayers.map((p) => (
-								<option key={p.id_player} value={p.id_player}>
-									{p.apelido || p.nome}
-								</option>
-							))}
+							{sortedPlayersForLink.map((p) => {
+								const isLinked = Boolean(p.user_id);
+								const displayName = p.apelido ? `${p.nome} (${p.apelido})` : p.nome;
+								return (
+									<option key={p.id_player} value={p.id_player}>
+										{displayName} {isLinked ? '✓ (Já vinculado)' : '— (Disponível)'}
+									</option>
+								);
+							})}
 						</Select>
 					</FormField>
 
@@ -584,6 +877,24 @@ export default function AdminUsersPage() {
 							}
 						/>
 						Conceder permissão de Administrador
+					</label>
+
+					<label className="flex items-start gap-2.5 text-xs text-muted cursor-pointer bg-background p-3 rounded-xl border border-border hover:border-border-hover transition">
+						<input
+							type="checkbox"
+							className="mt-0.5"
+							checked={inviteForm.skip_email}
+							onChange={(e) =>
+								setInviteForm({
+									...inviteForm,
+									skip_email: e.target.checked,
+								})
+							}
+						/>
+						<div>
+							<span className="font-semibold text-main block">Modo teste: Não enviar e-mail por SMTP</span>
+							<span>Cria o usuário e gera o link/credenciais de convite sem disparar e-mail para a caixa postal (evita bloqueios e bounces).</span>
+						</div>
 					</label>
 
 					<div className="flex gap-3 mt-2">
@@ -610,85 +921,121 @@ export default function AdminUsersPage() {
 			<Modal
 				isOpen={Boolean(inviteInfo)}
 				onClose={() => setInviteInfo(null)}
-				title="Convite Gerado"
+				title="Acesso e Ativação do Usuário"
+				maxWidth="max-w-lg"
 			>
-				{inviteInfo && (
-					<div className="flex flex-col gap-4 text-sm">
-						<p className="text-muted">
-							Compartilhe o link e a senha temporária abaixo com{' '}
-							<strong className="text-main">
-								{inviteInfo.username}
-							</strong>{' '}
-							({inviteInfo.email}):
-						</p>
+				{inviteInfo && (() => {
+					const displayLink =
+						inviteInfo.invite_link ||
+						normalizeInviteLink(inviteInfo.invite_link, inviteInfo.setup_token);
+					const displayPassword = inviteInfo.temporary_password || 'Baygon@123';
 
-						<div className="flex flex-col gap-1">
-							<span className="text-xs text-muted">
-								Link de Conclusão de Cadastro
-							</span>
-							<div className="flex gap-2">
-								<Input
-									readOnly
-									value={inviteInfo.invite_link}
-								/>
-								<Button
-									type="button"
-									variant="ghost"
-									size="sm"
-									className="w-auto shrink-0"
-									onClick={() =>
-										copyText('link', inviteInfo.invite_link)
-									}
-								>
-									{copiedField === 'link' ? (
-										<Check className="w-4 h-4 text-green-400" />
-									) : (
-										<Copy className="w-4 h-4" />
-									)}
-								</Button>
+					return (
+						<div className="flex flex-col gap-4 text-sm">
+							<div className="flex items-start gap-3 p-3.5 rounded-xl bg-primary/10 border border-primary/25 text-primary">
+								<CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
+								<div className="text-xs">
+									<p className="font-semibold text-main text-sm">Link de ativação gerado com sucesso!</p>
+									<p className="text-muted mt-1 leading-relaxed">
+										Para ativar o usuário <strong className="text-main">@{inviteInfo.username}</strong> ({inviteInfo.email}), compartilhe o link direto e a senha provisória abaixo:
+									</p>
+								</div>
 							</div>
-						</div>
 
-						{inviteInfo.temporary_password && (
-							<div className="flex flex-col gap-1">
-								<span className="text-xs text-muted">
-									Senha Temporária
+							{/* Bloco 1: Link Direto de Ativação */}
+							<div className="flex flex-col gap-2">
+								<div className="flex items-center justify-between">
+									<span className="text-xs font-semibold text-main flex items-center gap-1.5">
+										<Link2 className="w-3.5 h-3.5 text-primary" />
+										Link Direto de Ativação
+									</span>
+									<span className="text-[11px] text-muted">Válido por 24 horas</span>
+								</div>
+
+								{/* Container do link com quebra total e texto visível */}
+								<div className="p-3 rounded-xl bg-background border border-border text-xs font-mono text-main break-all select-all leading-relaxed max-h-28 overflow-y-auto font-medium">
+									{displayLink || 'Gerando link de ativação...'}
+								</div>
+
+								{/* Ações do Link com botões bem identificados */}
+								<div className="flex items-center gap-2">
+									<Button
+										type="button"
+										variant={copiedField === 'link' ? 'primary' : 'ghost'}
+										size="sm"
+										className="w-auto flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-semibold"
+										onClick={() => copyText('link', displayLink)}
+									>
+										{copiedField === 'link' ? (
+											<Check className="w-4 h-4 text-emerald-400" />
+										) : (
+											<Copy className="w-4 h-4" />
+										)}
+										<span>{copiedField === 'link' ? 'Link Copiado!' : 'Copiar Link'}</span>
+									</Button>
+
+									{displayLink && (
+										<a
+											href={displayLink}
+											target="_blank"
+											rel="noreferrer"
+											className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-primary hover:bg-primary-hover text-white transition cursor-pointer"
+										>
+											<span>Abrir Página de Ativação</span>
+											<ExternalLink className="w-3.5 h-3.5" />
+										</a>
+									)}
+								</div>
+							</div>
+
+							{/* Bloco 2: Senha Inicial Temporária */}
+							<div className="flex flex-col gap-2">
+								<span className="text-xs font-semibold text-main flex items-center gap-1.5">
+									<ShieldCheck className="w-3.5 h-3.5 text-amber-500" />
+									Senha Inicial Temporária
 								</span>
-								<div className="flex gap-2">
-									<Input
-										readOnly
-										value={inviteInfo.temporary_password}
-									/>
+
+								<div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-between gap-3">
+									<div className="flex flex-col gap-0.5">
+										<span className="text-[11px] uppercase tracking-wider font-semibold text-amber-500">
+											Senha Provisória
+										</span>
+										<span className="font-mono text-base font-bold tracking-wider text-main select-all">
+											{displayPassword}
+										</span>
+									</div>
+
 									<Button
 										type="button"
 										variant="ghost"
 										size="sm"
-										className="w-auto shrink-0"
-										onClick={() =>
-											copyText(
-												'pass',
-												inviteInfo.temporary_password!,
-											)
-										}
+										className="w-auto flex items-center gap-1.5 border border-amber-500/30 text-amber-500 hover:bg-amber-500/10 px-3 py-1.5 text-xs font-semibold"
+										onClick={() => copyText('pass', displayPassword)}
 									>
 										{copiedField === 'pass' ? (
-											<Check className="w-4 h-4 text-green-400" />
+											<Check className="w-4 h-4 text-emerald-400" />
 										) : (
 											<Copy className="w-4 h-4" />
 										)}
+										<span>{copiedField === 'pass' ? 'Senha Copiada!' : 'Copiar Senha'}</span>
 									</Button>
 								</div>
-							</div>
-						)}
 
-						<Button
-							type="button"
-							onClick={() => setInviteInfo(null)}
-						>
-							Fechar
-						</Button>
-					</div>
-				)}
+								<span className="text-[11px] text-muted leading-relaxed">
+									O usuário informará esta senha temporária no primeiro acesso e em seguida definirá sua nova senha definitiva.
+								</span>
+							</div>
+
+							<Button
+								type="button"
+								onClick={() => setInviteInfo(null)}
+								className="mt-2"
+							>
+								Concluído / Fechar
+							</Button>
+						</div>
+					);
+				})()}
 			</Modal>
 
 			{/* Modal Editar Usuário */}
@@ -813,7 +1160,7 @@ export default function AdminUsersPage() {
 					}}
 					className="flex flex-col gap-3"
 				>
-					<FormField label="Jogador disponível">
+					<FormField label="Jogador para vincular">
 						<Select
 							value={selectedPlayerId}
 							onChange={(e) =>
@@ -822,11 +1169,15 @@ export default function AdminUsersPage() {
 							required
 						>
 							<option value="">Selecione um jogador...</option>
-							{unlinkedPlayers.map((p) => (
-								<option key={p.id_player} value={p.id_player}>
-									{p.apelido || p.nome}
-								</option>
-							))}
+							{sortedPlayersForLink.map((p) => {
+								const isLinked = Boolean(p.user_id);
+								const displayName = p.apelido ? `${p.nome} (${p.apelido})` : p.nome;
+								return (
+									<option key={p.id_player} value={p.id_player}>
+										{displayName} {isLinked ? '✓ (Já vinculado)' : '— (Disponível)'}
+									</option>
+								);
+							})}
 						</Select>
 					</FormField>
 					<div className="flex gap-3 mt-2">

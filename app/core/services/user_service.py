@@ -12,7 +12,17 @@ from app.db.base import get_db
 from app.db.models.user import User
 from app.db.repositories.user_repository import UserRepository
 from app.config.settings import PHRASE_DECODE, PHRASE_ENCODE, APP_URL, EMAIL_CONFIG
-from app.core.utils import decode_jwt_token, decrypt_data, encrypt_data, generate_jwt_token, generate_setup_token, load_options, get_random_password, send_invite_email
+from app.core.utils import (
+    decode_jwt_token,
+    decrypt_data,
+    encrypt_data,
+    generate_jwt_token,
+    generate_setup_token,
+    load_options,
+    get_random_password,
+    send_invite_email,
+    send_password_reset_email,
+)
 
 class UserService:
     def __init__(self, repo: UserRepository):
@@ -22,6 +32,46 @@ class UserService:
 
 
     async def create_user_with_invite(self, user_data: dict):
+        skip_email = bool(user_data.pop("skip_email", False))
+        existing_by_email = await self.repo.get_by_email(user_data["email"])
+        if existing_by_email and existing_by_email.password == "pending_setup" and not existing_by_email.is_active:
+            setup_token = str(uuid.uuid4())
+            default_password = get_random_password(self.default_passwords)
+            exp = datetime.utcnow() + timedelta(hours=24)
+            updated_user = await self.repo.update(
+                existing_by_email.id_user,
+                {
+                    "name": user_data.get("name", existing_by_email.name),
+                    "username": user_data.get("username", existing_by_email.username),
+                    "phone_number": user_data.get("phone_number", existing_by_email.phone_number),
+                    "is_admin": user_data.get("is_admin", existing_by_email.is_admin),
+                    "setup_token": setup_token,
+                    "password": encrypt_data(default_password, self.key),
+                    "invite_token_expires": exp,
+                },
+            )
+            jwt_token = generate_setup_token(existing_by_email.id_user, setup_token, exp)
+            invite_link = f"{APP_URL}/complete-registration?setup_token={jwt_token}"
+            if not skip_email:
+                try:
+                    send_invite_email(
+                        from_email=EMAIL_CONFIG["from_email"],
+                        to_email=user_data["email"],
+                        invite_link=invite_link,
+                        smtp_server=EMAIL_CONFIG["smtp_server"],
+                        smtp_port=EMAIL_CONFIG["smtp_port"],
+                        smtp_user=EMAIL_CONFIG["smtp_user"],
+                        smtp_password=EMAIL_CONFIG["smtp_password"],
+                        default_password=default_password,
+                    )
+                except Exception as e:
+                    print(f"Erro ao enviar o e-mail: {str(e)}")
+            else:
+                print(f"[Modo Teste] Disparo de e-mail pulado para {user_data['email']}")
+            updated_user.invite_link = invite_link
+            updated_user.temporary_password = default_password
+            return updated_user
+
         required_data_is_used = await self.repo.validate_if_user_data_exists(
             username=user_data["username"],
             phone_number=user_data["phone_number"],
@@ -56,26 +106,29 @@ class UserService:
 
         # enviar email 
         invite_link = f"{APP_URL}/complete-registration?setup_token={jwt_token}"
-        try:
-            send_invite_email(
-                from_email=EMAIL_CONFIG["from_email"],
-                to_email=user_data["email"],
-                invite_link=invite_link,
-                smtp_server=EMAIL_CONFIG["smtp_server"],
-                smtp_port=EMAIL_CONFIG["smtp_port"],
-                smtp_user=EMAIL_CONFIG["smtp_user"],
-                smtp_password=EMAIL_CONFIG["smtp_password"],
-                default_password=default_password
-            )
-            print(f"Convite enviado para {user_data['email']}")
-        except Exception as e:
-            print(f"Erro ao enviar o e-mail: {str(e)}")
+        if not skip_email:
+            try:
+                send_invite_email(
+                    from_email=EMAIL_CONFIG["from_email"],
+                    to_email=user_data["email"],
+                    invite_link=invite_link,
+                    smtp_server=EMAIL_CONFIG["smtp_server"],
+                    smtp_port=EMAIL_CONFIG["smtp_port"],
+                    smtp_user=EMAIL_CONFIG["smtp_user"],
+                    smtp_password=EMAIL_CONFIG["smtp_password"],
+                    default_password=default_password
+                )
+                print(f"Convite enviado para {user_data['email']}")
+            except Exception as e:
+                print(f"Erro ao enviar o e-mail: {str(e)}")
+        else:
+            print(f"[Modo Teste] Disparo de e-mail pulado para {user_data['email']}")
         
         new_user.invite_link = invite_link
         new_user.temporary_password = default_password
         return new_user
 
-    async def resend_invite(self, user_id: int) -> User:
+    async def resend_invite(self, user_id: int, skip_email: bool = True) -> User:
         user = await self.repo.get_by_id(user_id)
         if not user:
             raise HTTPException(status_code=404, detail="Usuário não encontrado.")
@@ -95,19 +148,23 @@ class UserService:
         jwt_token = generate_setup_token(user.id_user, setup_token, exp)
         invite_link = f"{APP_URL}/complete-registration?setup_token={jwt_token}"
 
-        try:
-            send_invite_email(
-                from_email=EMAIL_CONFIG["from_email"],
-                to_email=user.email,
-                invite_link=invite_link,
-                smtp_server=EMAIL_CONFIG["smtp_server"],
-                smtp_port=EMAIL_CONFIG["smtp_port"],
-                smtp_user=EMAIL_CONFIG["smtp_user"],
-                smtp_password=EMAIL_CONFIG["smtp_password"],
-                default_password=default_password,
-            )
-        except Exception as e:
-            print(f"Erro ao reenviar e-mail: {str(e)}")
+        is_test_email = not user.email or user.email.endswith(".local") or user.email.endswith("@baygon.com") or user.email.endswith("@teste.com")
+        if not skip_email and not is_test_email:
+            try:
+                send_invite_email(
+                    from_email=EMAIL_CONFIG["from_email"],
+                    to_email=user.email,
+                    invite_link=invite_link,
+                    smtp_server=EMAIL_CONFIG["smtp_server"],
+                    smtp_port=EMAIL_CONFIG["smtp_port"],
+                    smtp_user=EMAIL_CONFIG["smtp_user"],
+                    smtp_password=EMAIL_CONFIG["smtp_password"],
+                    default_password=default_password,
+                )
+            except Exception as e:
+                print(f"Erro ao reenviar e-mail: {str(e)}")
+        else:
+            print(f"[Modo Link Direto] Disparo de e-mail desconsiderado para {user.email}")
 
         updated.invite_link = invite_link
         updated.temporary_password = default_password
@@ -263,15 +320,14 @@ class UserService:
         if user and user.is_active:
             reset_link = await self._create_reset_link_for_user(user)
             try:
-                send_invite_email(
+                send_password_reset_email(
                     from_email=EMAIL_CONFIG["from_email"],
                     to_email=user.email,
-                    invite_link=reset_link,
+                    reset_link=reset_link,
                     smtp_server=EMAIL_CONFIG["smtp_server"],
                     smtp_port=EMAIL_CONFIG["smtp_port"],
                     smtp_user=EMAIL_CONFIG["smtp_user"],
                     smtp_password=EMAIL_CONFIG["smtp_password"],
-                    default_password="(Use o link acima para definir sua nova senha)",
                 )
             except Exception as e:
                 print(f"Erro ao enviar e-mail de redefinição: {str(e)}")

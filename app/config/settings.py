@@ -35,8 +35,9 @@ DEFAULT_USER_PERMISSION = {
     "username": None
 }
 
-APP_URL = (
-    "http://localhost:8501"
+APP_URL = os.getenv(
+    "APP_URL",
+    "http://localhost:3000"
     if ENVIRONMENT == "development"
     else "https://baygon-fantasy.streamlit.app"
 )

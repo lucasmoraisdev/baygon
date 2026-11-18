@@ -12,8 +12,21 @@ export default function RootLayout({
 	children: React.ReactNode;
 }) {
 	return (
-		<html lang="pt-BR">
+		<html lang="pt-BR" suppressHydrationWarning>
 			<head>
+				<script
+					dangerouslySetInnerHTML={{
+						__html: `
+							try {
+								const saved = localStorage.getItem('baygon_theme');
+								const theme = (saved === 'light' || saved === 'dark') ? saved : 'dark';
+								document.documentElement.classList.remove('light', 'dark');
+								document.documentElement.classList.add(theme);
+								document.documentElement.setAttribute('data-theme', theme);
+							} catch (e) {}
+						`,
+					}}
+				/>
 				<link rel="preconnect" href="https://fonts.googleapis.com" />
 				<link
 					rel="preconnect"
@@ -25,7 +38,7 @@ export default function RootLayout({
 					rel="stylesheet"
 				/>
 			</head>
-			<body className="bg-background text-main">
+			<body className="bg-background text-main min-h-screen transition-colors duration-200">
 				<Providers>{children}</Providers>
 			</body>
 		</html>

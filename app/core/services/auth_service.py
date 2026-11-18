@@ -50,6 +50,12 @@ class AuthService:
 
             encrypted_password = user.password
 
+            if encrypted_password == "pending_setup":
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Conta pendente de ativação. Solicite um convite ou redefinição de senha."
+                )
+
             if not self.fernet:
                 self.logger.error("Fernet not initialized. Cannot decrypt password.")
                 raise HTTPException(
@@ -79,6 +85,8 @@ class AuthService:
             self.logger.info(f"Usuário '{email}' autenticado com sucesso.")
             return access_token
 
+        except HTTPException:
+            raise
         except Exception as e:
             self.logger.error(f"Erro ao autenticar usuário '{email}': {e}", exc_info=True)
             raise HTTPException(

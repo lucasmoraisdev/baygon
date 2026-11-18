@@ -8,18 +8,20 @@ import { Loading } from '@/components/Loading';
 import { Modal } from '@/components/Modal';
 import { Select } from '@/components/Select';
 import { TeamColorTag } from '@/components/TeamColorTag';
+import RoundVotingTab from '@/components/RoundVoting/RoundVotingTab';
 import { TEAM_COLORS } from '@/lib/teamColors';
 import { useAuth } from '@/context/AuthContext';
 import { fetchAPI } from '@/lib/api';
 import { Player, PlayerScore, Round, RoundRouletteWinner, Team } from '@/types/types';
 import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Award, CheckCircle2, ExternalLink, Gift, Medal, Sparkles, Trophy, Users, Zap } from 'lucide-react';
+import { ArrowLeft, Award, CheckCircle2, ClipboardList, ExternalLink, Gift, Medal, Sparkles, Trophy, Users, Zap } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 export default function RoundDetail({ params }: { params: { id: string } }) {
 	const router = useRouter();
+	const searchParams = useSearchParams();
 	const queryClient = useQueryClient();
 	const { user } = useAuth();
 	const isAdmin = Boolean(user?.is_admin || user?.role === 'admin');
@@ -81,6 +83,14 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 		Record<number, 'confirmed' | 'waiting' | 'declined' | ''>
 	>({});
 	const [attendanceSearch, setAttendanceSearch] = useState('');
+	const [activeTab, setActiveTab] = useState<'pontuacao' | 'detalhes' | 'votacao'>('pontuacao');
+
+	useEffect(() => {
+		const tab = searchParams.get('tab');
+		if (tab === 'voting' || tab === 'votacao') {
+			setActiveTab('votacao');
+		}
+	}, [searchParams]);
 
 	const [
 		roundQuery,
@@ -746,13 +756,6 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 		};
 	})();
 
-	const steps = [
-		{ num: 1, label: 'Presença', active: true },
-		{ num: 2, label: 'Times', active: hasTeams },
-		{ num: 3, label: 'Partidas', active: hasMatches },
-		{ num: 4, label: 'Pontuação', active: isConcluida },
-	];
-
 	const noResponseCount = Math.max(
 		0,
 		allPlayers.length - attendance.items.length,
@@ -786,7 +789,7 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 	};
 
 	return (
-		<div className="max-w-[1100px] w-full mx-auto flex flex-col gap-5 text-[#e6edf7] animate-slide-down">
+		<div className="max-w-[1100px] w-full mx-auto flex flex-col gap-5 text-main animate-slide-down">
 			{/* Header Row */}
 			<div className="flex flex-wrap items-start justify-between gap-4">
 				<div>
@@ -799,12 +802,12 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 									: '/seasons',
 							)
 						}
-						className="text-[13px] text-[#94a3b8] hover:text-[#e6edf7] transition-colors mb-1.5 inline-flex items-center gap-1.5 cursor-pointer"
+						className="text-[13px] text-muted hover:text-main transition-colors mb-1.5 inline-flex items-center gap-1.5 cursor-pointer"
 					>
 						<ArrowLeft size={16} /> Rodadas
 					</button>
 					<div className="flex items-center gap-3 flex-wrap">
-						<h1 className="m-0 text-[28px] font-bold tracking-[-0.01em] text-[#e6edf7]">
+						<h1 className="m-0 text-[28px] font-bold tracking-[-0.01em] text-main">
 							Rodada {round.round_number}
 						</h1>
 						<span
@@ -813,7 +816,7 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 							● {statusBadge.label}
 						</span>
 					</div>
-					<p className="text-[#94a3b8] mt-1.5 text-sm">
+					<p className="text-muted mt-1.5 text-sm">
 						{formattedRoundDate} · {round.location} · Juiz:{' '}
 						{round.referee}
 					</p>
@@ -824,7 +827,7 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 						<button
 							type="button"
 							onClick={openEditRoundModal}
-							className="inline-flex items-center justify-center gap-2 min-h-[40px] px-4 rounded-[10px] border border-white/[0.14] bg-transparent hover:bg-white/[0.05] text-[#e6edf7] font-medium text-sm transition-colors cursor-pointer"
+							className="inline-flex items-center justify-center gap-2 min-h-[40px] px-4 rounded-[10px] border border-border bg-surface hover:bg-nav-hover text-main font-medium text-sm transition-colors cursor-pointer"
 						>
 							Editar rodada
 						</button>
@@ -835,20 +838,20 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 								onClick={() => setIsMenuOpen((prev) => !prev)}
 								title="Mais opções"
 								aria-label="Mais opções"
-								className="inline-flex items-center justify-center min-h-[40px] w-10 p-0 rounded-[10px] border border-white/[0.14] bg-transparent hover:bg-white/[0.05] text-[#e6edf7] text-lg transition-colors cursor-pointer"
+								className="inline-flex items-center justify-center min-h-[40px] w-10 p-0 rounded-[10px] border border-border bg-surface hover:bg-nav-hover text-main text-lg transition-colors cursor-pointer"
 							>
 								⋯
 							</button>
 
 							{isMenuOpen && (
-								<div className="absolute right-0 mt-2 w-56 rounded-xl bg-[#111a2e] border border-white/10 shadow-2xl py-1.5 z-30">
+								<div className="absolute right-0 mt-2 w-56 rounded-xl bg-surface border border-border shadow-xl py-1.5 z-30">
 									<button
 										type="button"
 										onClick={() => {
 											setIsMenuOpen(false);
 											openDrawModal();
 										}}
-										className="w-full px-4 py-2 text-left text-sm text-[#e6edf7] hover:bg-white/[0.06] flex items-center gap-2.5 transition-colors cursor-pointer"
+										className="w-full px-4 py-2 text-left text-sm text-main hover:bg-nav-hover flex items-center gap-2.5 transition-colors cursor-pointer"
 									>
 										<span>🎲</span> Sortear / Montar times
 									</button>
@@ -862,11 +865,11 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 											setIsMenuOpen(false);
 											calculateScoresMutation.mutate();
 										}}
-										className="w-full px-4 py-2 text-left text-sm text-[#e6edf7] hover:bg-white/[0.06] disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2.5 transition-colors cursor-pointer"
+										className="w-full px-4 py-2 text-left text-sm text-main hover:bg-nav-hover disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2.5 transition-colors cursor-pointer"
 									>
 										<span>⚡</span> Calcular pontuações
 									</button>
-									<div className="my-1 border-t border-white/[0.07]" />
+									<div className="my-1 border-t border-border" />
 									<button
 										type="button"
 										disabled={deleteRoundMutation.isPending}
@@ -885,33 +888,104 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 				)}
 			</div>
 
-			{/* 4-Step Progress Bar */}
-			<div className="flex flex-wrap gap-2.5">
-				{steps.map((step) => (
-					<div
-						key={step.num}
-						className={`flex-1 min-w-[150px] flex items-center gap-2.5 px-3.5 py-3 rounded-xl font-medium text-sm transition-colors ${step.active
-							? 'bg-blue-500/16 text-[#bfdbfe]'
-							: 'bg-white/[0.03] text-[#94a3b8]'
-							}`}
-					>
-						<span
-							className={`w-6 h-6 rounded-full inline-flex items-center justify-center text-xs font-bold ${step.active
-								? 'bg-[#2563eb] text-white'
-								: 'bg-white/[0.08] text-[#94a3b8]'
-								}`}
-						>
-							{step.num}
-						</span>
-						{step.label}
+			{/* Banner de Resultados no Topo (substituindo a barra de 4 etapas) */}
+			{isConcluida && (
+				<div className="bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10 border border-emerald-500/30 rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+					<div className="flex items-center gap-3.5">
+						<div className="w-11 h-11 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-500 shrink-0">
+							<CheckCircle2 size={24} />
+						</div>
+						<div>
+							<h2 className="text-lg font-bold text-main flex items-center gap-2">
+								Resultados da Rodada
+								<span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
+									Rodada Concluída
+								</span>
+							</h2>
+							<p className="text-xs text-muted mt-0.5">
+								Premiações oficiais, classificação final dos times e pontuações individuais dos jogadores.
+							</p>
+						</div>
 					</div>
-				))}
+
+					<div className="flex items-center gap-2 flex-wrap">
+						{isAdmin && (
+							<button
+								type="button"
+								disabled={calculateScoresMutation.isPending}
+								onClick={() => calculateScoresMutation.mutate()}
+								className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-semibold transition-colors shadow-sm cursor-pointer disabled:opacity-50"
+							>
+								<Zap size={14} />
+								{calculateScoresMutation.isPending ? 'Calculando...' : 'Recalcular Pontuações'}
+							</button>
+						)}
+						<Link
+							href={`/awards?round=${round.id_round}`}
+							className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface hover:bg-nav-hover border border-border text-xs font-medium text-main transition-colors"
+						>
+							<Award size={14} />
+							Gerenciar Prêmios
+						</Link>
+					</div>
+				</div>
+			)}
+
+			{/* Navegação por Abas: Pontuação e Detalhes */}
+			<div className="flex items-center gap-2 border-b border-border pb-1">
+				<button
+					type="button"
+					onClick={() => setActiveTab('pontuacao')}
+					className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+						activeTab === 'pontuacao'
+							? 'bg-primary text-white shadow-md shadow-primary/20'
+							: 'text-muted hover:text-main hover:bg-nav-hover'
+					}`}
+				>
+					<Trophy size={16} />
+					<span>Pontuação</span>
+					{isConcluida && (
+						<span className="w-2 h-2 rounded-full bg-emerald-500" />
+					)}
+				</button>
+
+				<button
+					type="button"
+					onClick={() => setActiveTab('detalhes')}
+					className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+						activeTab === 'detalhes'
+							? 'bg-primary text-white shadow-md shadow-primary/20'
+							: 'text-muted hover:text-main hover:bg-nav-hover'
+					}`}
+				>
+					<ClipboardList size={16} />
+					<span>Detalhes</span>
+					<span className="text-xs font-normal opacity-70">
+						({attendance.confirmed_count} pres. · {teams.length} times · {matches.length} jogos)
+					</span>
+				</button>
+
+				<button
+					type="button"
+					onClick={() => setActiveTab('votacao')}
+					className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+						activeTab === 'votacao'
+							? 'bg-primary text-white shadow-md shadow-primary/20'
+							: 'text-muted hover:text-main hover:bg-nav-hover'
+					}`}
+				>
+					<Sparkles size={16} />
+					<span>Votação dos Destaques</span>
+				</button>
 			</div>
 
-			{/* Lista de Presença */}
-			<div className="bg-[#111a2e] border border-white/[0.07] rounded-[16px] p-6 flex flex-col gap-[18px]">
+			{/* Conteúdo da Aba 2: Detalhes */}
+			{activeTab === 'detalhes' && (
+				<>
+					{/* Lista de Presença */}
+					<div className="bg-surface border border-border rounded-[16px] p-6 flex flex-col gap-[18px]">
 				<div className="flex flex-wrap items-center justify-between gap-3">
-					<h2 className="m-0 text-lg font-semibold text-[#e6edf7]">
+					<h2 className="m-0 text-lg font-semibold text-main">
 						Lista de presença
 					</h2>
 					<div className="flex flex-wrap items-center gap-2">
@@ -959,35 +1033,35 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 
 				{/* 4 Stat Tiles */}
 				<div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-					<div className="bg-white/[0.03] border border-white/[0.07] rounded-xl p-4">
+					<div className="bg-background border border-border rounded-xl p-4">
 						<div className="text-[26px] font-bold text-[#4ade80] leading-tight">
 							{attendance.confirmed_count}
 						</div>
-						<div className="text-xs text-[#94a3b8] mt-1">
+						<div className="text-xs text-muted mt-1">
 							Confirmados
 						</div>
 					</div>
-					<div className="bg-white/[0.03] border border-white/[0.07] rounded-xl p-4">
+					<div className="bg-background border border-border rounded-xl p-4">
 						<div className="text-[26px] font-bold text-[#facc15] leading-tight">
 							{attendance.waiting_count}
 						</div>
-						<div className="text-xs text-[#94a3b8] mt-1">
+						<div className="text-xs text-muted mt-1">
 							Lista de espera
 						</div>
 					</div>
-					<div className="bg-white/[0.03] border border-white/[0.07] rounded-xl p-4">
-						<div className="text-[26px] font-bold text-[#e6edf7] leading-tight">
+					<div className="bg-background border border-border rounded-xl p-4">
+						<div className="text-[26px] font-bold text-main leading-tight">
 							{attendance.declined_count}
 						</div>
-						<div className="text-xs text-[#94a3b8] mt-1">
+						<div className="text-xs text-muted mt-1">
 							Não vão
 						</div>
 					</div>
-					<div className="bg-white/[0.03] border border-white/[0.07] rounded-xl p-4">
-						<div className="text-[26px] font-bold text-[#e6edf7] leading-tight">
+					<div className="bg-background border border-border rounded-xl p-4">
+						<div className="text-[26px] font-bold text-main leading-tight">
 							{noResponseCount}
 						</div>
-						<div className="text-xs text-[#94a3b8] mt-1">
+						<div className="text-xs text-muted mt-1">
 							Sem resposta
 						</div>
 					</div>
@@ -995,22 +1069,22 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 
 				{/* Capacity Progress Bar */}
 				<div>
-					<div className="flex justify-between text-[13px] text-[#94a3b8]">
+					<div className="flex justify-between text-[13px] text-muted">
 						<span>Confirmados</span>
 						<span>
 							{attendance.confirmed_count} de {maxVacancies} vagas
 						</span>
 					</div>
-					<div className="h-2 rounded bg-white/[0.07] mt-2 overflow-hidden">
+					<div className="h-2 rounded bg-border mt-2 overflow-hidden">
 						<div
-							className="h-full bg-[#22c55e] transition-all duration-300"
+							className="h-full bg-emerald-500 transition-all duration-300"
 							style={{ width: `${capacityPct}%` }}
 						/>
 					</div>
 				</div>
 
 				{attendance.items.length > 0 && (
-					<div className="flex flex-wrap gap-2 pt-1 border-t border-white/[0.07]">
+					<div className="flex flex-wrap gap-2 pt-1 border-t border-border">
 						{attendance.items.map((item) => {
 							const label =
 								item.player?.apelido ||
@@ -1018,10 +1092,10 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 								`#${item.player_id}`;
 							const badgeStyle =
 								item.status === 'confirmed'
-									? 'bg-emerald-500/15 border-emerald-500/30 text-[#4ade80]'
+									? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-[#4ade80]'
 									: item.status === 'waiting'
-										? 'bg-yellow-400/15 border-yellow-400/30 text-[#facc15]'
-										: 'bg-white/[0.04] border-white/10 text-[#94a3b8] line-through';
+										? 'bg-yellow-400/15 border-yellow-400/30 text-amber-600 dark:text-[#facc15]'
+										: 'bg-surface border-border text-muted line-through';
 							return (
 								<div
 									key={item.id_attendance}
@@ -1057,11 +1131,11 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 			{/* 2-Column Grid: Times & Partidas */}
 			<div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
 				{/* Times */}
-				<div className="bg-[#111a2e] border border-white/[0.07] rounded-[16px] p-6 flex flex-col gap-[18px]">
+				<div className="bg-surface border border-border rounded-[16px] p-6 flex flex-col gap-[18px]">
 					<div className="flex flex-wrap items-center justify-between gap-2">
-						<h2 className="m-0 text-lg font-semibold text-[#e6edf7]">
+						<h2 className="m-0 text-lg font-semibold text-main">
 							Times{' '}
-							<span className="text-[#94a3b8] font-normal">
+							<span className="text-muted font-normal">
 								({teams.length})
 							</span>
 						</h2>
@@ -1071,7 +1145,7 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 									<button
 										type="button"
 										onClick={openDrawModal}
-										className="inline-flex items-center justify-center gap-2 min-h-[40px] px-3.5 rounded-[10px] border border-white/[0.14] bg-transparent hover:bg-white/[0.05] text-[#e6edf7] font-medium text-sm transition-colors cursor-pointer"
+										className="inline-flex items-center justify-center gap-2 min-h-[40px] px-3.5 rounded-[10px] border border-border bg-surface hover:bg-nav-hover text-main font-medium text-sm transition-colors cursor-pointer"
 									>
 										Sortear times
 									</button>
@@ -1084,7 +1158,7 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 										setPlayerSearch('');
 										setIsTeamModalOpen(true);
 									}}
-									className="inline-flex items-center justify-center gap-2 min-h-[40px] px-4 rounded-[10px] border border-white/[0.14] bg-transparent hover:bg-white/[0.05] text-[#e6edf7] font-medium text-sm transition-colors cursor-pointer"
+									className="inline-flex items-center justify-center gap-2 min-h-[40px] px-4 rounded-[10px] border border-border bg-surface hover:bg-nav-hover text-main font-medium text-sm transition-colors cursor-pointer"
 								>
 									+ Time
 								</button>
@@ -1093,7 +1167,7 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 					</div>
 
 					{teams.length === 0 ? (
-						<div className="border border-dashed border-white/[0.14] rounded-xl py-7 px-5 text-center text-[#94a3b8] flex flex-col gap-3 items-center">
+						<div className="border border-dashed border-border rounded-xl py-7 px-5 text-center text-muted flex flex-col gap-3 items-center">
 							<div className="text-sm">
 								Nenhum time ainda. Sorteie automaticamente a
 								partir dos confirmados ou crie manualmente.
@@ -1107,23 +1181,23 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 											allPlayers.length === 0
 										}
 										onClick={openDrawModal}
-										className="inline-flex items-center justify-center gap-2 min-h-[40px] px-4 rounded-[10px] border border-white/[0.14] bg-transparent hover:bg-white/[0.05] disabled:opacity-45 disabled:cursor-not-allowed text-[#e6edf7] font-medium text-sm transition-colors cursor-pointer"
+										className="inline-flex items-center justify-center gap-2 min-h-[40px] px-4 rounded-[10px] border border-border bg-surface hover:bg-nav-hover disabled:opacity-45 disabled:cursor-not-allowed text-main font-medium text-sm transition-colors cursor-pointer"
 									>
 										Sortear times
 									</button>
-									<small className="text-xs text-[#94a3b8]">
+									<small className="text-xs text-muted">
 										Disponível quando houver confirmados.
 									</small>
 								</>
 							)}
 						</div>
 					) : (
-						<div className="border border-white/[0.07] rounded-xl divide-y divide-white/[0.07] overflow-hidden">
+						<div className="border border-border rounded-xl divide-y divide-border overflow-hidden">
 							{teams.map((t) => (
 								<Link
 									key={t.id_team}
 									href={`/teams/${t.id_team}`}
-									className="flex items-center justify-between gap-3 px-4 py-3.5 bg-white/[0.02] hover:bg-white/[0.05] transition-colors text-sm text-[#e6edf7]"
+									className="flex items-center justify-between gap-3 px-4 py-3.5 bg-surface hover:bg-nav-hover transition-colors text-sm text-main"
 								>
 									<div className="flex flex-col gap-1 min-w-0">
 										<div className="flex items-center gap-2">
@@ -1133,7 +1207,7 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 											<TeamColorTag color={t.color} />
 										</div>
 										{t.players && t.players.length > 0 && (
-											<span className="text-xs text-[#94a3b8] truncate">
+											<span className="text-xs text-muted truncate">
 												{t.players
 													.map(
 														(p) =>
@@ -1153,11 +1227,11 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 				</div>
 
 				{/* Partidas */}
-				<div className="bg-[#111a2e] border border-white/[0.07] rounded-[16px] p-6 flex flex-col gap-[18px]">
+				<div className="bg-surface border border-border rounded-[16px] p-6 flex flex-col gap-[18px]">
 					<div className="flex flex-wrap items-center justify-between gap-2">
-						<h2 className="m-0 text-lg font-semibold text-[#e6edf7]">
+						<h2 className="m-0 text-lg font-semibold text-main">
 							Partidas{' '}
-							<span className="text-[#94a3b8] font-normal">
+							<span className="text-muted font-normal">
 								({matches.length})
 							</span>
 						</h2>
@@ -1165,9 +1239,9 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 							<div className="flex items-center gap-2">
 								<Link
 									href={`/rounds/${params.id}/mass`}
-									className="inline-flex items-center justify-center gap-2 min-h-[40px] px-4 rounded-[10px] border border-blue-500/40 bg-blue-500/10 hover:bg-blue-500/20 text-[#bfdbfe] text-sm font-semibold transition-colors cursor-pointer"
+									className="inline-flex items-center justify-center gap-2 min-h-[40px] px-4 rounded-[10px] border border-blue-600/30 dark:border-blue-500/40 bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:hover:bg-blue-500/25 dark:text-blue-300 text-sm font-semibold transition-colors cursor-pointer shadow-sm"
 								>
-									<Zap size={15} />
+									<Zap size={15} className="text-blue-600 dark:text-blue-400" />
 									<span>⚡ Cadastro em Massa</span>
 								</Link>
 								<button
@@ -1179,7 +1253,7 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 									onClick={() =>
 										calculateScoresMutation.mutate()
 									}
-									className="inline-flex items-center justify-center gap-2 min-h-[40px] px-4 rounded-[10px] border border-white/[0.14] bg-transparent hover:bg-white/[0.05] disabled:opacity-45 disabled:cursor-not-allowed text-[#e6edf7] font-medium text-sm transition-colors cursor-pointer"
+									className="inline-flex items-center justify-center gap-2 min-h-[40px] px-4 rounded-[10px] border border-border bg-surface hover:bg-nav-hover disabled:opacity-45 disabled:cursor-not-allowed text-main font-medium text-sm transition-colors cursor-pointer"
 								>
 									{calculateScoresMutation.isPending
 										? 'Calculando...'
@@ -1189,7 +1263,7 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 									type="button"
 									disabled={teams.length < 2}
 									onClick={() => setIsMatchModalOpen(true)}
-									className="inline-flex items-center justify-center gap-2 min-h-[40px] px-4 rounded-[10px] bg-[#2563eb] hover:bg-blue-500 disabled:opacity-45 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors cursor-pointer"
+									className="inline-flex items-center justify-center gap-2 min-h-[40px] px-4 rounded-[10px] bg-primary hover:bg-primary-hover disabled:opacity-45 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors cursor-pointer"
 								>
 									+ Partida
 								</button>
@@ -1198,7 +1272,7 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 					</div>
 
 					{matches.length === 0 ? (
-						<div className="border border-dashed border-white/[0.14] rounded-xl py-7 px-5 text-center text-[#94a3b8] flex flex-col gap-3 items-center">
+						<div className="border border-dashed border-border rounded-xl py-7 px-5 text-center text-muted flex flex-col gap-3 items-center">
 							<div className="text-sm">
 								Nenhuma partida criada. Crie os times primeiro
 								para poder lançar partidas.
@@ -1218,25 +1292,25 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 									<Link
 										key={matchId}
 										href={`/matches/${matchId}`}
-										className="bg-white/[0.03] border border-white/[0.07] rounded-xl p-4 flex items-center justify-between hover:border-blue-500/40 hover:bg-white/[0.05] transition-colors"
+										className="bg-background border border-border rounded-xl p-4 flex items-center justify-between hover:border-primary/50 hover:bg-nav-hover/50 transition-colors"
 									>
-										<span className="text-sm font-medium text-[#e6edf7] flex items-center gap-1.5 flex-wrap">
+										<span className="text-sm font-medium text-main flex items-center gap-1.5 flex-wrap">
 											<span>{homeTeam?.name ?? `Time #${m.home_team_id}`}</span>
 											{homeTeam && <TeamColorTag showLabel={false} color={homeTeam.color} />}
-											<span className="text-[#94a3b8] px-1">vs</span>
+											<span className="text-muted px-1">vs</span>
 											<span>{awayTeam?.name ?? `Time #${m.away_team_id}`}</span>
 											{awayTeam && <TeamColorTag showLabel={false} color={awayTeam.color} />}
 										</span>
 										<span className="flex items-center gap-2.5">
 											<span
 												className={`text-[11px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider border ${m.is_finished
-													? 'bg-zinc-500/15 text-zinc-300 border-zinc-500/30'
-													: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+													? 'bg-surface text-muted border-border'
+													: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
 													}`}
 											>
 												{m.is_finished ? 'Encerrada' : 'Em andamento'}
 											</span>
-											<span className="text-base font-bold text-[#60a5fa] bg-[#0b1220] border border-white/10 px-3 py-1 rounded-lg">
+											<span className="text-base font-bold text-primary bg-surface border border-border px-3 py-1 rounded-lg">
 												{hScore} x {aScore}
 											</span>
 										</span>
@@ -1247,63 +1321,24 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 					)}
 				</div>
 			</div>
+		</>
+	)}
 
-			{/* Seção de Rodada Concluída: Premiações & Pontuações */}
-			{isConcluida && (
-				<div className="flex flex-col gap-6">
-					{/* Banner Informativo de Conclusão */}
-					<div className="bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10 border border-emerald-500/30 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
-						<div className="flex items-center gap-3.5">
-							<div className="w-11 h-11 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
-								<CheckCircle2 size={24} />
-							</div>
-							<div>
-								<h2 className="text-lg font-bold text-[#e6edf7] flex items-center gap-2">
-									Resultados da Rodada
-									<span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-										Rodada Concluída
-									</span>
-								</h2>
-								<p className="text-xs text-[#94a3b8] mt-0.5">
-									Premiações oficiais, classificação final dos times e pontuações individuais dos jogadores.
-								</p>
-							</div>
-						</div>
-
-						<div className="flex items-center gap-2 flex-wrap">
-							{isAdmin && (
-								<button
-									type="button"
-									disabled={calculateScoresMutation.isPending}
-									onClick={() => calculateScoresMutation.mutate()}
-									className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors shadow-sm cursor-pointer disabled:opacity-50"
-								>
-									<Zap size={14} />
-									{calculateScoresMutation.isPending ? 'Calculando...' : 'Recalcular Pontuações'}
-								</button>
-							)}
-							<Link
-								href={`/awards?round=${round.id_round}`}
-								className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-xs font-medium text-[#e6edf7] transition-colors"
-							>
-								<Award size={14} />
-								Gerenciar Prêmios
-							</Link>
-						</div>
-					</div>
-
-					{/* 1. Vencedores das Premiações */}
-					<div className="bg-[#111a2e] border border-white/[0.09] rounded-2xl p-6 flex flex-col gap-5">
+	{/* Conteúdo da Aba 1: Pontuação */}
+	{activeTab === 'pontuacao' && (
+		<div className="flex flex-col gap-6">
+			{/* 1. Vencedores das Premiações */}
+					<div className="bg-surface border border-border rounded-2xl p-6 flex flex-col gap-5">
 						<div className="flex items-center justify-between gap-3 flex-wrap">
 							<div className="flex items-center gap-2.5">
-								<div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400">
+								<div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-500">
 									<Trophy size={18} />
 								</div>
 								<div>
-									<h3 className="text-base font-semibold text-[#e6edf7]">
+									<h3 className="text-base font-semibold text-main">
 										Premiações da Rodada
 									</h3>
-									<p className="text-xs text-[#94a3b8]">
+									<p className="text-xs text-muted">
 										Vencedores de destaques, time campeão e contemplados nos sorteios da roleta
 									</p>
 								</div>
@@ -1316,16 +1351,16 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 							<div className="bg-gradient-to-br from-amber-500/10 via-amber-500/[0.03] to-transparent border border-amber-500/30 rounded-xl p-4 flex flex-col gap-2.5 relative overflow-hidden">
 								<div className="flex items-center justify-between">
 									<span className="text-xl">🍕</span>
-									<span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+									<span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30">
 										Campeão
 									</span>
 								</div>
 								<div>
-									<h4 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">
+									<h4 className="text-xs font-semibold text-muted uppercase tracking-wider">
 										Campeão da Rodada (Pizza)
 									</h4>
 									<div className="flex items-center gap-2 mt-1">
-										<p className="text-base font-bold text-[#e6edf7]">
+										<p className="text-base font-bold text-main">
 											{pizzaAward?.teams?.length
 												? pizzaAward.teams.map((t: any) => t.name).join(', ')
 												: teamStandings[0]?.team.name || 'A definir'}
@@ -1346,179 +1381,179 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 							</div>
 
 							{/* Card Bola Cheia */}
-							<div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-4 flex flex-col gap-2.5">
+							<div className="bg-surface border border-border rounded-xl p-4 flex flex-col gap-2.5">
 								<div className="flex items-center justify-between">
 									<span className="text-xl">🌟</span>
-									<span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-yellow-500/15 text-yellow-300 border border-yellow-500/30">
+									<span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-yellow-500/15 text-yellow-600 dark:text-yellow-300 border border-yellow-500/30">
 										Destaque
 									</span>
 								</div>
 								<div>
-									<h4 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">
+									<h4 className="text-xs font-semibold text-muted uppercase tracking-wider">
 										Bola Cheia (MVP)
 									</h4>
-									<p className="text-base font-bold text-[#e6edf7] mt-1">
+									<p className="text-base font-bold text-main mt-1">
 										{bolaCheia?.players?.length
 											? bolaCheia.players.map((p: any) => p.apelido || p.nome).join(', ')
 											: 'Não definido'}
 									</p>
 								</div>
-								<p className="text-[11px] text-[#94a3b8] mt-auto">
+								<p className="text-[11px] text-muted mt-auto">
 									Melhor atuação geral da rodada.
 								</p>
 							</div>
 
 							{/* Card Bola Murcha */}
-							<div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-4 flex flex-col gap-2.5">
+							<div className="bg-surface border border-border rounded-xl p-4 flex flex-col gap-2.5">
 								<div className="flex items-center justify-between">
 									<span className="text-xl">💩</span>
-									<span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-stone-500/15 text-stone-300 border border-stone-500/30">
+									<span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-stone-500/15 text-stone-600 dark:text-stone-300 border border-stone-500/30">
 										Zoeira
 									</span>
 								</div>
 								<div>
-									<h4 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">
+									<h4 className="text-xs font-semibold text-muted uppercase tracking-wider">
 										Bola Murcha
 									</h4>
-									<p className="text-base font-bold text-[#e6edf7] mt-1">
+									<p className="text-base font-bold text-main mt-1">
 										{bolaMurcha?.players?.length
 											? bolaMurcha.players.map((p: any) => p.apelido || p.nome).join(', ')
 											: 'Não definido'}
 									</p>
 								</div>
-								<p className="text-[11px] text-[#94a3b8] mt-auto">
+								<p className="text-[11px] text-muted mt-auto">
 									Pior em campo / destaque negativo.
 								</p>
 							</div>
 
 							{/* Card Gol da Rodada */}
-							<div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-4 flex flex-col gap-2.5">
+							<div className="bg-surface border border-border rounded-xl p-4 flex flex-col gap-2.5">
 								<div className="flex items-center justify-between">
 									<span className="text-xl">⚽</span>
-									<span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/30">
+									<span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
 										Pintura
 									</span>
 								</div>
 								<div>
-									<h4 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">
+									<h4 className="text-xs font-semibold text-muted uppercase tracking-wider">
 										Gol da Rodada
 									</h4>
-									<p className="text-base font-bold text-[#e6edf7] mt-1">
+									<p className="text-base font-bold text-main mt-1">
 										{golRodada?.players?.length
 											? golRodada.players.map((p: any) => p.apelido || p.nome).join(', ')
 											: 'Não definido'}
 									</p>
 								</div>
-								<p className="text-[11px] text-[#94a3b8] mt-auto">
+								<p className="text-[11px] text-muted mt-auto">
 									O gol mais bonito do dia.
 								</p>
 							</div>
 
 							{/* Card Defesa da Rodada */}
-							<div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-4 flex flex-col gap-2.5">
+							<div className="bg-surface border border-border rounded-xl p-4 flex flex-col gap-2.5">
 								<div className="flex items-center justify-between">
 									<span className="text-xl">🧤</span>
-									<span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+									<span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 border border-cyan-500/30">
 										Milagre
 									</span>
 								</div>
 								<div>
-									<h4 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">
+									<h4 className="text-xs font-semibold text-muted uppercase tracking-wider">
 										Defesa da Rodada
 									</h4>
-									<p className="text-base font-bold text-[#e6edf7] mt-1">
+									<p className="text-base font-bold text-main mt-1">
 										{defesaRodada?.players?.length
 											? defesaRodada.players.map((p: any) => p.apelido || p.nome).join(', ')
 											: 'Não definido'}
 									</p>
 								</div>
-								<p className="text-[11px] text-[#94a3b8] mt-auto">
+								<p className="text-[11px] text-muted mt-auto">
 									A defesa mais espetacular da rodada.
 								</p>
 							</div>
 
 							{/* Card Drible da Rodada */}
-							<div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-4 flex flex-col gap-2.5">
+							<div className="bg-surface border border-border rounded-xl p-4 flex flex-col gap-2.5">
 								<div className="flex items-center justify-between">
 									<span className="text-xl">🌀</span>
-									<span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30">
+									<span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-600 dark:text-purple-300 border border-purple-500/30">
 										Habilidade
 									</span>
 								</div>
 								<div>
-									<h4 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">
+									<h4 className="text-xs font-semibold text-muted uppercase tracking-wider">
 										Drible da Rodada
 									</h4>
-									<p className="text-base font-bold text-[#e6edf7] mt-1">
+									<p className="text-base font-bold text-main mt-1">
 										{dribleRodada?.players?.length
 											? dribleRodada.players.map((p: any) => p.apelido || p.nome).join(', ')
 											: 'Não definido'}
 									</p>
 								</div>
-								<p className="text-[11px] text-[#94a3b8] mt-auto">
+								<p className="text-[11px] text-muted mt-auto">
 									O drible mais desconcertante.
 								</p>
 							</div>
 
 							{/* Card Inacreditável */}
-							<div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-4 flex flex-col gap-2.5">
+							<div className="bg-surface border border-border rounded-xl p-4 flex flex-col gap-2.5">
 								<div className="flex items-center justify-between">
 									<span className="text-xl">😱</span>
-									<span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-300 border border-rose-500/30">
+									<span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-300 border border-rose-500/30">
 										Inacreditável
 									</span>
 								</div>
 								<div>
-									<h4 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">
+									<h4 className="text-xs font-semibold text-muted uppercase tracking-wider">
 										Inacreditável
 									</h4>
-									<p className="text-base font-bold text-[#e6edf7] mt-1">
+									<p className="text-base font-bold text-main mt-1">
 										{inacreditavel?.players?.length
 											? inacreditavel.players.map((p: any) => p.apelido || p.nome).join(', ')
 											: 'Não definido'}
 									</p>
 								</div>
-								<p className="text-[11px] text-[#94a3b8] mt-auto">
+								<p className="text-[11px] text-muted mt-auto">
 									O gol mais fácil perdido do dia.
 								</p>
 							</div>
 
 							{/* Card Goleiro Menos Vazado */}
-							<div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-4 flex flex-col gap-2.5">
+							<div className="bg-surface border border-border rounded-xl p-4 flex flex-col gap-2.5">
 								<div className="flex items-center justify-between">
 									<span className="text-xl">🥅</span>
-									<span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
+									<span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30">
 										Paredão
 									</span>
 								</div>
 								<div>
-									<h4 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">
+									<h4 className="text-xs font-semibold text-muted uppercase tracking-wider">
 										Goleiro Menos Vazado
 									</h4>
-									<p className="text-base font-bold text-[#e6edf7] mt-1">
+									<p className="text-base font-bold text-main mt-1">
 										{goleiro?.players?.length
 											? goleiro.players.map((p: any) => p.apelido || p.nome).join(', ')
 											: 'Não definido'}
 									</p>
 								</div>
-								<p className="text-[11px] text-[#94a3b8] mt-auto">
+								<p className="text-[11px] text-muted mt-auto">
 									Goleiro mais consistente e com menos gols sofridos.
 								</p>
 							</div>
 
 							{/* Card Roleta 1 */}
-							<div className="bg-white/[0.02] border border-emerald-500/25 rounded-xl p-4 flex flex-col gap-2.5 relative">
+							<div className="bg-surface border border-emerald-500/25 rounded-xl p-4 flex flex-col gap-2.5 relative">
 								<div className="flex items-center justify-between">
 									<span className="text-xl">🎰</span>
-									<span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+									<span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
 										Roleta 1
 									</span>
 								</div>
 								<div>
-									<h4 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">
+									<h4 className="text-xs font-semibold text-muted uppercase tracking-wider">
 										Contemplado Roleta 1
 									</h4>
-									<p className="text-base font-bold text-[#e6edf7] mt-1">
+									<p className="text-base font-bold text-main mt-1">
 										{roleta1?.player_name ||
 											(roleta1?.player_id
 												? (playerMap.get(roleta1.player_id)?.apelido || playerMap.get(roleta1.player_id)?.nome)
@@ -1527,11 +1562,11 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 								</div>
 								<div className="mt-auto pt-1">
 									{roleta1?.prize_name ? (
-										<span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-md">
+										<span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-md">
 											<Gift size={12} /> {roleta1.prize_name}
 										</span>
 									) : (
-										<span className="text-[11px] text-[#94a3b8]">
+										<span className="text-[11px] text-muted">
 											Prêmio a registrar
 										</span>
 									)}
@@ -1539,18 +1574,18 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 							</div>
 
 							{/* Card Roleta 2 */}
-							<div className="bg-white/[0.02] border border-teal-500/25 rounded-xl p-4 flex flex-col gap-2.5 relative">
+							<div className="bg-surface border border-teal-500/25 rounded-xl p-4 flex flex-col gap-2.5 relative">
 								<div className="flex items-center justify-between">
 									<span className="text-xl">🎰</span>
-									<span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-500/15 text-teal-300 border border-teal-500/30">
+									<span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-500/15 text-teal-600 dark:text-teal-300 border border-teal-500/30">
 										Roleta 2
 									</span>
 								</div>
 								<div>
-									<h4 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">
+									<h4 className="text-xs font-semibold text-muted uppercase tracking-wider">
 										Contemplado Roleta 2
 									</h4>
-									<p className="text-base font-bold text-[#e6edf7] mt-1">
+									<p className="text-base font-bold text-main mt-1">
 										{roleta2?.player_name ||
 											(roleta2?.player_id
 												? (playerMap.get(roleta2.player_id)?.apelido || playerMap.get(roleta2.player_id)?.nome)
@@ -1559,11 +1594,11 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 								</div>
 								<div className="mt-auto pt-1">
 									{roleta2?.prize_name ? (
-										<span className="inline-flex items-center gap-1 text-[11px] font-semibold text-teal-300 bg-teal-500/10 border border-teal-500/25 px-2 py-0.5 rounded-md">
+										<span className="inline-flex items-center gap-1 text-[11px] font-semibold text-teal-600 dark:text-teal-300 bg-teal-500/10 border border-teal-500/25 px-2 py-0.5 rounded-md">
 											<Gift size={12} /> {roleta2.prize_name}
 										</span>
 									) : (
-										<span className="text-[11px] text-[#94a3b8]">
+										<span className="text-[11px] text-muted">
 											Prêmio a registrar
 										</span>
 									)}
@@ -1576,7 +1611,7 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 							<div className="bg-amber-500/[0.04] border border-amber-500/20 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3">
 								<div className="flex items-center gap-2">
 									<span className="text-lg">🥇</span>
-									<span className="text-xs font-semibold text-amber-300">
+									<span className="text-xs font-semibold text-amber-600 dark:text-amber-300">
 										Ouros da Rodada:
 									</span>
 								</div>
@@ -1586,7 +1621,7 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 										return (
 											<span
 												key={`ouro-tag-${o.player_id}`}
-												className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-xs text-amber-200 font-medium"
+												className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-xs text-amber-700 dark:text-amber-200 font-medium"
 											>
 												<span>{pl?.apelido || pl?.nome || `Jogador #${o.player_id}`}</span>
 												<span className="bg-amber-400 text-black text-[10px] font-bold px-1.5 py-0.2 rounded-full">
@@ -1601,17 +1636,17 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 					</div>
 
 					{/* 2. Classificação dos Times na Rodada */}
-					<div className="bg-[#111a2e] border border-white/[0.09] rounded-2xl p-6 flex flex-col gap-5">
+					<div className="bg-surface border border-border rounded-2xl p-6 flex flex-col gap-5">
 						<div className="flex items-center justify-between gap-3 flex-wrap">
 							<div className="flex items-center gap-2.5">
-								<div className="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400">
+								<div className="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-primary">
 									<Medal size={18} />
 								</div>
 								<div>
-									<h3 className="text-base font-semibold text-[#e6edf7]">
+									<h3 className="text-base font-semibold text-main">
 										Classificação dos Times
 									</h3>
-									<p className="text-xs text-[#94a3b8]">
+									<p className="text-xs text-muted">
 										Desempenho final dos times na rodada (vitórias, empates, gols e saldo)
 									</p>
 								</div>
@@ -1619,17 +1654,17 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 						</div>
 
 						{teamStandings.length === 0 ? (
-							<div className="border border-dashed border-white/[0.14] rounded-xl py-6 px-4 text-center text-[#94a3b8] text-xs">
+							<div className="border border-dashed border-border rounded-xl py-6 px-4 text-center text-muted text-xs">
 								Nenhum time ou partida computada nesta rodada.
 							</div>
 						) : (
 							<div className="overflow-x-auto">
 								<table className="w-full text-left border-collapse text-xs">
 									<thead>
-										<tr className="border-b border-white/[0.08] text-[#94a3b8] uppercase tracking-wider text-[11px]">
+										<tr className="border-b border-border text-muted uppercase tracking-wider text-[11px]">
 											<th className="py-2.5 px-3">#</th>
 											<th className="py-2.5 px-3">Time</th>
-											<th className="py-2.5 px-3 text-center font-bold text-[#e6edf7]">PTS</th>
+											<th className="py-2.5 px-3 text-center font-bold text-main">PTS</th>
 											<th className="py-2.5 px-3 text-center">J</th>
 											<th className="py-2.5 px-3 text-center">V</th>
 											<th className="py-2.5 px-3 text-center">E</th>
@@ -1639,13 +1674,13 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 											<th className="py-2.5 px-3 text-center">SG</th>
 										</tr>
 									</thead>
-									<tbody className="divide-y divide-white/[0.05]">
+									<tbody className="divide-y divide-border/50">
 										{teamStandings.map((st, idx) => {
 											const isChampion = idx === 0 && st.points > 0;
 											return (
 												<tr
 													key={`standing-team-${st.team.id_team}`}
-													className={`transition-colors hover:bg-white/[0.03] ${
+													className={`transition-colors hover:bg-nav-hover/40 ${
 														isChampion ? 'bg-amber-500/[0.06] font-semibold' : ''
 													}`}
 												>
@@ -1655,10 +1690,10 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 																idx === 0
 																	? 'bg-amber-400 text-black'
 																	: idx === 1
-																	? 'bg-zinc-300 text-black'
+																	? 'bg-slate-200 text-slate-800 dark:bg-zinc-300 dark:text-black'
 																	: idx === 2
 																	? 'bg-amber-700/60 text-amber-100'
-																	: 'text-[#94a3b8]'
+																	: 'text-muted'
 															}`}
 														>
 															{idx + 1}
@@ -1666,27 +1701,27 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 													</td>
 													<td className="py-3 px-3">
 														<div className="flex items-center gap-2">
-															<span className="text-[#e6edf7] font-medium">
+															<span className="text-main font-medium">
 																{st.team.name}
 															</span>
 															<TeamColorTag color={st.team.color} showLabel={false} />
 															{isChampion && (
-																<span className="inline-flex items-center gap-1 text-[10px] bg-amber-400/20 text-amber-300 border border-amber-400/30 px-2 py-0.5 rounded-full font-bold">
+																<span className="inline-flex items-center gap-1 text-[10px] bg-amber-400/20 text-amber-600 dark:text-amber-300 border border-amber-400/30 px-2 py-0.5 rounded-full font-bold">
 																	🍕 Campeão
 																</span>
 															)}
 														</div>
 													</td>
-													<td className="py-3 px-3 text-center font-bold text-sm text-[#60a5fa]">
+													<td className="py-3 px-3 text-center font-bold text-sm text-primary">
 														{st.points}
 													</td>
-													<td className="py-3 px-3 text-center text-[#94a3b8]">{st.matchesPlayed}</td>
-													<td className="py-3 px-3 text-center text-emerald-400 font-medium">{st.wins}</td>
-													<td className="py-3 px-3 text-center text-amber-400 font-medium">{st.draws}</td>
-													<td className="py-3 px-3 text-center text-red-400 font-medium">{st.losses}</td>
-													<td className="py-3 px-3 text-center text-[#e6edf7]">{st.goalsFor}</td>
-													<td className="py-3 px-3 text-center text-[#94a3b8]">{st.goalsAgainst}</td>
-													<td className="py-3 px-3 text-center font-semibold text-[#e6edf7]">
+													<td className="py-3 px-3 text-center text-muted">{st.matchesPlayed}</td>
+													<td className="py-3 px-3 text-center text-emerald-500 font-medium">{st.wins}</td>
+													<td className="py-3 px-3 text-center text-amber-500 font-medium">{st.draws}</td>
+													<td className="py-3 px-3 text-center text-red-500 font-medium">{st.losses}</td>
+													<td className="py-3 px-3 text-center text-main">{st.goalsFor}</td>
+													<td className="py-3 px-3 text-center text-muted">{st.goalsAgainst}</td>
+													<td className="py-3 px-3 text-center font-semibold text-main">
 														{st.goalDifference > 0 ? `+${st.goalDifference}` : st.goalDifference}
 													</td>
 												</tr>
@@ -1699,17 +1734,17 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 					</div>
 
 					{/* 3. Pontuações dos Jogadores na Rodada */}
-					<div className="bg-[#111a2e] border border-white/[0.09] rounded-2xl p-6 flex flex-col gap-5">
+					<div className="bg-surface border border-border rounded-2xl p-6 flex flex-col gap-5">
 						<div className="flex items-center justify-between gap-3 flex-wrap">
 							<div className="flex items-center gap-2.5">
 								<div className="w-8 h-8 rounded-lg bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400">
 									<Users size={18} />
 								</div>
 								<div>
-									<h3 className="text-base font-semibold text-[#e6edf7]">
+									<h3 className="text-base font-semibold text-main">
 										Pontuação dos Jogadores
 									</h3>
-									<p className="text-xs text-[#94a3b8]">
+									<p className="text-xs text-muted">
 										Pontuação individual consolidada de cada atleta nesta rodada
 									</p>
 								</div>
@@ -1717,14 +1752,14 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 						</div>
 
 						{playerLeaderboard.length === 0 ? (
-							<div className="border border-dashed border-white/[0.14] rounded-xl py-6 px-4 text-center text-[#94a3b8] flex flex-col items-center gap-3">
+							<div className="border border-dashed border-border rounded-xl py-6 px-4 text-center text-muted flex flex-col items-center gap-3">
 								<p className="text-xs">As pontuações ainda não foram processadas para esta rodada.</p>
 								{isAdmin && (
 									<button
 										type="button"
 										disabled={calculateScoresMutation.isPending}
 										onClick={() => calculateScoresMutation.mutate()}
-										className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
+										className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
 									>
 										<Zap size={14} />
 										{calculateScoresMutation.isPending ? 'Calculando...' : 'Calcular Agora'}
@@ -1735,26 +1770,26 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 							<div className="overflow-x-auto">
 								<table className="w-full text-left border-collapse text-xs">
 									<thead>
-										<tr className="border-b border-white/[0.08] text-[#94a3b8] uppercase tracking-wider text-[11px]">
+										<tr className="border-b border-border text-muted uppercase tracking-wider text-[11px]">
 											<th className="py-2.5 px-3">#</th>
 											<th className="py-2.5 px-3">Jogador</th>
 											<th className="py-2.5 px-3">Time</th>
 											<th className="py-2.5 px-3 text-center">Pts Time</th>
 											<th className="py-2.5 px-3 text-center">Pts Indiv.</th>
 											<th className="py-2.5 px-3 text-center">Pts Colab.</th>
-											<th className="py-2.5 px-3 text-center font-bold text-[#e6edf7]">Total</th>
+											<th className="py-2.5 px-3 text-center font-bold text-main">Total</th>
 										</tr>
 									</thead>
-									<tbody className="divide-y divide-white/[0.05]">
+									<tbody className="divide-y divide-border/50">
 										{playerLeaderboard.map((row, idx) => {
 											return (
 												<tr
 													key={`leaderboard-${row.player_id}`}
-													className={`transition-colors hover:bg-white/[0.03] ${
+													className={`transition-colors hover:bg-nav-hover/40 ${
 														idx === 0
 															? 'bg-amber-500/[0.05]'
 															: idx === 1
-															? 'bg-zinc-400/[0.04]'
+															? 'bg-muted/10'
 															: idx === 2
 															? 'bg-amber-700/[0.04]'
 															: ''
@@ -1766,10 +1801,10 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 																idx === 0
 																	? 'bg-amber-400 text-black shadow-sm'
 																	: idx === 1
-																	? 'bg-zinc-300 text-black'
+																	? 'bg-slate-200 text-slate-800 dark:bg-zinc-300 dark:text-black'
 																	: idx === 2
 																	? 'bg-amber-700/70 text-amber-100'
-																	: 'text-[#94a3b8]'
+																	: 'text-muted'
 															}`}
 														>
 															{idx + 1}
@@ -1777,11 +1812,11 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 													</td>
 													<td className="py-2.5 px-3">
 														<div className="flex flex-col">
-															<span className="font-semibold text-[#e6edf7]">
+															<span className="font-semibold text-main">
 																{row.nickname || row.name}
 															</span>
 															{row.nickname && row.nickname !== row.name && (
-																<span className="text-[11px] text-[#94a3b8]">
+																<span className="text-[11px] text-muted">
 																	{row.name}
 																</span>
 															)}
@@ -1790,23 +1825,23 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 													<td className="py-2.5 px-3">
 														{row.teamName ? (
 															<div className="inline-flex items-center gap-1.5">
-																<span className="text-[#cbd5e1]">{row.teamName}</span>
+																<span className="text-main">{row.teamName}</span>
 																<TeamColorTag color={row.teamColor} showLabel={false} />
 															</div>
 														) : (
-															<span className="text-[#94a3b8] italic">Avulso / Extra</span>
+															<span className="text-muted italic">Avulso / Extra</span>
 														)}
 													</td>
-													<td className="py-2.5 px-3 text-center text-[#cbd5e1]">
+													<td className="py-2.5 px-3 text-center text-main">
 														{row.pointsTeam}
 													</td>
-													<td className="py-2.5 px-3 text-center text-blue-400 font-medium">
+													<td className="py-2.5 px-3 text-center text-primary font-medium">
 														{row.pointsIndividual > 0 ? `+${row.pointsIndividual}` : row.pointsIndividual}
 													</td>
-													<td className="py-2.5 px-3 text-center text-emerald-400 font-medium">
+													<td className="py-2.5 px-3 text-center text-emerald-500 font-medium">
 														{row.pointsCollaboration > 0 ? `+${row.pointsCollaboration}` : row.pointsCollaboration}
 													</td>
-													<td className="py-2.5 px-3 text-center font-bold text-sm text-[#60a5fa]">
+													<td className="py-2.5 px-3 text-center font-bold text-sm text-primary">
 														{row.totalPoints}
 													</td>
 												</tr>
@@ -1820,23 +1855,20 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 				</div>
 			)}
 
-
-			{/* Footer Danger Notice Banner */}
-			{isAdmin && (
-				<div className="bg-red-500/[0.05] border border-red-500/[0.22] rounded-[16px] px-6 py-4 flex flex-wrap gap-3 justify-between items-center">
-					<span className="text-[13px] text-[#94a3b8]">
-						Excluir rodada fica no menu ⋯ e pede confirmação.
-					</span>
-					<button
-						type="button"
-						disabled={deleteRoundMutation.isPending}
-						onClick={handleDeleteRound}
-						className="text-[#f87171] hover:underline font-medium text-[13px] cursor-pointer"
-					>
-						Ação irreversível
-					</button>
-				</div>
+			{/* Conteúdo da Aba 3: Votação dos Destaques */}
+			{activeTab === 'votacao' && (
+				<RoundVotingTab
+					roundId={parseInt(params.id, 10)}
+					players={allPlayers}
+					confirmedPlayerIds={(attendance?.items || [])
+						.filter((i) => i.status === 'confirmed')
+						.map((i) => i.player_id)}
+					awards={awards}
+					roundTeams={teams}
+					rouletteWinners={rouletteWinners}
+				/>
 			)}
+
 
 			{/* Modal Adicionar Time */}
 			<Modal
@@ -1868,7 +1900,7 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 										onClick={() => setTeamColor(c.id)}
 										className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${isSelected
 											? `${c.badgeBg} ${c.badgeBorder} ${c.badgeText} ring-2 ring-blue-500/50 shadow-sm`
-											: 'border-white/[0.1] bg-white/[0.02] text-[#94a3b8] hover:bg-white/[0.06]'
+											: 'border-border bg-surface text-muted hover:bg-nav-hover'
 											}`}
 									>
 										<span
@@ -1892,7 +1924,7 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 							className="mb-2"
 						/>
 						{playerTeamInRoundMap.size > 0 && (
-							<p className="text-[11px] text-[#94a3b8] mb-2">
+							<p className="text-[11px] text-muted mb-2">
 								Jogadores já escalados em outro time desta
 								rodada exibem a tag do time e ficam bloqueados.
 								Para incluí-los aqui, remova-os primeiro do time
@@ -1912,8 +1944,8 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 									<label
 										key={p.id_player}
 										className={`flex items-center justify-between gap-2 px-3 py-2 text-sm ${isAssigned
-											? 'opacity-60 cursor-not-allowed bg-white/[0.01] text-[#94a3b8]'
-											: 'text-main hover:bg-white/5 cursor-pointer'
+											? 'opacity-60 cursor-not-allowed bg-nav-hover/20 text-muted'
+											: 'text-main hover:bg-nav-hover cursor-pointer'
 											}`}
 									>
 										<div className="flex items-center gap-2 min-w-0">
@@ -1936,13 +1968,13 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 										</div>
 										{assignedTeam ? (
 											<span
-												className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 text-[#facc15] border border-amber-500/30 shrink-0"
+												className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-600 dark:text-[#facc15] border border-amber-500/30 shrink-0"
 												title={`Escalado em ${assignedTeam.name}. Remova-o de lá para selecionar aqui.`}
 											>
 												{assignedTeam.name}
 											</span>
 										) : p.potes ? (
-											<span className="text-xs text-[#94a3b8] shrink-0">
+											<span className="text-xs text-muted shrink-0">
 												Pote {p.potes}
 											</span>
 										) : null}

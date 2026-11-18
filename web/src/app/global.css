@@ -1,23 +1,55 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   color-scheme: dark;
   --primary-color: #3b82f6;
   --primary-hover: #2563eb;
-  --bg-color: #0f172a;
-  --bg-surface: rgba(30, 41, 59, 0.7);
-  --hover-nav: #ffffff0d;
-  --border-color: rgba(255, 255, 255, 0.1);
-  --border-hover: rgba(255, 255, 255, 0.2);
+  --bg-color: #070b14;
+  --bg-surface: #0d1527;
+  --hover-nav: rgba(255, 255, 255, 0.05);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(255, 255, 255, 0.16);
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+}
+
+/* Stripe-inspired light theme: rich slate canvas, crisp white cards, balanced contrast */
+html.light, [data-theme="light"] {
+  color-scheme: light;
+  --primary-color: #635bff;
+  --primary-hover: #533afd;
+  --bg-color: #f4f7fa;
+  --bg-surface: #ffffff;
+  --hover-nav: #e8edf3;
+  --border-color: #e1eaf3;
+  --border-hover: #bac8da;
+  --text-main: #1a2c44;
+  --text-muted: #667691;
+}
+
+html.dark, [data-theme="dark"] {
+  color-scheme: dark;
+  --primary-color: #3b82f6;
+  --primary-hover: #2563eb;
+  --bg-color: #070b14;
+  --bg-surface: #0d1527;
+  --hover-nav: rgba(255, 255, 255, 0.05);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(255, 255, 255, 0.16);
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
 }
 
 input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(0.8) sepia(1) saturate(3) hue-rotate(190deg);
   cursor: pointer;
-  opacity: 0.85;
+  opacity: 0.75;
   transition: opacity 0.2s ease;
+}
+
+html.dark input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.8) sepia(1) saturate(3) hue-rotate(190deg);
 }
 
 input[type="date"]::-webkit-calendar-picker-indicator:hover {

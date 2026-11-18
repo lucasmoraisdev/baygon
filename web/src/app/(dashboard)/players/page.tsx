@@ -6,7 +6,7 @@ import SuspendModal from '@/components/SuspendModal';
 import { useAuth } from '@/context/AuthContext';
 import { fetchAPI } from '@/lib/api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ban, Pencil, Search, Trash2 } from 'lucide-react';
+import { Ban, ChevronLeft, ChevronRight, Pencil, Search, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -56,6 +56,8 @@ export default function PlayersPage() {
 	const [search, setSearch] = useState('');
 	const [potFilter, setPotFilter] = useState<string>('all');
 	const [typeFilter, setTypeFilter] = useState<string>('all');
+	const [currentPage, setCurrentPage] = useState<number>(1);
+	const pageSize = 10;
 
 	const [openMenuId, setOpenMenuId] = useState<number | null>(null);
 	const menuContainerRef = useRef<HTMLDivElement>(null);
@@ -173,6 +175,16 @@ export default function PlayersPage() {
 		});
 	}, [players, search, potFilter, typeFilter]);
 
+	useEffect(() => {
+		setCurrentPage(1);
+	}, [search, potFilter, typeFilter]);
+
+	const totalPages = Math.ceil(filteredPlayers.length / pageSize) || 1;
+	const paginatedPlayers = useMemo(() => {
+		const start = (currentPage - 1) * pageSize;
+		return filteredPlayers.slice(start, start + pageSize);
+	}, [filteredPlayers, currentPage, pageSize]);
+
 	const handleEdit = (player: Player) => {
 		setOpenMenuId(null);
 		setEditingId(player.id_player);
@@ -219,15 +231,15 @@ export default function PlayersPage() {
 	return (
 		<div
 			ref={menuContainerRef}
-			className="flex flex-col animate-slide-down text-[#e6edf7]"
+			className="flex flex-col animate-slide-down text-main"
 		>
 			{/* Header Principal */}
 			<div className="flex items-center justify-between gap-4 flex-wrap">
 				<div className="flex items-baseline gap-3">
-					<h1 className="m-0 text-[28px] font-bold tracking-[-0.01em] text-[#e6edf7]">
+					<h1 className="m-0 text-[28px] font-bold tracking-[-0.01em] text-main">
 						Jogadores
 					</h1>
-					<span className="text-[13px] text-[#94a3b8]">
+					<span className="text-[13px] text-muted">
 						{filteredPlayers.length}{' '}
 						{filteredPlayers.length === 1 ? 'jogador' : 'jogadores'}
 						{filteredPlayers.length !== players.length
@@ -244,7 +256,7 @@ export default function PlayersPage() {
 							setForm(EMPTY_FORM);
 							setIsFormOpen(true);
 						}}
-						className="min-h-[44px] px-5 rounded-[10px] border-0 bg-[#2563eb] hover:bg-blue-500 text-white font-semibold text-sm cursor-pointer transition-colors"
+						className="min-h-[44px] px-5 rounded-[10px] border-0 bg-primary hover:bg-primary-hover text-white font-semibold text-sm cursor-pointer transition-colors"
 					>
 						+ Novo jogador
 					</button>
@@ -254,19 +266,19 @@ export default function PlayersPage() {
 			{/* Barra de Busca e Filtros Segmentados */}
 			<div className="flex flex-wrap gap-3 my-6 mb-4 items-center">
 				{/* Input de Busca */}
-				<div className="flex-1 min-w-[240px] flex items-center gap-2.5 min-h-[44px] px-3.5 rounded-[10px] border border-white/10 bg-[#111a2e] text-[#94a3b8] focus-within:border-primary transition-colors">
-					<Search className="w-4 h-4 shrink-0 text-[#94a3b8]" />
+				<div className="flex-1 min-w-[240px] flex items-center gap-2.5 min-h-[44px] px-3.5 rounded-[10px] border border-border bg-surface text-muted focus-within:border-primary transition-colors">
+					<Search className="w-4 h-4 shrink-0 text-muted" />
 					<input
 						type="text"
 						placeholder="Buscar por nome ou apelido…"
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
-						className="w-full bg-transparent border-0 text-sm text-[#e6edf7] placeholder:text-[#94a3b8] focus:outline-none"
+						className="w-full bg-transparent border-0 text-sm text-main placeholder:text-muted focus:outline-none"
 					/>
 				</div>
 
 				{/* Segmented Control: Tipo */}
-				<div className="inline-flex bg-[#111a2e] border border-white/[0.07] rounded-[10px] p-[3px]">
+				<div className="inline-flex bg-surface border border-border rounded-[10px] p-[3px]">
 					{[
 						{ key: 'all', label: 'Todos' },
 						{ key: 'associate', label: 'Mensalistas' },
@@ -279,8 +291,8 @@ export default function PlayersPage() {
 								type="button"
 								onClick={() => setTypeFilter(opt.key)}
 								className={`px-3.5 py-[7px] rounded-[7px] text-sm font-medium transition-colors cursor-pointer ${isOn
-										? 'bg-blue-500/20 text-[#bfdbfe]'
-										: 'text-[#94a3b8] hover:text-slate-200'
+										? 'bg-primary/20 text-primary font-semibold'
+										: 'text-muted hover:text-main hover:bg-hover-nav'
 									}`}
 							>
 								{opt.label}
@@ -290,13 +302,13 @@ export default function PlayersPage() {
 				</div>
 
 				{/* Segmented Control: Potes */}
-				<div className="inline-flex bg-[#111a2e] border border-white/[0.07] rounded-[10px] p-[3px]">
+				<div className="inline-flex bg-surface border border-border rounded-[10px] p-[3px]">
 					<button
 						type="button"
 						onClick={() => setPotFilter('all')}
 						className={`px-3.5 py-[7px] rounded-[7px] text-sm font-medium transition-colors cursor-pointer ${potFilter === 'all'
-								? 'bg-blue-500/20 text-[#bfdbfe]'
-								: 'text-[#94a3b8] hover:text-slate-200'
+								? 'bg-primary/20 text-primary font-semibold'
+								: 'text-muted hover:text-main hover:bg-hover-nav'
 							}`}
 					>
 						Potes
@@ -312,8 +324,8 @@ export default function PlayersPage() {
 									setPotFilter(isOn ? 'all' : val)
 								}
 								className={`px-3.5 py-[7px] rounded-[7px] text-sm font-medium transition-colors cursor-pointer ${isOn
-										? 'bg-blue-500/20 text-[#bfdbfe]'
-										: 'text-[#94a3b8] hover:text-slate-200'
+										? 'bg-primary/20 text-primary font-semibold'
+										: 'text-muted hover:text-main hover:bg-hover-nav'
 									}`}
 							>
 								{p}
@@ -324,9 +336,9 @@ export default function PlayersPage() {
 			</div>
 
 			{/* Tabela / Lista de Jogadores */}
-			<section className="bg-[#111a2e] border border-white/[0.07] rounded-[16px]">
+			<section className="bg-surface border border-border rounded-[16px] overflow-hidden">
 				{/* Cabeçalho das Colunas */}
-				<div className="hidden md:grid md:grid-cols-[2fr_2fr_1.6fr_1fr_130px] gap-4 items-center px-5 py-3 text-xs font-semibold text-[#94a3b8] tracking-[0.04em] uppercase">
+				<div className="hidden md:grid md:grid-cols-[2fr_2fr_1.6fr_1fr_130px] gap-4 items-center px-5 py-3 text-xs font-semibold text-muted tracking-[0.04em] uppercase border-b border-border bg-hover-nav/40">
 					<span>JOGADOR</span>
 					<span>CONTATO</span>
 					<span>PERFIL</span>
@@ -335,22 +347,22 @@ export default function PlayersPage() {
 				</div>
 
 				{filteredPlayers.length === 0 ? (
-					<div className="px-5 py-10 border-t border-white/[0.06] text-center text-sm text-[#94a3b8]">
+					<div className="px-5 py-10 text-center text-sm text-muted">
 						Nenhum jogador encontrado com os filtros selecionados.
 					</div>
 				) : (
-					filteredPlayers.map((player) => {
+					paginatedPlayers.map((player) => {
 						const statusText = player.status || 'Ativo';
 						const isInactive =
 							statusText === 'Suspenso' ||
 							statusText === 'Bloqueado';
 
-						// Cor do avatar seguindo a estética do wireframe
+						// Cor do avatar com suporte aos temas
 						const avatarStyle = isInactive
-							? 'bg-[#7c2d12] text-[#fed7aa]'
+							? 'bg-red-500/20 text-red-400'
 							: player.is_guest
-								? 'bg-[#14532d] text-[#bbf7d0]'
-								: 'bg-[#1e3a8a] text-[#bfdbfe]';
+								? 'bg-emerald-500/20 text-emerald-400'
+								: 'bg-primary/20 text-primary';
 
 						const displayTitle = player.apelido || player.nome;
 						const displaySub = player.apelido
@@ -363,7 +375,7 @@ export default function PlayersPage() {
 						return (
 							<div
 								key={player.id_player}
-								className={`grid grid-cols-1 md:grid-cols-[2fr_2fr_1.6fr_1fr_130px] gap-4 items-center px-5 py-3.5 border-t border-white/[0.06] hover:bg-white/[0.025] transition-colors ${isInactive ? 'opacity-65 hover:opacity-95' : ''
+								className={`grid grid-cols-1 md:grid-cols-[2fr_2fr_1.6fr_1fr_130px] gap-4 items-center px-5 py-3.5 border-t border-border hover:bg-hover-nav/50 transition-colors ${isInactive ? 'opacity-65 hover:opacity-95' : ''
 									}`}
 							>
 								{/* Coluna 1: Jogador */}
@@ -374,10 +386,10 @@ export default function PlayersPage() {
 										{initialChar}
 									</div>
 									<div className="min-w-0">
-										<div className="font-semibold text-[#e6edf7] truncate">
+										<div className="font-semibold text-main truncate">
 											{displayTitle}
 										</div>
-										<div className="text-[13px] text-[#94a3b8] truncate">
+										<div className="text-[13px] text-muted truncate">
 											{displaySub}
 										</div>
 									</div>
@@ -385,33 +397,33 @@ export default function PlayersPage() {
 
 								{/* Coluna 2: Contato */}
 								<div className="min-w-0">
-									<div className="text-[#e6edf7] text-sm truncate">
+									<div className="text-main text-sm truncate">
 										{player.email || '—'}
 									</div>
-									<div className="text-[13px] text-[#94a3b8] truncate">
+									<div className="text-[13px] text-muted truncate">
 										{player.telefone || '—'}
 									</div>
 								</div>
 
 								{/* Coluna 3: Perfil (Chips) */}
 								<div className="flex gap-1.5 flex-wrap">
-									<span className="text-xs font-medium px-[9px] py-[3px] rounded-full bg-white/[0.06] text-[#cbd5e1] whitespace-nowrap">
+									<span className="text-xs font-medium px-[9px] py-[3px] rounded-full bg-hover-nav border border-border text-main whitespace-nowrap">
 										{player.is_guest
 											? 'Convidado'
 											: 'Mensalista'}
 									</span>
 									{player.pe && (
-										<span className="text-xs font-medium px-[9px] py-[3px] rounded-full bg-white/[0.06] text-[#cbd5e1] whitespace-nowrap">
+										<span className="text-xs font-medium px-[9px] py-[3px] rounded-full bg-hover-nav border border-border text-main whitespace-nowrap">
 											{player.pe}
 										</span>
 									)}
 									{player.potes && (
-										<span className="text-xs font-medium px-[9px] py-[3px] rounded-full bg-white/[0.06] text-[#cbd5e1] whitespace-nowrap">
+										<span className="text-xs font-medium px-[9px] py-[3px] rounded-full bg-hover-nav border border-border text-main whitespace-nowrap">
 											Pote {player.potes}
 										</span>
 									)}
 									{player.posicao && (
-										<span className="text-xs font-medium px-[9px] py-[3px] rounded-full bg-white/[0.06] text-[#cbd5e1] whitespace-nowrap">
+										<span className="text-xs font-medium px-[9px] py-[3px] rounded-full bg-hover-nav border border-border text-main whitespace-nowrap">
 											{POSICAO_LABEL[player.posicao] ??
 												player.posicao}
 										</span>
@@ -435,7 +447,7 @@ export default function PlayersPage() {
 								<div className="flex gap-2 justify-end items-center relative">
 									<Link
 										href={`/players/${player.id_player}`}
-										className="min-h-[36px] px-3.5 rounded-lg border border-white/[0.14] bg-transparent hover:bg-white/5 text-[#e6edf7] font-medium text-[13px] inline-flex items-center justify-center transition-colors"
+										className="min-h-[36px] px-3.5 rounded-lg border border-border bg-surface hover:bg-hover-nav text-main font-medium text-[13px] inline-flex items-center justify-center transition-colors"
 									>
 										Perfil
 									</Link>
@@ -454,22 +466,22 @@ export default function PlayersPage() {
 												}
 												aria-label="Mais ações"
 												title="Mais ações"
-												className="min-h-[36px] w-9 p-0 rounded-lg border border-white/[0.14] bg-transparent hover:bg-white/5 text-[#e6edf7] text-lg leading-none flex items-center justify-center cursor-pointer transition-colors"
+												className="min-h-[36px] w-9 p-0 rounded-lg border border-border bg-surface hover:bg-hover-nav text-main text-lg leading-none flex items-center justify-center cursor-pointer transition-colors"
 											>
 												⋯
 											</button>
 
 											{openMenuId ===
 												player.id_player && (
-													<div className="absolute right-0 top-full mt-1.5 w-40 bg-[#0b1220] border border-white/15 rounded-xl p-1.5 shadow-[0_14px_34px_rgba(0,0,0,0.65)] z-50 animate-slide-down">
+													<div className="absolute right-0 top-full mt-1.5 w-40 bg-surface border border-border rounded-xl p-1.5 shadow-[0_10px_25px_rgba(0,0,0,0.1)] dark:shadow-[0_14px_34px_rgba(0,0,0,0.65)] z-50 animate-slide-down">
 														<button
 															type="button"
 															onClick={() =>
 																handleEdit(player)
 															}
-															className="w-full px-3 py-2 rounded-lg text-xs font-medium text-[#e6edf7] hover:bg-white/5 flex items-center gap-2.5 transition-colors cursor-pointer text-left"
+															className="w-full px-3 py-2 rounded-lg text-xs font-medium text-main hover:bg-hover-nav flex items-center gap-2.5 transition-colors cursor-pointer text-left"
 														>
-															<Pencil className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+															<Pencil className="w-3.5 h-3.5 text-primary shrink-0" />
 															<span>Editar</span>
 														</button>
 
@@ -484,13 +496,13 @@ export default function PlayersPage() {
 																	true,
 																);
 															}}
-															className="w-full px-3 py-2 rounded-lg text-xs font-medium text-amber-400 hover:bg-amber-500/10 flex items-center gap-2.5 transition-colors cursor-pointer text-left"
+															className="w-full px-3 py-2 rounded-lg text-xs font-medium text-amber-500 hover:bg-amber-500/10 flex items-center gap-2.5 transition-colors cursor-pointer text-left"
 														>
 															<Ban className="w-3.5 h-3.5 shrink-0" />
 															<span>Suspender</span>
 														</button>
 
-														<div className="my-1 border-t border-white/[0.07]" />
+														<div className="my-1 border-t border-border" />
 
 														<button
 															type="button"
@@ -500,7 +512,7 @@ export default function PlayersPage() {
 															disabled={
 																deleteMutation.isPending
 															}
-															className="w-full px-3 py-2 rounded-lg text-xs font-medium text-[#f87171] hover:bg-red-500/10 flex items-center gap-2.5 transition-colors cursor-pointer text-left disabled:opacity-50"
+															className="w-full px-3 py-2 rounded-lg text-xs font-medium text-red-500 hover:bg-red-500/10 flex items-center gap-2.5 transition-colors cursor-pointer text-left disabled:opacity-50"
 														>
 															<Trash2 className="w-3.5 h-3.5 shrink-0" />
 															<span>Excluir</span>
@@ -514,10 +526,69 @@ export default function PlayersPage() {
 						);
 					})
 				)}
+
+				{/* Paginação */}
+				{filteredPlayers.length > pageSize && (
+					<div className="flex items-center justify-between border-t border-border p-4 px-5 flex-wrap gap-3 bg-surface">
+						<span className="text-xs text-muted">
+							Mostrando{' '}
+							<strong className="text-main">
+								{Math.min(
+									(currentPage - 1) * pageSize + 1,
+									filteredPlayers.length,
+								)}
+							</strong>{' '}
+							a{' '}
+							<strong className="text-main">
+								{Math.min(
+									currentPage * pageSize,
+									filteredPlayers.length,
+								)}
+							</strong>{' '}
+							de{' '}
+							<strong className="text-main">
+								{filteredPlayers.length}
+							</strong>{' '}
+							jogadores
+						</span>
+
+						<div className="flex items-center gap-1.5">
+							<button
+								type="button"
+								onClick={() =>
+									setCurrentPage((p) => Math.max(1, p - 1))
+								}
+								disabled={currentPage === 1}
+								className="p-1.5 rounded-lg border border-border bg-surface text-main hover:bg-hover-nav disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+								title="Página anterior"
+							>
+								<ChevronLeft className="w-4 h-4" />
+							</button>
+
+							<span className="px-3 py-1 text-xs font-medium text-main bg-surface border border-border rounded-lg">
+								{currentPage} / {totalPages}
+							</span>
+
+							<button
+								type="button"
+								onClick={() =>
+									setCurrentPage((p) =>
+										Math.min(totalPages, p + 1),
+									)
+								}
+								disabled={currentPage === totalPages}
+								className="p-1.5 rounded-lg border border-border bg-surface text-main hover:bg-hover-nav disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+								title="Próxima página"
+							>
+								<ChevronRight className="w-4 h-4" />
+							</button>
+						</div>
+					</div>
+				)}
 			</section>
 
 			{isAdmin && (
-				<div className="text-[13px] text-[#94a3b8] mt-3">
+				<div className="text-[13px] text-muted mt-3">
 					Editar, suspender e excluir ficam no menu ⋯ de cada linha.
 				</div>
 			)}
@@ -535,13 +606,13 @@ export default function PlayersPage() {
 				>
 					{/* Seção 1: DADOS PESSOAIS */}
 					<div className="flex flex-col gap-3.5">
-						<h3 className="m-0 text-xs tracking-[0.08em] text-[#64748b] font-semibold uppercase">
+						<h3 className="m-0 text-xs tracking-[0.08em] text-muted font-semibold uppercase">
 							DADOS PESSOAIS
 						</h3>
 
 						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 							<div>
-								<label className="block text-[13px] text-[#94a3b8] mb-1.5">
+								<label className="block text-[13px] text-muted mb-1.5">
 									Nome *
 								</label>
 								<input
@@ -555,12 +626,12 @@ export default function PlayersPage() {
 											nome: e.target.value,
 										})
 									}
-									className="box-border min-h-[44px] px-3.5 rounded-[10px] border border-white/[0.12] bg-[#0b1220] text-[#e6edf7] placeholder:text-[#64748b] text-sm w-full focus:outline-none focus:border-primary transition-colors"
+									className="box-border min-h-[44px] px-3.5 rounded-[10px] border border-border bg-surface text-main placeholder:text-muted text-sm w-full focus:outline-none focus:border-primary transition-colors"
 								/>
 							</div>
 
 							<div>
-								<label className="block text-[13px] text-[#94a3b8] mb-1.5">
+								<label className="block text-[13px] text-muted mb-1.5">
 									Apelido
 								</label>
 								<input
@@ -573,12 +644,12 @@ export default function PlayersPage() {
 											apelido: e.target.value,
 										})
 									}
-									className="box-border min-h-[44px] px-3.5 rounded-[10px] border border-white/[0.12] bg-[#0b1220] text-[#e6edf7] placeholder:text-[#64748b] text-sm w-full focus:outline-none focus:border-primary transition-colors"
+									className="box-border min-h-[44px] px-3.5 rounded-[10px] border border-border bg-surface text-main placeholder:text-muted text-sm w-full focus:outline-none focus:border-primary transition-colors"
 								/>
 							</div>
 
 							<div>
-								<label className="block text-[13px] text-[#94a3b8] mb-1.5">
+								<label className="block text-[13px] text-muted mb-1.5">
 									Email
 								</label>
 								<input
@@ -591,12 +662,12 @@ export default function PlayersPage() {
 											email: e.target.value,
 										})
 									}
-									className="box-border min-h-[44px] px-3.5 rounded-[10px] border border-white/[0.12] bg-[#0b1220] text-[#e6edf7] placeholder:text-[#64748b] text-sm w-full focus:outline-none focus:border-primary transition-colors"
+									className="box-border min-h-[44px] px-3.5 rounded-[10px] border border-border bg-surface text-main placeholder:text-muted text-sm w-full focus:outline-none focus:border-primary transition-colors"
 								/>
 							</div>
 
 							<div>
-								<label className="block text-[13px] text-[#94a3b8] mb-1.5">
+								<label className="block text-[13px] text-muted mb-1.5">
 									Telefone
 								</label>
 								<input
@@ -609,7 +680,7 @@ export default function PlayersPage() {
 											telefone: e.target.value,
 										})
 									}
-									className="box-border min-h-[44px] px-3.5 rounded-[10px] border border-white/[0.12] bg-[#0b1220] text-[#e6edf7] placeholder:text-[#64748b] text-sm w-full focus:outline-none focus:border-primary transition-colors"
+									className="box-border min-h-[44px] px-3.5 rounded-[10px] border border-border bg-surface text-main placeholder:text-muted text-sm w-full focus:outline-none focus:border-primary transition-colors"
 								/>
 							</div>
 						</div>
@@ -617,13 +688,13 @@ export default function PlayersPage() {
 
 					{/* Seção 2: PERFIL DE JOGO */}
 					<div className="flex flex-col gap-3.5">
-						<h3 className="m-0 text-xs tracking-[0.08em] text-[#64748b] font-semibold uppercase">
+						<h3 className="m-0 text-xs tracking-[0.08em] text-muted font-semibold uppercase">
 							PERFIL DE JOGO
 						</h3>
 
 						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 							<div>
-								<label className="block text-[13px] text-[#94a3b8] mb-1.5">
+								<label className="block text-[13px] text-muted mb-1.5">
 									Posição
 								</label>
 								<select
@@ -636,35 +707,35 @@ export default function PlayersPage() {
 												| '',
 										})
 									}
-									className="box-border min-h-[44px] px-3.5 rounded-[10px] border border-white/[0.12] bg-[#0b1220] text-[#e6edf7] text-sm w-full focus:outline-none focus:border-primary transition-colors cursor-pointer"
+									className="box-border min-h-[44px] px-3.5 rounded-[10px] border border-border bg-surface text-main text-sm w-full focus:outline-none focus:border-primary transition-colors cursor-pointer"
 								>
 									<option
 										value=""
-										className="bg-[#0b1220] text-[#64748b]"
+										className="bg-surface text-muted"
 									>
 										Selecione…
 									</option>
 									<option
 										value="goleiro"
-										className="bg-[#0b1220] text-[#e6edf7]"
+										className="bg-surface text-main"
 									>
 										Goleiro
 									</option>
 									<option
 										value="defensores"
-										className="bg-[#0b1220] text-[#e6edf7]"
+										className="bg-surface text-main"
 									>
 										Defensores
 									</option>
 									<option
 										value="meias"
-										className="bg-[#0b1220] text-[#e6edf7]"
+										className="bg-surface text-main"
 									>
 										Meias
 									</option>
 									<option
 										value="atacantes"
-										className="bg-[#0b1220] text-[#e6edf7]"
+										className="bg-surface text-main"
 									>
 										Atacantes
 									</option>
@@ -672,10 +743,10 @@ export default function PlayersPage() {
 							</div>
 
 							<div>
-								<label className="block text-[13px] text-[#94a3b8] mb-1.5">
+								<label className="block text-[13px] text-muted mb-1.5">
 									Pé predominante
 								</label>
-								<div className="flex bg-[#0b1220] border border-white/[0.12] rounded-[10px] p-[3px]">
+								<div className="flex bg-surface border border-border rounded-[10px] p-[3px]">
 									{[
 										{ key: 'D', label: 'Direito' },
 										{ key: 'E', label: 'Esquerdo' },
@@ -693,8 +764,8 @@ export default function PlayersPage() {
 													})
 												}
 												className={`flex-1 text-center py-[9px] rounded-[7px] text-sm font-medium transition-colors cursor-pointer ${isOn
-														? 'bg-blue-500/20 text-[#bfdbfe]'
-														: 'text-[#94a3b8] hover:text-slate-200'
+														? 'bg-primary/20 text-primary font-semibold'
+														: 'text-muted hover:text-main hover:bg-hover-nav'
 													}`}
 											>
 												{opt.label}
@@ -707,10 +778,10 @@ export default function PlayersPage() {
 
 						{/* Pote (Segmented Control 1 a 5) */}
 						<div>
-							<label className="block text-[13px] text-[#94a3b8] mb-1.5">
+							<label className="block text-[13px] text-muted mb-1.5">
 								Pote
 							</label>
-							<div className="flex bg-[#0b1220] border border-white/[0.12] rounded-[10px] p-[3px]">
+							<div className="flex bg-surface border border-border rounded-[10px] p-[3px]">
 								{[1, 2, 3, 4, 5].map((n) => {
 									const isOn = Number(form.potes) === n;
 									return (
@@ -724,8 +795,8 @@ export default function PlayersPage() {
 												})
 											}
 											className={`flex-1 text-center py-[9px] rounded-[7px] text-sm font-medium transition-colors cursor-pointer ${isOn
-													? 'bg-blue-500/20 text-[#bfdbfe]'
-													: 'text-[#94a3b8] hover:text-slate-200'
+													? 'bg-primary/20 text-primary font-semibold'
+													: 'text-muted hover:text-main hover:bg-hover-nav'
 												}`}
 										>
 											{n}
@@ -737,18 +808,18 @@ export default function PlayersPage() {
 
 						{/* Tipo (Segmented Control Mensalista / Convidado) */}
 						<div>
-							<label className="block text-[13px] text-[#94a3b8] mb-1.5">
+							<label className="block text-[13px] text-muted mb-1.5">
 								Tipo
 							</label>
-							<div className="flex bg-[#0b1220] border border-white/[0.12] rounded-[10px] p-[3px]">
+							<div className="flex bg-surface border border-border rounded-[10px] p-[3px]">
 								<button
 									type="button"
 									onClick={() =>
 										setForm({ ...form, is_guest: false })
 									}
 									className={`flex-1 text-center py-[9px] rounded-[7px] text-sm font-medium transition-colors cursor-pointer ${!form.is_guest
-											? 'bg-blue-500/20 text-[#bfdbfe]'
-											: 'text-[#94a3b8] hover:text-slate-200'
+											? 'bg-primary/20 text-primary font-semibold'
+											: 'text-muted hover:text-main hover:bg-hover-nav'
 										}`}
 								>
 									Mensalista
@@ -759,8 +830,8 @@ export default function PlayersPage() {
 										setForm({ ...form, is_guest: true })
 									}
 									className={`flex-1 text-center py-[9px] rounded-[7px] text-sm font-medium transition-colors cursor-pointer ${form.is_guest
-											? 'bg-blue-500/20 text-[#bfdbfe]'
-											: 'text-[#94a3b8] hover:text-slate-200'
+											? 'bg-primary/20 text-primary font-semibold'
+											: 'text-muted hover:text-main hover:bg-hover-nav'
 										}`}
 								>
 									Convidado
@@ -770,18 +841,18 @@ export default function PlayersPage() {
 					</div>
 
 					{/* Rodapé do Modal */}
-					<div className="flex gap-3 justify-end pt-5 border-t border-white/[0.06]">
+					<div className="flex gap-3 justify-end pt-5 border-t border-border">
 						<button
 							type="button"
 							onClick={closeForm}
-							className="min-h-[44px] px-5 rounded-[10px] border border-white/[0.14] bg-transparent hover:bg-white/5 text-[#e6edf7] font-medium text-sm cursor-pointer transition-colors"
+							className="min-h-[44px] px-5 rounded-[10px] border border-border bg-transparent hover:bg-hover-nav text-main font-medium text-sm cursor-pointer transition-colors"
 						>
 							Cancelar
 						</button>
 						<button
 							type="submit"
 							disabled={saveMutation.isPending}
-							className="min-h-[44px] px-6 rounded-[10px] border-0 bg-[#2563eb] hover:bg-blue-500 text-white font-semibold text-sm cursor-pointer transition-colors disabled:opacity-50"
+							className="min-h-[44px] px-6 rounded-[10px] border-0 bg-primary hover:bg-primary-hover text-white font-semibold text-sm cursor-pointer transition-colors disabled:opacity-50"
 						>
 							{saveMutation.isPending
 								? 'Salvando...'

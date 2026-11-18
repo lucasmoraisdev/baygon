@@ -137,6 +137,7 @@ export interface Player {
 	apelido: string | null;
 	posicao: string | null;
 	potes?: number | null;
+	user_id?: number | null;
 }
 
 export interface Match {
@@ -177,5 +178,73 @@ export interface PlayerScore {
 	extra_matches_drawn?: number;
 	extra_matches_lost?: number;
 	total_points: number;
+}
+
+export interface PollOption {
+	id_option: number;
+	poll_id: number;
+	title: string;
+	description?: string | null;
+	votes_count: number;
+	percentage: number;
+}
+
+export interface Poll {
+	id_poll: number;
+	season_id: number;
+	title: string;
+	description?: string | null;
+	is_active: boolean;
+	multiple_choices: boolean;
+	starts_at?: string | null;
+	ends_at?: string | null;
+	created_by_user_id?: number | null;
+	created_at?: string | null;
+	options: PollOption[];
+	total_votes: number;
+	has_voted: boolean;
+	user_voted_option_ids: number[];
+}
+
+export interface RoundVoter {
+	id_voter: number;
+	round_id: number;
+	user_id: number;
+	user_name: string;
+	user_email: string;
+	has_voted: boolean;
+}
+
+export interface RoundVoteItem {
+	award_type: string;
+	player_id: number;
+}
+
+export interface RoundVoteCandidateCount {
+	player_id: number;
+	player_name: string;
+	player_apelido?: string | null;
+	votes_count: number;
+	percentage: number;
+}
+
+export interface RoundCategoryTally {
+	award_type: string;
+	category_label: string;
+	total_votes: number;
+	candidates: RoundVoteCandidateCount[];
+	leading_player_id?: number | null;
+	leading_player_name?: string | null;
+}
+
+export interface RoundVotingStatus {
+	round_id: number;
+	is_voting_open: boolean;
+	is_user_voter: boolean;
+	total_voters_count: number;
+	voted_voters_count: number;
+	voters: RoundVoter[];
+	user_votes: RoundVoteItem[];
+	tallies: RoundCategoryTally[];
 }
 

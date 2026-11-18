@@ -714,7 +714,7 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 	if (matchQuery.isLoading && !match) return <Loading />;
 	if (!match)
 		return (
-			<div className="text-[#94a3b8] p-4">Partida não encontrada.</div>
+			<div className="text-muted p-4">Partida não encontrada.</div>
 		);
 
 	const homeScore = match.home_score ?? match.score_home ?? 0;
@@ -777,17 +777,17 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 	};
 
 	return (
-		<div className="max-w-[1100px] w-full mx-auto flex flex-col gap-5 text-[#e6edf7] animate-slide-down">
+		<div className="max-w-[1100px] w-full mx-auto flex flex-col gap-5 text-main animate-slide-down">
 			{/* Top Header */}
 			<div className="flex flex-wrap gap-3 justify-between items-center">
 				<div>
 					<Link
 						href={`/rounds/${match.round_id}`}
-						className="text-[13px] text-[#94a3b8] hover:text-[#e6edf7] mb-1 inline-flex items-center gap-1.5 transition-colors"
+						className="text-[13px] text-muted hover:text-main mb-1 inline-flex items-center gap-1.5 transition-colors"
 					>
 						<ArrowLeft size={16} /> Rodada #{match.round_id}
 					</Link>
-					<h1 className="m-0 text-2xl font-bold text-[#e6edf7]">
+					<h1 className="m-0 text-2xl font-bold text-main">
 						{readOnly
 							? 'Resumo da partida'
 							: isEditing
@@ -800,21 +800,21 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 					{isAdmin && match?.round_id && (
 						<Link
 							href={`/rounds/${match.round_id}/mass`}
-							className="min-h-[40px] px-4 rounded-[10px] border border-blue-500/40 bg-blue-500/10 hover:bg-blue-500/20 text-[#bfdbfe] text-sm font-semibold flex items-center gap-2 cursor-pointer transition-colors"
+							className="min-h-[40px] px-4 rounded-[10px] border border-blue-600/30 dark:border-blue-500/40 bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:hover:bg-blue-500/25 dark:text-blue-300 text-sm font-semibold flex items-center gap-2 cursor-pointer transition-colors shadow-sm"
 						>
-							<Zap size={15} />
+							<Zap size={15} className="text-blue-600 dark:text-blue-400" />
 							<span>⚡ Cadastro em Massa</span>
 						</Link>
 					)}
 
 					{isFinished ? (
-						<span className="inline-flex items-center gap-2 text-[13px] font-semibold px-3 py-[5px] rounded-full bg-zinc-500/15 border border-zinc-500/30 text-zinc-300">
-							<span className="w-2 h-2 rounded-full bg-zinc-400" />
+						<span className="inline-flex items-center gap-2 text-[13px] font-semibold px-3 py-[5px] rounded-full bg-surface border border-border text-muted">
+							<span className="w-2 h-2 rounded-full bg-muted" />
 							Encerrada · Partida #{match.id_match ?? match.id}
 						</span>
 					) : (
-						<span className="inline-flex items-center gap-2 text-[13px] font-semibold px-3 py-[5px] rounded-full bg-emerald-500/[0.14] text-[#4ade80]">
-							<span className="w-2 h-2 rounded-full bg-[#4ade80] animate-pulse" />
+						<span className="inline-flex items-center gap-2 text-[13px] font-semibold px-3 py-[5px] rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-[#4ade80]">
+							<span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
 							Ao vivo · Partida #{match.id_match ?? match.id}
 						</span>
 					)}
@@ -833,7 +833,7 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 								type="button"
 								disabled={finishMatchMutation.isPending}
 								onClick={() => setIsEditing(false)}
-								className="min-h-[40px] px-4 rounded-[10px] border border-white/[0.14] bg-transparent hover:bg-white/[0.05] text-[#94a3b8] font-medium text-sm cursor-pointer transition-colors"
+								className="min-h-[40px] px-4 rounded-[10px] border border-border bg-surface hover:bg-nav-hover text-muted font-medium text-sm cursor-pointer transition-colors"
 							>
 								Cancelar
 							</button>
@@ -843,7 +843,7 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 								onClick={() =>
 									finishMatchMutation.mutate({ redirect: false })
 								}
-								className="min-h-[40px] px-4 rounded-[10px] border border-[#2563eb] bg-[#2563eb] hover:bg-blue-500 text-white font-medium text-sm cursor-pointer transition-colors disabled:opacity-50"
+								className="min-h-[40px] px-4 rounded-[10px] border border-primary bg-primary hover:bg-primary-hover text-white font-medium text-sm cursor-pointer transition-colors disabled:opacity-50"
 							>
 								{finishMatchMutation.isPending
 									? 'Salvando...'
@@ -863,7 +863,7 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 									finishMatchMutation.mutate({ redirect: true });
 								}
 							}}
-							className="min-h-[40px] px-4 rounded-[10px] border border-white/[0.14] bg-transparent hover:bg-white/[0.05] text-[#e6edf7] font-medium text-sm cursor-pointer transition-colors"
+							className="min-h-[40px] px-4 rounded-[10px] border border-border bg-surface hover:bg-nav-hover text-main font-medium text-sm cursor-pointer transition-colors"
 						>
 							{finishMatchMutation.isPending
 								? 'Encerrando...'
@@ -874,17 +874,17 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 			</div>
 
 			{/* Hero Scoreboard */}
-			<section className="bg-gradient-to-b from-[#14203a] to-[#111a2e] border border-white/[0.07] rounded-[16px] grid grid-cols-[1fr_auto_1fr] items-center gap-6 px-6 sm:px-8 py-7">
+			<section className="bg-surface border border-border shadow-xs rounded-[16px] grid grid-cols-[1fr_auto_1fr] items-center gap-6 px-6 sm:px-8 py-7">
 				<div className="text-right min-w-0">
-					<div className="text-lg sm:text-xl font-semibold text-[#e6edf7] truncate flex items-center justify-end gap-2">
+					<div className="text-lg sm:text-xl font-semibold text-main truncate flex items-center justify-end gap-2">
 						<span className="truncate">{homeTeamName}</span>
 						<TeamColorTag color={homeTeam?.color} fallbackIndex={0} />
 					</div>
-					<div className="text-[13px] text-[#94a3b8]">Mandante</div>
+					<div className="text-[13px] text-muted">Mandante</div>
 				</div>
 
 				<div className="flex flex-col items-center gap-1.5">
-					<div className="flex items-center gap-4 sm:gap-6 text-[44px] sm:text-[60px] font-bold leading-none tabular-nums text-[#e6edf7]">
+					<div className="flex items-center gap-4 sm:gap-6 text-[44px] sm:text-[60px] font-bold leading-none tabular-nums text-main">
 						<div className="flex items-center gap-2">
 							{!readOnly && (
 								<button
@@ -892,7 +892,7 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 									title="Diminuir gol do mandante (-1)"
 									disabled={homeScore <= 0 || updateScoreMutation.isPending}
 									onClick={() => handleAdjustScore('home', -1)}
-									className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-white/20 bg-white/5 hover:bg-white/10 text-sm text-[#94a3b8] hover:text-white flex items-center justify-center cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+									className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-border bg-background hover:bg-nav-hover text-sm text-muted hover:text-main flex items-center justify-center cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
 								>
 									−
 								</button>
@@ -904,14 +904,14 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 									title="Aumentar gol do mandante (+1)"
 									disabled={updateScoreMutation.isPending}
 									onClick={() => handleAdjustScore('home', 1)}
-									className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-white/20 bg-white/5 hover:bg-white/10 text-sm text-[#94a3b8] hover:text-white flex items-center justify-center cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+									className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-border bg-background hover:bg-nav-hover text-sm text-muted hover:text-main flex items-center justify-center cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
 								>
 									+
 								</button>
 							)}
 						</div>
 
-						<span className="text-[26px] text-[#64748b]">×</span>
+						<span className="text-[26px] text-muted">×</span>
 
 						<div className="flex items-center gap-2">
 							{!readOnly && (
@@ -920,7 +920,7 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 									title="Diminuir gol do visitante (-1)"
 									disabled={awayScore <= 0 || updateScoreMutation.isPending}
 									onClick={() => handleAdjustScore('away', -1)}
-									className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-white/20 bg-white/5 hover:bg-white/10 text-sm text-[#94a3b8] hover:text-white flex items-center justify-center cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+									className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-border bg-background hover:bg-nav-hover text-sm text-muted hover:text-main flex items-center justify-center cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
 								>
 									−
 								</button>
@@ -932,7 +932,7 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 									title="Aumentar gol do visitante (+1)"
 									disabled={updateScoreMutation.isPending}
 									onClick={() => handleAdjustScore('away', 1)}
-									className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-white/20 bg-white/5 hover:bg-white/10 text-sm text-[#94a3b8] hover:text-white flex items-center justify-center cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+									className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-border bg-background hover:bg-nav-hover text-sm text-muted hover:text-main flex items-center justify-center cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
 								>
 									+
 								</button>
@@ -940,41 +940,41 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 						</div>
 					</div>
 					{!readOnly && (
-						<div className="text-[11px] text-[#64748b] tracking-wide">
+						<div className="text-[11px] text-muted tracking-wide">
 							Ajuste manual do placar (+ / −)
 						</div>
 					)}
 				</div>
 
 				<div className="text-left min-w-0">
-					<div className="text-lg sm:text-xl font-semibold text-[#e6edf7] truncate flex items-center gap-2">
+					<div className="text-lg sm:text-xl font-semibold text-main truncate flex items-center gap-2">
 						<span className="truncate">{awayTeamName}</span>
 						<TeamColorTag color={awayTeam?.color} fallbackIndex={1} />
 					</div>
-					<div className="text-[13px] text-[#94a3b8]">Visitante</div>
+					<div className="text-[13px] text-muted">Visitante</div>
 				</div>
 			</section>
 
 			{/* Card: Quem estava filmando */}
-			<section className="bg-[#111a2e] border border-white/[0.07] rounded-[16px] p-5 sm:p-6 flex flex-col gap-3.5">
+			<section className="bg-surface border border-border rounded-[16px] p-5 sm:p-6 flex flex-col gap-3.5">
 				<div className="flex flex-wrap items-center justify-between gap-2">
 					<div>
-						<h2 className="m-0 text-base font-semibold text-[#e6edf7] flex items-center gap-2">
+						<h2 className="m-0 text-base font-semibold text-main flex items-center gap-2">
 							<span>🎥 Quem estava filmando</span>
 						</h2>
-						<p className="m-0 mt-0.5 text-xs text-[#94a3b8]">
+						<p className="m-0 mt-0.5 text-xs text-muted">
 							Selecione o jogador responsável pela gravação desta
 							partida (soma pontos de câmera na temporada).
 						</p>
 					</div>
 
 					{currentCameramanLabel ? (
-						<span className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full bg-blue-500/[0.16] border border-blue-500/30 text-[#bfdbfe]">
-							<span className="w-2 h-2 rounded-full bg-[#60a5fa]" />
+						<span className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-primary">
+							<span className="w-2 h-2 rounded-full bg-primary" />
 							Filmando: {currentCameramanLabel}
 						</span>
 					) : (
-						<span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-white/[0.05] text-[#94a3b8]">
+						<span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-surface border border-border text-muted">
 							Nenhum jogador selecionado
 						</span>
 					)}
@@ -995,8 +995,8 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 									)
 								}
 								className={`min-h-[38px] px-3.5 rounded-[10px] border inline-flex items-center gap-2 text-sm transition-colors cursor-pointer disabled:opacity-50 ${isSelected
-									? 'bg-[#2563eb] border-[#2563eb] text-white font-semibold'
-									: 'border-white/[0.12] bg-white/[0.03] hover:bg-white/[0.06] text-[#e6edf7] font-medium'
+									? 'bg-primary border-primary text-white font-semibold'
+									: 'border-border bg-surface hover:bg-nav-hover text-main font-medium'
 									}`}
 							>
 								<span>{player.apelido || player.nome}</span>
@@ -1004,7 +1004,7 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 									<span
 										className={`text-[11px] px-1.5 py-0.5 rounded ${isSelected
 											? 'bg-white/20 text-white'
-											: 'bg-white/[0.06] text-[#94a3b8]'
+											: 'bg-muted/10 text-muted'
 											}`}
 									>
 										{teamName}
@@ -1020,7 +1020,7 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 							onClick={() =>
 								setShowExtraCameramen((prev) => !prev)
 							}
-							className="min-h-[38px] px-3.5 rounded-[10px] border border-dashed border-white/[0.18] bg-white/[0.02] hover:bg-white/[0.05] text-[#94a3b8] inline-flex items-center text-sm font-medium cursor-pointer transition-colors"
+							className="min-h-[38px] px-3.5 rounded-[10px] border border-dashed border-border bg-surface hover:bg-nav-hover text-muted inline-flex items-center text-sm font-medium cursor-pointer transition-colors"
 						>
 							Outros jogadores {showExtraCameramen ? '⌃' : '⌄'}
 						</button>
@@ -1028,13 +1028,13 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 				</div>
 
 				{showExtraCameramen && otherCameramen.length > 0 && (
-					<div className="pt-3 border-t border-white/[0.07] flex flex-col gap-2.5">
+					<div className="pt-3 border-t border-border flex flex-col gap-2.5">
 						<input
 							type="text"
 							value={cameramanSearch}
 							onChange={(e) => setCameramanSearch(e.target.value)}
 							placeholder="Buscar jogador para câmera..."
-							className="w-full sm:max-w-xs min-h-[36px] px-3 rounded-[9px] bg-[#0b1220] border border-white/[0.12] text-[#e6edf7] text-xs focus:outline-none focus:border-[#2563eb]"
+							className="w-full sm:max-w-xs min-h-[36px] px-3 rounded-[9px] bg-background border border-border text-main placeholder:text-muted text-xs focus:outline-none focus:border-primary"
 						/>
 						<div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto">
 							{filteredOtherCameramen.map((p) => {
@@ -1051,8 +1051,8 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 											)
 										}
 										className={`min-h-[34px] px-3 rounded-lg border inline-flex items-center text-xs transition-colors cursor-pointer disabled:opacity-50 ${isSelected
-											? 'bg-[#2563eb] border-[#2563eb] text-white font-semibold'
-											: 'border-white/[0.12] bg-white/[0.02] hover:bg-white/[0.05] text-[#94a3b8]'
+											? 'bg-primary border-primary text-white font-semibold'
+											: 'border-border bg-surface hover:bg-nav-hover text-muted'
 											}`}
 									>
 										{p.apelido || p.nome}
@@ -1068,23 +1068,23 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 			<div className={`grid grid-cols-1 gap-5 items-start ${readOnly ? '' : 'lg:grid-cols-2'}`}>
 				{/* Left Card: Registrar evento */}
 				{!readOnly && (
-					<section className="bg-[#111a2e] border border-white/[0.07] rounded-[16px] p-6 flex flex-col gap-[22px]">
-						<h2 className="m-0 text-base font-semibold text-[#e6edf7]">
+					<section className="bg-surface border border-border rounded-[16px] p-6 flex flex-col gap-[22px]">
+						<h2 className="m-0 text-base font-semibold text-main">
 							Registrar evento
 						</h2>
 
 						{/* TIME Segmented Control */}
 						<div>
-							<div className="text-xs tracking-[0.08em] text-[#64748b] font-semibold mb-2.5 uppercase">
+							<div className="text-xs tracking-[0.08em] text-muted font-semibold mb-2.5 uppercase">
 								TIME
 							</div>
-							<div className="flex bg-[#0b1220] border border-white/[0.12] rounded-[10px] p-[3px]">
+							<div className="flex bg-background border border-border rounded-[10px] p-[3px]">
 								<button
 									type="button"
 									onClick={() => handleSelectSide('home')}
 									className={`flex-1 text-center py-[9px] px-3 rounded-[7px] font-semibold text-sm transition-colors cursor-pointer truncate ${selectedSide === 'home'
-										? 'bg-blue-500/20 text-[#bfdbfe]'
-										: 'text-[#94a3b8] hover:text-[#e6edf7]'
+										? 'bg-primary/20 text-primary'
+										: 'text-muted hover:text-main'
 										}`}
 								>
 									{homeTeamName}
@@ -1093,8 +1093,8 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 									type="button"
 									onClick={() => handleSelectSide('away')}
 									className={`flex-1 text-center py-[9px] px-3 rounded-[7px] font-semibold text-sm transition-colors cursor-pointer truncate ${selectedSide === 'away'
-										? 'bg-blue-500/20 text-[#bfdbfe]'
-										: 'text-[#94a3b8] hover:text-[#e6edf7]'
+										? 'bg-primary/20 text-primary'
+										: 'text-muted hover:text-main'
 										}`}
 								>
 									{awayTeamName}
@@ -1104,7 +1104,7 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 
 						{/* JOGADOR Pills */}
 						<div>
-							<div className="text-xs tracking-[0.08em] text-[#64748b] font-semibold mb-2.5 uppercase">
+							<div className="text-xs tracking-[0.08em] text-muted font-semibold mb-2.5 uppercase">
 								JOGADOR
 							</div>
 							<div className="flex flex-wrap gap-2">
@@ -1125,8 +1125,8 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 												}
 											}}
 											className={`min-h-[40px] px-4 rounded-[10px] border inline-flex items-center text-sm transition-colors cursor-pointer ${isSelected
-												? 'bg-[#2563eb] border-[#2563eb] text-white font-semibold'
-												: 'border-white/[0.12] bg-white/[0.03] hover:bg-white/[0.06] text-[#e6edf7] font-medium'
+												? 'bg-primary border-primary text-white font-semibold'
+												: 'border-border bg-surface hover:bg-nav-hover text-main font-medium'
 												}`}
 										>
 											{p.apelido || p.nome}
@@ -1140,7 +1140,7 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 									playerMap.has(selectedPlayerId) && (
 										<button
 											type="button"
-											className="min-h-[40px] px-4 rounded-[10px] border inline-flex items-center gap-1.5 text-sm transition-colors cursor-pointer bg-[#2563eb] border-[#2563eb] text-white font-semibold"
+											className="min-h-[40px] px-4 rounded-[10px] border inline-flex items-center gap-1.5 text-sm transition-colors cursor-pointer bg-primary border-primary text-white font-semibold"
 										>
 											<span>
 												{playerMap.get(selectedPlayerId)?.apelido ||
@@ -1158,7 +1158,7 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 										onClick={() =>
 											setShowExtraPlayers((prev) => !prev)
 										}
-										className="min-h-[40px] px-4 rounded-[10px] border border-dashed border-white/[0.18] bg-white/[0.02] hover:bg-white/[0.05] text-[#94a3b8] inline-flex items-center text-sm font-medium cursor-pointer transition-colors"
+										className="min-h-[40px] px-4 rounded-[10px] border border-dashed border-border bg-surface hover:bg-nav-hover text-muted inline-flex items-center text-sm font-medium cursor-pointer transition-colors"
 									>
 										Outros jogadores {showExtraPlayers ? '⌃' : '⌄'}
 									</button>
@@ -1166,7 +1166,7 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 							</div>
 
 							{showExtraPlayers && extraPlayers.length > 0 && (
-								<div className="mt-2.5 pt-2.5 border-t border-white/[0.07] flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
+								<div className="mt-2.5 pt-2.5 border-t border-border flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
 									{extraPlayers.map((p) => {
 										const isSelected =
 											selectedPlayerId === p.id_player;
@@ -1187,8 +1187,8 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 													}
 												}}
 												className={`min-h-[34px] px-3 rounded-lg border inline-flex items-center text-xs transition-colors cursor-pointer ${isSelected
-													? 'bg-[#2563eb] border-[#2563eb] text-white font-semibold'
-													: 'border-white/[0.12] bg-white/[0.02] hover:bg-white/[0.05] text-[#94a3b8]'
+													? 'bg-primary border-primary text-white font-semibold'
+													: 'border-border bg-surface hover:bg-nav-hover text-muted'
 													}`}
 											>
 												{p.apelido || p.nome}
@@ -1200,9 +1200,9 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 						</div>
 
 						{/* ASSISTÊNCIA OU OURO (OPCIONAL) */}
-						<div className="flex flex-col gap-2.5 bg-white/[0.02] border border-white/[0.06] rounded-[12px] p-3.5">
+						<div className="flex flex-col gap-2.5 bg-background border border-border rounded-[12px] p-3.5">
 							<div className="flex items-center justify-between">
-								<div className="text-xs tracking-[0.08em] text-[#64748b] font-semibold uppercase">
+								<div className="text-xs tracking-[0.08em] text-muted font-semibold uppercase">
 									ASSISTÊNCIA OU OURO (OPCIONAL)
 								</div>
 								{selectedAssistId !== null && (
@@ -1212,7 +1212,7 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 											setSelectedAssistId(null);
 											setAssistMode('none');
 										}}
-										className="text-xs text-[#94a3b8] hover:text-[#f87171] underline cursor-pointer bg-transparent border-0"
+										className="text-xs text-muted hover:text-red-500 underline cursor-pointer bg-transparent border-0"
 									>
 										Limpar seleção
 									</button>
@@ -1230,8 +1230,8 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 										setShowExtraOuro(false);
 									}}
 									className={`min-h-[38px] px-2 rounded-[8px] border text-xs sm:text-sm font-medium transition-colors cursor-pointer flex items-center justify-center ${assistMode === 'none'
-										? 'bg-white/[0.12] border-white/30 text-white font-semibold'
-										: 'border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.05] text-[#94a3b8]'
+										? 'bg-primary/15 border-primary text-primary font-semibold'
+										: 'border-border bg-surface hover:bg-nav-hover text-muted'
 										}`}
 								>
 									Sem assistência
@@ -1244,11 +1244,11 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 										setShowExtraOuro(false);
 									}}
 									className={`min-h-[38px] px-2 rounded-[8px] border text-xs sm:text-sm font-medium transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${assistMode === 'assistencia'
-										? 'bg-blue-500/25 border-blue-500/60 text-[#bfdbfe] font-semibold'
-										: 'border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.05] text-[#94a3b8]'
+										? 'bg-primary/20 border-primary/60 text-primary font-semibold'
+										: 'border-border bg-surface hover:bg-nav-hover text-muted'
 										}`}
 								>
-									<span className="w-2 h-2 rounded-full bg-[#60a5fa] shrink-0" />
+									<span className="w-2 h-2 rounded-full bg-primary shrink-0" />
 									<span>Assistência</span>
 								</button>
 								<button
@@ -1259,19 +1259,19 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 										setShowExtraAssist(false);
 									}}
 									className={`min-h-[38px] px-2 rounded-[8px] border text-xs sm:text-sm font-medium transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${assistMode === 'ouro'
-										? 'bg-blue-500/25 border-blue-500/60 text-[#bfdbfe] font-semibold'
-										: 'border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.05] text-[#94a3b8]'
+										? 'bg-primary/20 border-primary/60 text-primary font-semibold'
+										: 'border-border bg-surface hover:bg-nav-hover text-muted'
 										}`}
 								>
-									<span className="w-[8px] h-2.5 rounded-[2px] bg-[#3b82f6] shrink-0" />
+									<span className="w-[8px] h-2.5 rounded-[2px] bg-primary shrink-0" />
 									<span>Ouro (falha)</span>
 								</button>
 							</div>
 
 							{/* Lista de jogadores quando Assistência está ativo */}
 							{assistMode === 'assistencia' && (
-								<div className="flex flex-col gap-2 pt-1 border-t border-white/[0.06] mt-1">
-									<div className="text-[11px] text-[#94a3b8]">
+								<div className="flex flex-col gap-2 pt-1 border-t border-border mt-1">
+									<div className="text-[11px] text-muted">
 										Selecione o companheiro (ou emprestado) que deu o passe:
 									</div>
 									<div className="flex flex-wrap gap-2">
@@ -1285,8 +1285,8 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 														setSelectedAssistId(isSelected ? null : p.id_player);
 													}}
 													className={`min-h-[36px] px-3 rounded-[8px] border inline-flex items-center gap-1.5 text-xs sm:text-sm transition-colors cursor-pointer ${isSelected
-														? 'bg-blue-500/30 border-blue-500/70 text-[#bfdbfe] font-semibold'
-														: 'border-white/[0.12] bg-white/[0.03] hover:bg-white/[0.06] text-[#e6edf7]'
+														? 'bg-primary/25 border-primary/70 text-primary font-semibold'
+														: 'border-border bg-surface hover:bg-nav-hover text-main'
 														}`}
 												>
 													<span>{p.apelido || p.nome}</span>
@@ -1301,7 +1301,7 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 												<button
 													type="button"
 													onClick={() => setSelectedAssistId(null)}
-													className="min-h-[36px] px-3 rounded-[8px] border inline-flex items-center gap-1.5 text-xs sm:text-sm transition-colors cursor-pointer bg-blue-500/30 border-blue-500/70 text-[#bfdbfe] font-semibold"
+													className="min-h-[36px] px-3 rounded-[8px] border inline-flex items-center gap-1.5 text-xs sm:text-sm transition-colors cursor-pointer bg-primary/25 border-primary/70 text-primary font-semibold"
 												>
 													<span>
 														{playerMap.get(selectedAssistId)?.apelido ||
@@ -1317,7 +1317,7 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 											<button
 												type="button"
 												onClick={() => setShowExtraAssist((prev) => !prev)}
-												className="min-h-[36px] px-3 rounded-[8px] border border-dashed border-white/[0.18] bg-white/[0.02] hover:bg-white/[0.05] text-[#94a3b8] inline-flex items-center text-xs sm:text-sm font-medium cursor-pointer transition-colors"
+												className="min-h-[36px] px-3 rounded-[8px] border border-dashed border-border bg-surface hover:bg-nav-hover text-muted inline-flex items-center text-xs sm:text-sm font-medium cursor-pointer transition-colors"
 											>
 												{showExtraAssist ? 'Ocultar outros ⌃' : 'Outros jogadores ⌄'}
 											</button>
@@ -1325,7 +1325,7 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 									</div>
 
 									{showExtraAssist && assistOtherPlayers.length > 0 && (
-										<div className="mt-1 pt-2 border-t border-white/[0.06] flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
+										<div className="mt-1 pt-2 border-t border-border flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
 											{assistOtherPlayers.map((p) => {
 												const isSelected = selectedAssistId === p.id_player;
 												const teamName = playerTeamMap.get(p.id_player);
@@ -1337,16 +1337,16 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 															setSelectedAssistId(isSelected ? null : p.id_player);
 														}}
 														className={`min-h-[32px] px-2.5 rounded-lg border inline-flex items-center gap-1.5 text-xs transition-colors cursor-pointer ${isSelected
-															? 'bg-blue-500/30 border-blue-500/70 text-[#bfdbfe] font-semibold'
-															: 'border-dashed border-white/[0.14] bg-white/[0.02] hover:bg-white/[0.05] text-[#94a3b8]'
+															? 'bg-primary/25 border-primary/70 text-primary font-semibold'
+															: 'border-dashed border-border bg-surface hover:bg-nav-hover text-muted'
 															}`}
 													>
 														<span>{p.apelido || p.nome}</span>
 														{teamName && (
 															<span
 																className={`text-[10px] px-1 py-0.2 rounded ${isSelected
-																	? 'bg-blue-500/30 text-[#bfdbfe]'
-																	: 'bg-white/[0.06] text-[#64748b]'
+																	? 'bg-primary/20 text-primary'
+																	: 'bg-muted/10 text-muted'
 																	}`}
 															>
 																{teamName}
@@ -1362,8 +1362,8 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 
 							{/* Lista de jogadores quando Ouro está ativo */}
 							{assistMode === 'ouro' && (
-								<div className="flex flex-col gap-2 pt-1 border-t border-white/[0.06] mt-1">
-									<div className="text-[11px] text-[#94a3b8]">
+								<div className="flex flex-col gap-2 pt-1 border-t border-border mt-1">
+									<div className="text-[11px] text-muted">
 										Selecione o adversário que falhou/entregou o gol:
 									</div>
 									<div className="flex flex-wrap gap-2">
@@ -1377,11 +1377,11 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 														setSelectedAssistId(isSelected ? null : p.id_player);
 													}}
 													className={`min-h-[36px] px-3 rounded-[8px] border inline-flex items-center gap-2 text-xs sm:text-sm transition-colors cursor-pointer ${isSelected
-														? 'bg-[#3b82f6]/30 border-[#3b82f6]/70 text-[#bfdbfe] font-semibold'
-														: 'border-dashed border-white/[0.14] bg-white/[0.02] hover:bg-white/[0.05] text-[#94a3b8]'
+														? 'bg-primary/25 border-primary/70 text-primary font-semibold'
+														: 'border-dashed border-border bg-surface hover:bg-nav-hover text-muted'
 														}`}
 												>
-													<span className="w-[8px] h-2.5 rounded-[2px] bg-[#3b82f6] shrink-0" />
+													<span className="w-[8px] h-2.5 rounded-[2px] bg-primary shrink-0" />
 													<span>{p.apelido || p.nome}</span>
 												</button>
 											);
@@ -1394,9 +1394,9 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 												<button
 													type="button"
 													onClick={() => setSelectedAssistId(null)}
-													className="min-h-[36px] px-3 rounded-[8px] border inline-flex items-center gap-1.5 text-xs sm:text-sm transition-colors cursor-pointer bg-[#3b82f6]/30 border-[#3b82f6]/70 text-[#bfdbfe] font-semibold"
+													className="min-h-[36px] px-3 rounded-[8px] border inline-flex items-center gap-1.5 text-xs sm:text-sm transition-colors cursor-pointer bg-primary/25 border-primary/70 text-primary font-semibold"
 												>
-													<span className="w-[8px] h-2.5 rounded-[2px] bg-[#3b82f6] shrink-0" />
+													<span className="w-[8px] h-2.5 rounded-[2px] bg-primary shrink-0" />
 													<span>
 														{playerMap.get(selectedAssistId)?.apelido ||
 															playerMap.get(selectedAssistId)?.nome}
@@ -1411,7 +1411,7 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 											<button
 												type="button"
 												onClick={() => setShowExtraOuro((prev) => !prev)}
-												className="min-h-[36px] px-3 rounded-[8px] border border-dashed border-white/[0.18] bg-white/[0.02] hover:bg-white/[0.05] text-[#94a3b8] inline-flex items-center text-xs sm:text-sm font-medium cursor-pointer transition-colors"
+												className="min-h-[36px] px-3 rounded-[8px] border border-dashed border-border bg-surface hover:bg-nav-hover text-muted inline-flex items-center text-xs sm:text-sm font-medium cursor-pointer transition-colors"
 											>
 												{showExtraOuro ? 'Ocultar outros ⌃' : 'Outros jogadores ⌄'}
 											</button>
@@ -1419,7 +1419,7 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 									</div>
 
 									{showExtraOuro && ouroOtherPlayers.length > 0 && (
-										<div className="mt-1 pt-2 border-t border-white/[0.06] flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
+										<div className="mt-1 pt-2 border-t border-border flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
 											{ouroOtherPlayers.map((p) => {
 												const isSelected = selectedAssistId === p.id_player;
 												const teamName = playerTeamMap.get(p.id_player);
@@ -1431,17 +1431,17 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 															setSelectedAssistId(isSelected ? null : p.id_player);
 														}}
 														className={`min-h-[32px] px-2.5 rounded-lg border inline-flex items-center gap-1.5 text-xs transition-colors cursor-pointer ${isSelected
-															? 'bg-[#3b82f6]/30 border-[#3b82f6]/70 text-[#bfdbfe] font-semibold'
-															: 'border-dashed border-white/[0.10] bg-white/[0.015] hover:bg-white/[0.05] text-[#94a3b8]'
+															? 'bg-primary/25 border-primary/70 text-primary font-semibold'
+															: 'border-dashed border-border bg-surface hover:bg-nav-hover text-muted'
 															}`}
 													>
-														<span className="w-[7px] h-2.5 rounded-[2px] bg-[#3b82f6] shrink-0" />
+														<span className="w-[7px] h-2.5 rounded-[2px] bg-primary shrink-0" />
 														<span>{p.apelido || p.nome}</span>
 														{teamName && (
 															<span
 																className={`text-[10px] px-1 py-0.2 rounded ${isSelected
-																	? 'bg-blue-500/30 text-[#bfdbfe]'
-																	: 'bg-white/[0.06] text-[#64748b]'
+																	? 'bg-primary/20 text-primary'
+																	: 'bg-muted/10 text-muted'
 																	}`}
 															>
 																{teamName}
@@ -1510,7 +1510,7 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 								onClick={() =>
 									handleRegisterEvent('cartao_amarelo')
 								}
-								className="min-h-[48px] rounded-[10px] border border-white/[0.14] bg-transparent hover:bg-white/[0.05] disabled:opacity-45 disabled:cursor-not-allowed text-[#e6edf7] font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
+								className="min-h-[48px] rounded-[10px] border border-border bg-surface hover:bg-nav-hover disabled:opacity-45 disabled:cursor-not-allowed text-main font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
 							>
 								<span className="w-[11px] h-[15px] rounded-[2px] bg-[#facc15] inline-block" />
 								Amarelo
@@ -1524,7 +1524,7 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 								onClick={() =>
 									handleRegisterEvent('cartao_vermelho')
 								}
-								className="min-h-[48px] rounded-[10px] border border-white/[0.14] bg-transparent hover:bg-white/[0.05] disabled:opacity-45 disabled:cursor-not-allowed text-[#e6edf7] font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
+								className="min-h-[48px] rounded-[10px] border border-border bg-surface hover:bg-nav-hover disabled:opacity-45 disabled:cursor-not-allowed text-main font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
 							>
 								<span className="w-[11px] h-[15px] rounded-[2px] bg-[#ef4444] inline-block" />
 								Vermelho
@@ -1538,13 +1538,13 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 								onClick={() =>
 									handleRegisterEvent('gol_contra')
 								}
-								className="min-h-[48px] rounded-[10px] border border-white/[0.14] bg-transparent hover:bg-white/[0.05] disabled:opacity-45 disabled:cursor-not-allowed text-[#e6edf7] font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
+								className="min-h-[48px] rounded-[10px] border border-border bg-surface hover:bg-nav-hover disabled:opacity-45 disabled:cursor-not-allowed text-main font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
 							>
 								Gol contra
 							</button>
 						</div>
 
-						<div className="text-[#94a3b8] mt-2.5 text-xs">
+						<div className="text-muted mt-2.5 text-xs">
 							Gol contra conta para {opponentTeamName}.
 						</div>
 					</div>
@@ -1552,12 +1552,12 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 				)}
 
 			{/* Right Card: Linha do tempo */}
-			<section className="bg-[#111a2e] border border-white/[0.07] rounded-[16px] p-6 flex flex-col">
+			<section className="bg-surface border border-border rounded-[16px] p-6 flex flex-col">
 				<div className="flex justify-between items-baseline mb-2">
-					<h2 className="m-0 text-base font-semibold text-[#e6edf7]">
+					<h2 className="m-0 text-base font-semibold text-main">
 						Linha do tempo
 					</h2>
-					<span className="text-[13px] text-[#94a3b8]">
+					<span className="text-[13px] text-muted">
 						{timelineEntries.length}{' '}
 						{timelineEntries.length === 1
 							? 'evento'
@@ -1566,7 +1566,7 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 				</div>
 
 				{timelineEntries.length === 0 ? (
-					<div className="py-6 text-[13px] text-[#94a3b8]">
+					<div className="py-6 text-[13px] text-muted">
 						Nenhum evento ainda. Escolha um jogador para
 						começar.
 					</div>
@@ -1644,7 +1644,7 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 									);
 								}
 								return (
-									<div className="w-7 h-7 rounded-full flex-none flex items-center justify-center text-xs font-bold bg-blue-500/[0.16] text-[#60a5fa]">
+									<div className="w-7 h-7 rounded-full flex-none flex items-center justify-center text-xs font-bold bg-blue-500/[0.16] text-primary">
 										A
 									</div>
 								);
@@ -1669,25 +1669,25 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 								<div
 									key={entry.key}
 									className={`flex gap-3 py-3 items-start ${idx > 0
-										? 'border-t border-white/[0.06]'
+										? 'border-t border-border'
 										: ''
 										}`}
 								>
 									{renderBadge()}
 									<div className="min-w-0 flex-1">
-										<div className="font-semibold text-sm text-[#e6edf7] flex items-center gap-1.5 flex-wrap">
+										<div className="font-semibold text-sm text-main flex items-center gap-1.5 flex-wrap">
 											<span>
 												{EVENT_TITLES[evt.event_type] ??
 													evt.event_type}{' '}
 												· {playerLabel}
 											</span>
 											{isLoaned && (
-												<span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-[#bfdbfe] border border-blue-500/40 font-normal">
+												<span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-primary border border-blue-500/40 font-normal">
 													Emprestado
 												</span>
 											)}
 										</div>
-										<div className="text-[13px] text-[#94a3b8]">
+										<div className="text-[13px] text-muted">
 											{subtitle}
 										</div>
 									</div>
@@ -1700,7 +1700,7 @@ export default function LiveMatch({ params }: { params: { id: string } }) {
 													entry,
 												)
 											}
-											className="ml-auto bg-transparent border-0 text-[#94a3b8] hover:text-[#f87171] font-medium text-xs cursor-pointer px-1.5 py-1 underline shrink-0 transition-colors"
+											className="ml-auto bg-transparent border-0 text-muted hover:text-red-500 font-medium text-xs cursor-pointer px-1.5 py-1 underline shrink-0 transition-colors"
 										>
 											Desfazer
 										</button>

@@ -867,22 +867,22 @@ export function MassMatchRegistration({
 	if (roundQuery.isLoading || teamsQuery.isLoading) return <Loading />;
 
 	return (
-		<div className="flex flex-col gap-6 text-[#e6edf7] max-w-[1300px] w-full mx-auto animate-slide-down">
+		<div className="flex flex-col gap-6 text-main max-w-[1300px] w-full mx-auto animate-slide-down">
 			{/* Top Bar / Header */}
-			<div className="flex flex-wrap items-center justify-between gap-4 p-5 rounded-[16px] bg-[#111a2e] border border-white/[0.08]">
+			<div className="flex flex-wrap items-center justify-between gap-4 p-5 rounded-[16px] bg-surface border border-border shadow-sm">
 				<div>
 					<div className="flex items-center gap-2 mb-1">
-						<span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-blue-500/20 text-[#60a5fa] border border-blue-500/30">
+						<span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
 							Modo Admin
 						</span>
-						<span className="text-xs text-[#94a3b8]">
+						<span className="text-xs text-muted">
 							Rodada #{round?.round_number ?? rId}
 						</span>
 					</div>
-					<h1 className="text-xl sm:text-2xl font-bold text-white m-0 flex items-center gap-2">
+					<h1 className="text-xl sm:text-2xl font-bold text-main m-0 flex items-center gap-2">
 						<span>⚡ Cadastro em Massa de Partidas</span>
 					</h1>
-					<p className="text-xs sm:text-sm text-[#94a3b8] mt-1 m-0">
+					<p className="text-xs sm:text-sm text-muted mt-1 m-0">
 						Lance todas as partidas da súmula linha a linha, registre premiações e calcule os pontos totais da rodada.
 					</p>
 				</div>
@@ -892,7 +892,7 @@ export function MassMatchRegistration({
 						<button
 							type="button"
 							onClick={onClose}
-							className="px-4 py-2 rounded-[10px] border border-white/[0.14] bg-white/[0.03] hover:bg-white/[0.08] text-sm text-[#e6edf7] font-medium cursor-pointer transition-colors"
+							className="px-4 py-2 rounded-[10px] border border-border bg-surface hover:bg-nav-hover text-sm text-main font-medium cursor-pointer transition-colors shadow-sm"
 						>
 							Voltar
 						</button>
@@ -904,8 +904,8 @@ export function MassMatchRegistration({
 			{feedbackMsg && (
 				<div
 					className={`p-4 rounded-[12px] text-sm font-semibold flex items-center justify-between transition-all ${feedbackMsg.type === 'success'
-						? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-300'
-						: 'bg-rose-500/20 border border-rose-500/40 text-rose-300'
+						? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+						: 'bg-rose-500/15 border border-rose-500/30 text-rose-700 dark:text-rose-300'
 						}`}
 				>
 					<div className="flex items-center gap-2">
@@ -923,14 +923,14 @@ export function MassMatchRegistration({
 			)}
 
 			{/* TABELA DE PARTIDAS */}
-			<div className="bg-[#111a2e] border border-white/[0.08] rounded-[16px] overflow-hidden flex flex-col">
-				<div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between bg-white/[0.01]">
+			<div className="bg-surface border border-border rounded-[16px] overflow-hidden flex flex-col shadow-sm">
+				<div className="px-5 py-4 border-b border-border flex items-center justify-between bg-surface">
 					<div>
-						<h2 className="text-base font-semibold text-white m-0">
+						<h2 className="text-base font-semibold text-main m-0">
 							Partidas da Rodada ({rows.filter((r) => r.isConfirmed).length} confirmada
 							{rows.filter((r) => r.isConfirmed).length === 1 ? '' : 's'})
 						</h2>
-						<span className="text-xs text-[#94a3b8]">
+						<span className="text-xs text-muted">
 							Preencha os times, os gols com assistências/ouro e o cinegrafista.
 						</span>
 					</div>
@@ -939,7 +939,7 @@ export function MassMatchRegistration({
 				<div className="overflow-x-auto">
 					<table className="w-full text-left border-collapse min-w-[1150px]">
 						<thead>
-							<tr className="border-b border-white/[0.08] bg-white/[0.02] text-[11px] text-[#94a3b8] uppercase tracking-wider font-semibold">
+							<tr className="border-b border-border bg-nav-hover/40 text-[11px] text-muted uppercase tracking-wider font-semibold">
 								<th className="py-3 px-3 text-center w-12">#</th>
 								<th className="py-3 px-3 min-w-[240px]">Times da Partida</th>
 								<th className="py-3 px-2 min-w-[125px]">Gol (1)</th>
@@ -951,7 +951,7 @@ export function MassMatchRegistration({
 								<th className="py-3 px-3 text-center min-w-[110px]">Ações</th>
 							</tr>
 						</thead>
-						<tbody className="divide-y divide-white/[0.06] text-sm">
+						<tbody className="divide-y divide-border text-sm">
 							{rows.map((row, rowIdx) => {
 								const { home: scoreHome, away: scoreAway } = calculateScore(row);
 								const homeTeam = row.homeTeamId ? teamMap.get(row.homeTeamId) : null;
@@ -961,12 +961,12 @@ export function MassMatchRegistration({
 									<tr
 										key={row.key}
 										className={`transition-colors ${row.isConfirmed && !row.isEditing
-											? 'bg-white/[0.01] hover:bg-white/[0.02]'
-											: 'bg-blue-500/[0.04]'
+											? 'bg-surface hover:bg-nav-hover/40'
+											: 'bg-blue-50/50 dark:bg-blue-500/[0.04]'
 											}`}
 									>
 										{/* Número da partida */}
-										<td className="py-3 px-3 text-center text-xs font-bold text-[#64748b]">
+										<td className="py-3 px-3 text-center text-xs font-bold text-muted">
 											{rowIdx + 1}
 										</td>
 
@@ -974,11 +974,11 @@ export function MassMatchRegistration({
 										<td className="py-3 px-3">
 											{row.isConfirmed && !row.isEditing ? (
 												<div className="flex items-center gap-2">
-													<span className="font-bold text-white text-base flex items-center gap-2 flex-wrap">
+													<span className="font-bold text-main text-base flex items-center gap-2 flex-wrap">
 														<span className="flex items-center gap-1.5">
 															{homeTeam?.name || 'Casa'}
 														</span>
-														<span className="text-[#60a5fa] px-2 py-0.5 rounded-lg bg-blue-500/20 text-sm font-black border border-blue-500/30">
+														<span className="text-blue-600 dark:text-blue-400 px-2.5 py-0.5 rounded-lg bg-blue-500/15 text-sm font-black border border-blue-500/30">
 															{scoreHome} × {scoreAway}
 														</span>
 														<span className="flex items-center gap-1.5">
@@ -1000,7 +1000,7 @@ export function MassMatchRegistration({
 																		: null,
 																)
 															}
-															className="w-[120px] bg-[#1b2845] border border-white/[0.12] rounded-[8px] px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
+															className="w-[120px] bg-background border border-border rounded-[8px] px-2 py-1.5 text-xs text-main focus:outline-none focus:border-primary"
 														>
 															<option value="">Time Casa</option>
 															{teams.map((t) => (
@@ -1015,7 +1015,7 @@ export function MassMatchRegistration({
 														</select>
 													</div>
 
-													<span className="text-xs font-bold text-[#64748b]">×</span>
+													<span className="text-xs font-bold text-muted">×</span>
 
 													<div className="flex items-center gap-1">
 														<select
@@ -1029,7 +1029,7 @@ export function MassMatchRegistration({
 																		: null,
 																)
 															}
-															className="w-[120px] bg-[#1b2845] border border-white/[0.12] rounded-[8px] px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
+															className="w-[120px] bg-background border border-border rounded-[8px] px-2 py-1.5 text-xs text-main focus:outline-none focus:border-primary"
 														>
 															<option value="">Time Fora</option>
 															{teams.map((t) => (
@@ -1066,7 +1066,7 @@ export function MassMatchRegistration({
 													{goal && goal.playerId ? (
 														<div
 															className={`p-1.5 rounded-[8px] border text-xs flex flex-col gap-0.5 relative group transition-all shadow-sm ${goal.isOwnGoal
-																? 'bg-rose-500/15 border-rose-500/40 text-rose-200'
+																? 'bg-rose-500/15 border-rose-500/40 text-rose-700 dark:text-rose-200'
 																: `${teamColor.goalBg} ${teamColor.goalBorder} ${teamColor.goalText}`
 																}`}
 														>
@@ -1094,7 +1094,7 @@ export function MassMatchRegistration({
 																				newGoals,
 																			);
 																		}}
-																		className="text-white/60 hover:text-rose-400 text-[10px] cursor-pointer"
+																		className="text-muted hover:text-rose-500 text-[10px] cursor-pointer"
 																	>
 																		✕
 																	</button>
@@ -1129,7 +1129,7 @@ export function MassMatchRegistration({
 																			goalIndex: gIdx,
 																		})
 																	}
-																	className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-[8px] text-[10px] font-semibold text-white transition-opacity cursor-pointer"
+																	className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-[8px] text-[10px] font-semibold text-white transition-opacity cursor-pointer"
 																>
 																	Alterar
 																</button>
@@ -1146,7 +1146,7 @@ export function MassMatchRegistration({
 																		goalIndex: gIdx,
 																	})
 																}
-																className="w-full min-h-[36px] rounded-[8px] border border-dashed border-white/[0.14] bg-white/[0.02] hover:bg-white/[0.06] text-[#94a3b8] hover:text-white text-xs font-medium flex items-center justify-center gap-1 cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+																className="w-full min-h-[36px] rounded-[8px] border border-dashed border-border bg-surface hover:bg-nav-hover text-muted hover:text-main text-xs font-medium flex items-center justify-center gap-1 cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
 															>
 																<Plus size={12} />
 																<span>Gol {gIdx + 1}</span>
@@ -1160,8 +1160,8 @@ export function MassMatchRegistration({
 										{/* Cinegrafista */}
 										<td className="py-3 px-3">
 											{row.isConfirmed && !row.isEditing ? (
-												<div className="flex items-center gap-1.5 text-xs text-[#94a3b8]">
-													<Camera size={13} className="text-[#60a5fa]" />
+												<div className="flex items-center gap-1.5 text-xs text-muted">
+													<Camera size={13} className="text-blue-500" />
 													<span className="truncate max-w-[120px]">
 														{row.cameramanPlayerId
 															? playerMap.get(row.cameramanPlayerId)?.apelido ||
@@ -1181,7 +1181,7 @@ export function MassMatchRegistration({
 																: null,
 														)
 													}
-													className="w-full bg-[#1b2845] border border-white/[0.12] rounded-[8px] px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
+													className="w-full bg-background border border-border rounded-[8px] px-2 py-1.5 text-xs text-main focus:outline-none focus:border-primary"
 												>
 													<option value="">Filmado por...</option>
 													{allPlayers.map((p) => (
@@ -1203,7 +1203,7 @@ export function MassMatchRegistration({
 															handleUpdateRowField(row.key, 'isEditing', true)
 														}
 														title="Editar partida"
-														className="p-1.5 rounded-lg border border-white/[0.12] bg-white/[0.04] hover:bg-white/[0.08] text-[#94a3b8] hover:text-white cursor-pointer transition-colors"
+														className="p-1.5 rounded-lg border border-border bg-surface hover:bg-nav-hover text-muted hover:text-main cursor-pointer transition-colors shadow-sm"
 													>
 														<Pencil size={14} />
 													</button>
@@ -1215,7 +1215,7 @@ export function MassMatchRegistration({
 															}
 														}}
 														title="Excluir partida"
-														className="p-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 cursor-pointer transition-colors"
+														className="p-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-300 cursor-pointer transition-colors"
 													>
 														<Trash2 size={14} />
 													</button>
@@ -1229,7 +1229,7 @@ export function MassMatchRegistration({
 														saveMatchMutation.isPending
 													}
 													onClick={() => saveMatchMutation.mutate(row)}
-													className="min-h-[34px] px-3 rounded-[8px] bg-[#16a34a] hover:bg-green-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors mx-auto"
+													className="min-h-[34px] px-3 rounded-[8px] bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors mx-auto shadow-sm"
 												>
 													<Check size={14} />
 													<span>Confirmar</span>
@@ -1247,12 +1247,12 @@ export function MassMatchRegistration({
 			{/* SEÇÃO PÓS-PARTIDAS: PREMIAÇÕES E COLABORAÇÃO */}
 			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 				{/* 1. Premiações da Rodada */}
-				<div className="p-5 rounded-[16px] bg-[#111a2e] border border-white/[0.08] flex flex-col gap-4">
-					<div className="flex items-center gap-2 border-b border-white/[0.06] pb-3">
-						<Trophy className="text-yellow-400" size={20} />
+				<div className="p-5 rounded-[16px] bg-surface border border-border flex flex-col gap-4 shadow-sm">
+					<div className="flex items-center gap-2 border-b border-border pb-3">
+						<Trophy className="text-yellow-500" size={20} />
 						<div>
-							<h3 className="text-base font-bold text-white m-0">Premiações da Rodada</h3>
-							<p className="text-xs text-[#94a3b8] m-0">
+							<h3 className="text-base font-bold text-main m-0">Premiações da Rodada</h3>
+							<p className="text-xs text-muted m-0">
 								Defina os destaques e vencedores da rodada.
 							</p>
 						</div>
@@ -1265,9 +1265,9 @@ export function MassMatchRegistration({
 							return (
 								<div
 									key={aw.event_type}
-									className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-[10px] bg-white/[0.02] border border-white/[0.05]"
+									className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-[10px] bg-nav-hover/30 border border-border"
 								>
-									<div className="flex items-center gap-2 text-xs font-semibold text-[#e6edf7]">
+									<div className="flex items-center gap-2 text-xs font-semibold text-main">
 										<span className="text-base">{aw.icon}</span>
 										<span>{aw.label}</span>
 									</div>
@@ -1284,7 +1284,7 @@ export function MassMatchRegistration({
 													[aw.event_type]: { team_id: val },
 												}));
 											}}
-											className="w-full sm:w-[200px] bg-[#1b2845] border border-white/[0.12] rounded-[8px] px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
+											className="w-full sm:w-[200px] bg-background border border-border rounded-[8px] px-2.5 py-1.5 text-xs text-main focus:outline-none focus:border-primary"
 										>
 											<option value="">Selecionar time...</option>
 											{teams.map((t) => (
@@ -1306,7 +1306,7 @@ export function MassMatchRegistration({
 														[aw.event_type]: { player_id: val },
 													}));
 												}}
-												className="w-full sm:w-[170px] bg-[#1b2845] border border-white/[0.12] rounded-[8px] px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
+												className="w-full sm:w-[170px] bg-background border border-border rounded-[8px] px-2.5 py-1.5 text-xs text-main focus:outline-none focus:border-primary"
 											>
 												<option value="">Selecionar vencedor...</option>
 												{allPlayers.map((p) => {
@@ -1332,7 +1332,7 @@ export function MassMatchRegistration({
 														[key]: { prize_id: val },
 													}));
 												}}
-												className="w-full sm:w-[170px] bg-[#1b2845] border border-yellow-500/40 rounded-[8px] px-2.5 py-1.5 text-xs text-yellow-300 focus:outline-none focus:border-yellow-500"
+												className="w-full sm:w-[170px] bg-background border border-amber-500/40 rounded-[8px] px-2.5 py-1.5 text-xs text-amber-700 dark:text-amber-300 focus:outline-none focus:border-amber-500"
 											>
 												<option value="">🎁 Prêmio ganho...</option>
 												{roulettePrizes.map((prz) => (
@@ -1346,7 +1346,7 @@ export function MassMatchRegistration({
 												type="button"
 												onClick={() => setIsPrizeModalOpen(true)}
 												title="Cadastrar / Gerenciar Prêmios da Roleta"
-												className="px-2 py-1.5 rounded-[8px] border border-yellow-500/40 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-300 text-xs font-semibold flex items-center justify-center gap-1 cursor-pointer shrink-0 transition-colors"
+												className="px-2 py-1.5 rounded-[8px] border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-xs font-semibold flex items-center justify-center gap-1 cursor-pointer shrink-0 transition-colors shadow-sm"
 											>
 												<Plus size={13} />
 												<span className="hidden sm:inline">Prêmio</span>
@@ -1364,7 +1364,7 @@ export function MassMatchRegistration({
 													[aw.event_type]: { player_id: val },
 												}));
 											}}
-											className="w-full sm:w-[200px] bg-[#1b2845] border border-white/[0.12] rounded-[8px] px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
+											className="w-full sm:w-[200px] bg-background border border-border rounded-[8px] px-2.5 py-1.5 text-xs text-main focus:outline-none focus:border-primary"
 										>
 											<option value="">Selecionar jogador...</option>
 											{allPlayers.map((p) => {
@@ -1385,12 +1385,12 @@ export function MassMatchRegistration({
 				</div>
 
 				{/* 2. Pontuações de Colaboração */}
-				<div className="p-5 rounded-[16px] bg-[#111a2e] border border-white/[0.08] flex flex-col gap-4 h-full">
-					<div className="flex items-center gap-2 border-b border-white/[0.06] pb-3">
-						<Sparkles className="text-blue-400" size={20} />
+				<div className="p-5 rounded-[16px] bg-surface border border-border flex flex-col gap-4 h-full shadow-sm">
+					<div className="flex items-center gap-2 border-b border-border pb-3">
+						<Sparkles className="text-blue-500" size={20} />
 						<div>
-							<h3 className="text-base font-bold text-white m-0">Pontuações de Colaboração</h3>
-							<p className="text-xs text-[#94a3b8] m-0">
+							<h3 className="text-base font-bold text-main m-0">Pontuações de Colaboração</h3>
+							<p className="text-xs text-muted m-0">
 								Pontos extras para jogadores que filmaram, levaram bola, coletes ou organizaram.
 							</p>
 						</div>
@@ -1401,7 +1401,7 @@ export function MassMatchRegistration({
 						<select
 							value={selectedCollabPlayerId}
 							onChange={(e) => setSelectedCollabPlayerId(e.target.value)}
-							className="flex-1 bg-[#1b2845] border border-white/[0.12] rounded-[8px] px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+							className="flex-1 bg-background border border-border rounded-[8px] px-3 py-2 text-xs text-main focus:outline-none focus:border-primary"
 						>
 							<option value="">
 								{availableCollabPlayers.length === 0
@@ -1431,7 +1431,7 @@ export function MassMatchRegistration({
 									setSelectedCollabPlayerId('');
 								}
 							}}
-							className="px-3.5 py-2 rounded-[8px] bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-xs font-semibold text-white cursor-pointer transition-colors"
+							className="px-3.5 py-2 rounded-[8px] bg-primary hover:bg-primary-hover disabled:opacity-40 text-xs font-semibold text-white cursor-pointer transition-colors shadow-sm"
 						>
 							+ Adicionar
 						</button>
@@ -1440,7 +1440,7 @@ export function MassMatchRegistration({
 					{/* Lista de Colaboradores com flex-1 ocupando todo o espaço vertical */}
 					<div className="flex-1 flex flex-col gap-2 min-h-[320px] max-h-[580px] overflow-y-auto pr-1.5">
 						{Object.keys(collabPoints).length === 0 ? (
-							<div className="flex-1 py-12 flex flex-col items-center justify-center text-center text-xs text-[#64748b] border border-dashed border-white/[0.08] rounded-[10px]">
+							<div className="flex-1 py-12 flex flex-col items-center justify-center text-center text-xs text-muted border border-dashed border-border rounded-[10px]">
 								Nenhum ponto de colaboração atribuído ainda.
 							</div>
 						) : (
@@ -1452,19 +1452,19 @@ export function MassMatchRegistration({
 								return (
 									<div
 										key={`collab-${pid}`}
-										className="w-full shrink-0 flex items-center justify-between gap-3 p-3 rounded-[10px] bg-white/[0.02] border border-white/[0.06] hover:border-white/[0.12] transition-colors"
+										className="w-full shrink-0 flex items-center justify-between gap-3 p-3 rounded-[10px] bg-nav-hover/30 border border-border hover:border-primary/40 transition-colors"
 									>
 										<div className="min-w-0">
-											<div className="text-xs font-bold text-white truncate">
+											<div className="text-xs font-bold text-main truncate">
 												{p.apelido || p.nome}
 											</div>
-											<div className="text-[10px] text-[#94a3b8]">
+											<div className="text-[10px] text-muted">
 												{collabNotes[pid] || 'Colaboração na rodada'}
 											</div>
 										</div>
 
 										<div className="flex items-center gap-2">
-											<div className="flex items-center border border-white/[0.14] rounded-lg bg-black/20 overflow-hidden">
+											<div className="flex items-center border border-border rounded-lg bg-surface overflow-hidden">
 												<button
 													type="button"
 													onClick={() =>
@@ -1473,11 +1473,11 @@ export function MassMatchRegistration({
 															[pid]: Math.max(0, (prev[pid] ?? 1) - 1),
 														}))
 													}
-													className="px-2 py-1 text-xs hover:bg-white/[0.08] text-[#94a3b8] cursor-pointer"
+													className="px-2 py-1 text-xs hover:bg-nav-hover text-muted hover:text-main cursor-pointer"
 												>
 													−
 												</button>
-												<span className="px-2.5 py-1 text-xs font-bold text-white min-w-[28px] text-center">
+												<span className="px-2.5 py-1 text-xs font-bold text-main min-w-[28px] text-center">
 													+{pts}
 												</span>
 												<button
@@ -1488,7 +1488,7 @@ export function MassMatchRegistration({
 															[pid]: (prev[pid] ?? 0) + 1,
 														}))
 													}
-													className="px-2 py-1 text-xs hover:bg-white/[0.08] text-[#94a3b8] cursor-pointer"
+													className="px-2 py-1 text-xs hover:bg-nav-hover text-muted hover:text-main cursor-pointer"
 												>
 													+
 												</button>
@@ -1503,7 +1503,7 @@ export function MassMatchRegistration({
 														return n;
 													});
 												}}
-												className="text-xs text-[#94a3b8] hover:text-rose-400 p-1 cursor-pointer"
+												className="text-xs text-muted hover:text-rose-500 p-1 cursor-pointer"
 											>
 												✕
 											</button>
@@ -1519,19 +1519,19 @@ export function MassMatchRegistration({
 			{/* SEÇÃO PÓS-PARTIDAS: OUROS DA RODADA E JOGADORES EXTRAS */}
 			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 				{/* 3. Ouros da Rodada */}
-				<div className="p-5 rounded-[16px] bg-[#111a2e] border border-white/[0.08] flex flex-col gap-4 h-full">
-					<div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
+				<div className="p-5 rounded-[16px] bg-surface border border-border flex flex-col gap-4 h-full shadow-sm">
+					<div className="flex items-center justify-between border-b border-border pb-3">
 						<div className="flex items-center gap-2">
-							<Medal className="text-yellow-400" size={20} />
+							<Medal className="text-yellow-500" size={20} />
 							<div>
-								<h3 className="text-base font-bold text-white m-0">Ouros da Rodada</h3>
-								<p className="text-xs text-[#94a3b8] m-0">
+								<h3 className="text-base font-bold text-main m-0">Ouros da Rodada</h3>
+								<p className="text-xs text-muted m-0">
 									Lance os ouros (falhas) concedidos a cada jogador nesta rodada.
 								</p>
 							</div>
 						</div>
 						{Object.keys(roundOuros).length > 0 && (
-							<span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
+							<span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
 								{Object.values(roundOuros).reduce((a, b) => a + b, 0)} ouro(s)
 							</span>
 						)}
@@ -1542,7 +1542,7 @@ export function MassMatchRegistration({
 						<select
 							value={selectedOuroPlayerId}
 							onChange={(e) => setSelectedOuroPlayerId(e.target.value)}
-							className="flex-1 bg-[#1b2845] border border-white/[0.12] rounded-[8px] px-3 py-2 text-xs text-white focus:outline-none focus:border-yellow-500"
+							className="flex-1 bg-background border border-border rounded-[8px] px-3 py-2 text-xs text-main focus:outline-none focus:border-amber-500"
 						>
 							<option value="">
 								{availableOuroPlayers.length === 0
@@ -1572,7 +1572,7 @@ export function MassMatchRegistration({
 									setSelectedOuroPlayerId('');
 								}
 							}}
-							className="px-3.5 py-2 rounded-[8px] bg-yellow-600 hover:bg-yellow-500 disabled:opacity-40 text-xs font-semibold text-white cursor-pointer transition-colors"
+							className="px-3.5 py-2 rounded-[8px] bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-xs font-semibold text-white cursor-pointer transition-colors shadow-sm"
 						>
 							+ Adicionar Ouro
 						</button>
@@ -1581,7 +1581,7 @@ export function MassMatchRegistration({
 					{/* Lista de Ouros */}
 					<div className="flex-1 flex flex-col gap-2 min-h-[220px] max-h-[420px] overflow-y-auto pr-1.5">
 						{Object.keys(roundOuros).length === 0 ? (
-							<div className="flex-1 py-10 flex flex-col items-center justify-center text-center text-xs text-[#64748b] border border-dashed border-white/[0.08] rounded-[10px]">
+							<div className="flex-1 py-10 flex flex-col items-center justify-center text-center text-xs text-muted border border-dashed border-border rounded-[10px]">
 								Nenhum ouro registrado para esta rodada.
 							</div>
 						) : (
@@ -1594,24 +1594,24 @@ export function MassMatchRegistration({
 								return (
 									<div
 										key={`ouro-${pid}`}
-										className="w-full shrink-0 flex items-center justify-between gap-3 p-3 rounded-[10px] bg-white/[0.02] border border-white/[0.06] hover:border-yellow-500/30 transition-colors"
+										className="w-full shrink-0 flex items-center justify-between gap-3 p-3 rounded-[10px] bg-nav-hover/30 border border-border hover:border-amber-500/40 transition-colors"
 									>
 										<div className="min-w-0">
-											<div className="text-xs font-bold text-white truncate flex items-center gap-1.5">
+											<div className="text-xs font-bold text-main truncate flex items-center gap-1.5">
 												<span>{p.apelido || p.nome}</span>
 												{tInfo && (
-													<span className="text-[10px] px-1.5 py-0.2 rounded bg-white/[0.08] text-[#94a3b8] font-normal">
+													<span className="text-[10px] px-1.5 py-0.2 rounded bg-surface border border-border text-muted font-normal">
 														{tInfo.name}
 													</span>
 												)}
 											</div>
-											<div className="text-[10px] text-yellow-400/80 font-medium">
+											<div className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
 												Ouro (falha na rodada)
 											</div>
 										</div>
 
 										<div className="flex items-center gap-2">
-											<div className="flex items-center border border-yellow-500/30 rounded-lg bg-black/20 overflow-hidden">
+											<div className="flex items-center border border-amber-500/40 rounded-lg bg-surface overflow-hidden">
 												<button
 													type="button"
 													onClick={() =>
@@ -1620,11 +1620,11 @@ export function MassMatchRegistration({
 															[pid]: Math.max(1, (prev[pid] ?? 1) - 1),
 														}))
 													}
-													className="px-2 py-1 text-xs hover:bg-white/[0.08] text-[#94a3b8] cursor-pointer"
+													className="px-2 py-1 text-xs hover:bg-nav-hover text-muted hover:text-main cursor-pointer"
 												>
 													−
 												</button>
-												<span className="px-2.5 py-1 text-xs font-bold text-yellow-300 min-w-[28px] text-center">
+												<span className="px-2.5 py-1 text-xs font-bold text-amber-700 dark:text-amber-300 min-w-[28px] text-center">
 													{count}
 												</span>
 												<button
@@ -1635,7 +1635,7 @@ export function MassMatchRegistration({
 															[pid]: (prev[pid] ?? 0) + 1,
 														}))
 													}
-													className="px-2 py-1 text-xs hover:bg-white/[0.08] text-[#94a3b8] cursor-pointer"
+													className="px-2 py-1 text-xs hover:bg-nav-hover text-muted hover:text-main cursor-pointer"
 												>
 													+
 												</button>
@@ -1650,7 +1650,7 @@ export function MassMatchRegistration({
 														return n;
 													});
 												}}
-												className="text-xs text-[#94a3b8] hover:text-rose-400 p-1 cursor-pointer"
+												className="text-xs text-muted hover:text-rose-500 p-1 cursor-pointer"
 											>
 												✕
 											</button>
@@ -1663,13 +1663,13 @@ export function MassMatchRegistration({
 				</div>
 
 				{/* 4. Jogadores Extras / Emprestados */}
-				<div className="p-5 rounded-[16px] bg-[#111a2e] border border-white/[0.08] flex flex-col gap-4 h-full">
-					<div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
+				<div className="p-5 rounded-[16px] bg-surface border border-border flex flex-col gap-4 h-full shadow-sm">
+					<div className="flex items-center justify-between border-b border-border pb-3">
 						<div className="flex items-center gap-2">
-							<Users className="text-indigo-400" size={20} />
+							<Users className="text-indigo-500" size={20} />
 							<div>
-								<h3 className="text-base font-bold text-white m-0">Jogadores Extras / Emprestados</h3>
-								<p className="text-xs text-[#94a3b8] m-0">
+								<h3 className="text-base font-bold text-main m-0">Jogadores Extras / Emprestados</h3>
+								<p className="text-xs text-muted m-0">
 									Marque vitórias (+3 pts) e empates (+1 pt) para jogadores que completaram times.
 								</p>
 							</div>
@@ -1681,7 +1681,7 @@ export function MassMatchRegistration({
 						<select
 							value={selectedExtraPlayerId}
 							onChange={(e) => setSelectedExtraPlayerId(e.target.value)}
-							className="flex-1 bg-[#1b2845] border border-white/[0.12] rounded-[8px] px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+							className="flex-1 bg-background border border-border rounded-[8px] px-3 py-2 text-xs text-main focus:outline-none focus:border-indigo-500"
 						>
 							<option value="">
 								{availableExtraPlayers.length === 0
@@ -1712,7 +1712,7 @@ export function MassMatchRegistration({
 									setSelectedExtraPlayerId('');
 								}
 							}}
-							className="px-3.5 py-2 rounded-[8px] bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-xs font-semibold text-white cursor-pointer transition-colors"
+							className="px-3.5 py-2 rounded-[8px] bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-xs font-semibold text-white cursor-pointer transition-colors shadow-sm"
 						>
 							+ Adicionar Extra
 						</button>
@@ -1721,7 +1721,7 @@ export function MassMatchRegistration({
 					{/* Lista de Jogadores Extras */}
 					<div className="flex-1 flex flex-col gap-2.5 min-h-[220px] max-h-[420px] overflow-y-auto pr-1.5">
 						{Object.keys(extraPlayerStats).length === 0 ? (
-							<div className="flex-1 py-10 flex flex-col items-center justify-center text-center text-xs text-[#64748b] border border-dashed border-white/[0.08] rounded-[10px]">
+							<div className="flex-1 py-10 flex flex-col items-center justify-center text-center text-xs text-muted border border-dashed border-border rounded-[10px]">
 								Nenhum jogador extra registrado nesta rodada.
 							</div>
 						) : (
@@ -1730,19 +1730,18 @@ export function MassMatchRegistration({
 								const p = playerMap.get(pid);
 								if (!p) return null;
 								const tInfo = playerTeamInRoundMap.get(pid);
-								const det = autoDetectedExtraStats[pid];
 								const teamPoints = stats.wins * 3 + stats.draws * 1;
 
 								return (
 									<div
 										key={`extra-${pid}`}
-										className="w-full shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-[10px] bg-white/[0.02] border border-white/[0.06] hover:border-indigo-500/30 transition-colors"
+										className="w-full shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-[10px] bg-nav-hover/30 border border-border hover:border-indigo-500/40 transition-colors"
 									>
 										<div className="min-w-0">
-											<div className="text-xs font-bold text-white truncate flex items-center gap-1.5">
+											<div className="text-xs font-bold text-main truncate flex items-center gap-1.5">
 												<span>{p.apelido || p.nome}</span>
 												{tInfo && (
-													<span className="text-[10px] px-1.5 py-0.2 rounded bg-white/[0.08] text-[#94a3b8] font-normal">
+													<span className="text-[10px] px-1.5 py-0.2 rounded bg-surface border border-border text-muted font-normal">
 														{tInfo.name}
 													</span>
 												)}
@@ -1751,8 +1750,8 @@ export function MassMatchRegistration({
 
 										<div className="flex items-center gap-2.5 flex-wrap">
 											{/* Vitórias */}
-											<div className="flex items-center gap-1 bg-black/20 border border-green-500/30 rounded-lg overflow-hidden px-1 py-0.5" title="Vitórias (+3 pts)">
-												<span className="text-[10px] font-bold text-green-400 pl-1">V:</span>
+											<div className="flex items-center gap-1 bg-surface border border-emerald-500/40 rounded-lg overflow-hidden px-1 py-0.5" title="Vitórias (+3 pts)">
+												<span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 pl-1">V:</span>
 												<button
 													type="button"
 													onClick={() =>
@@ -1764,11 +1763,11 @@ export function MassMatchRegistration({
 															},
 														}))
 													}
-													className="px-1.5 py-0.5 text-xs text-[#94a3b8] hover:text-white"
+													className="px-1.5 py-0.5 text-xs text-muted hover:text-main"
 												>
 													−
 												</button>
-												<span className="text-xs font-bold text-green-300 min-w-[16px] text-center">
+												<span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 min-w-[16px] text-center">
 													{stats.wins}
 												</span>
 												<button
@@ -1782,15 +1781,15 @@ export function MassMatchRegistration({
 															},
 														}))
 													}
-													className="px-1.5 py-0.5 text-xs text-[#94a3b8] hover:text-white"
+													className="px-1.5 py-0.5 text-xs text-muted hover:text-main"
 												>
 													+
 												</button>
 											</div>
 
 											{/* Empates */}
-											<div className="flex items-center gap-1 bg-black/20 border border-blue-500/30 rounded-lg overflow-hidden px-1 py-0.5" title="Empates (+1 pt)">
-												<span className="text-[10px] font-bold text-blue-400 pl-1">E:</span>
+											<div className="flex items-center gap-1 bg-surface border border-blue-500/40 rounded-lg overflow-hidden px-1 py-0.5" title="Empates (+1 pt)">
+												<span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 pl-1">E:</span>
 												<button
 													type="button"
 													onClick={() =>
@@ -1802,11 +1801,11 @@ export function MassMatchRegistration({
 															},
 														}))
 													}
-													className="px-1.5 py-0.5 text-xs text-[#94a3b8] hover:text-white"
+													className="px-1.5 py-0.5 text-xs text-muted hover:text-main"
 												>
 													−
 												</button>
-												<span className="text-xs font-bold text-blue-300 min-w-[16px] text-center">
+												<span className="text-xs font-bold text-blue-700 dark:text-blue-300 min-w-[16px] text-center">
 													{stats.draws}
 												</span>
 												<button
@@ -1820,15 +1819,15 @@ export function MassMatchRegistration({
 															},
 														}))
 													}
-													className="px-1.5 py-0.5 text-xs text-[#94a3b8] hover:text-white"
+													className="px-1.5 py-0.5 text-xs text-muted hover:text-main"
 												>
 													+
 												</button>
 											</div>
 
 											{/* Derrotas */}
-											<div className="flex items-center gap-1 bg-black/20 border border-rose-500/30 rounded-lg overflow-hidden px-1 py-0.5" title="Derrotas (0 pts)">
-												<span className="text-[10px] font-bold text-rose-400 pl-1">D:</span>
+											<div className="flex items-center gap-1 bg-surface border border-rose-500/40 rounded-lg overflow-hidden px-1 py-0.5" title="Derrotas (0 pts)">
+												<span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 pl-1">D:</span>
 												<button
 													type="button"
 													onClick={() =>
@@ -1840,11 +1839,11 @@ export function MassMatchRegistration({
 															},
 														}))
 													}
-													className="px-1.5 py-0.5 text-xs text-[#94a3b8] hover:text-white"
+													className="px-1.5 py-0.5 text-xs text-muted hover:text-main"
 												>
 													−
 												</button>
-												<span className="text-xs font-bold text-rose-300 min-w-[16px] text-center">
+												<span className="text-xs font-bold text-rose-700 dark:text-rose-300 min-w-[16px] text-center">
 													{stats.losses}
 												</span>
 												<button
@@ -1858,14 +1857,14 @@ export function MassMatchRegistration({
 															},
 														}))
 													}
-													className="px-1.5 py-0.5 text-xs text-[#94a3b8] hover:text-white"
+													className="px-1.5 py-0.5 text-xs text-muted hover:text-main"
 												>
 													+
 												</button>
 											</div>
 
 											{/* Pontos de time calculados */}
-											<span className="text-[11px] font-bold px-2 py-1 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+											<span className="text-[11px] font-bold px-2 py-1 rounded bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30">
 												+{teamPoints} pts
 											</span>
 
@@ -1878,7 +1877,7 @@ export function MassMatchRegistration({
 														return n;
 													});
 												}}
-												className="text-xs text-[#94a3b8] hover:text-rose-400 p-1 cursor-pointer"
+												className="text-xs text-muted hover:text-rose-500 p-1 cursor-pointer"
 											>
 												✕
 											</button>
@@ -1892,13 +1891,13 @@ export function MassMatchRegistration({
 			</div>
 
 			{/* BOTÃO FINALIZAR RODADA & CALCULAR PONTUAÇÕES TOTAIS */}
-			<div className="p-5 rounded-[16px] bg-gradient-to-r from-blue-900/40 via-blue-600/20 to-emerald-900/30 border border-blue-500/30 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+			<div className="p-5 rounded-[16px] bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-emerald-500/10 border border-blue-500/30 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md">
 				<div>
-					<h3 className="text-base font-bold text-white m-0 flex items-center gap-2">
-						<Zap className="text-yellow-400" size={18} />
+					<h3 className="text-base font-bold text-main m-0 flex items-center gap-2">
+						<Zap className="text-yellow-500" size={18} />
 						<span>Finalizar e Consolidar Rodada</span>
 					</h3>
-					<p className="text-xs text-[#94a3b8] mt-1 m-0">
+					<p className="text-xs text-muted mt-1 m-0">
 						Grave as premiações, pontos de colaboração e processe o ranking geral completo da temporada.
 					</p>
 				</div>
@@ -1911,7 +1910,7 @@ export function MassMatchRegistration({
 							finalizeRoundMutation.mutate();
 						}
 					}}
-					className="min-h-[48px] px-6 rounded-[12px] bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-40 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 cursor-pointer transition-all"
+					className="min-h-[48px] px-6 rounded-[12px] bg-primary hover:bg-primary-hover disabled:opacity-40 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/20 cursor-pointer transition-all"
 				>
 					{finalizeRoundMutation.isPending ? (
 						<span>Calculando pontuações...</span>
@@ -1962,14 +1961,14 @@ export function MassMatchRegistration({
 
 			{/* MODAL DE CADASTRO E GERENCIAMENTO DE PRÊMIOS DA ROLETA */}
 			{isPrizeModalOpen && (
-				<div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-					<div className="bg-[#111a2e] border border-white/[0.14] rounded-[16px] max-w-[500px] w-full p-5 flex flex-col gap-4 text-[#e6edf7] shadow-2xl">
-						<div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+				<div className="fixed inset-0 z-50 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+					<div className="bg-surface border border-border rounded-[16px] max-w-[500px] w-full p-5 flex flex-col gap-4 text-main shadow-2xl">
+						<div className="flex items-center justify-between border-b border-border pb-3">
 							<div className="flex items-center gap-2">
-								<Gift className="text-yellow-400" size={20} />
+								<Gift className="text-yellow-500" size={20} />
 								<div>
-									<h3 className="text-base font-bold text-white m-0">Prêmios da Roleta</h3>
-									<p className="text-xs text-[#94a3b8] m-0">
+									<h3 className="text-base font-bold text-main m-0">Prêmios da Roleta</h3>
+									<p className="text-xs text-muted m-0">
 										Cadastre os prêmios disponíveis para os vencedores da roleta.
 									</p>
 								</div>
@@ -1977,15 +1976,15 @@ export function MassMatchRegistration({
 							<button
 								type="button"
 								onClick={() => setIsPrizeModalOpen(false)}
-								className="text-[#94a3b8] hover:text-white p-1 text-sm cursor-pointer"
+								className="text-muted hover:text-main p-1 text-sm cursor-pointer"
 							>
 								✕
 							</button>
 						</div>
 
 						{/* Formulário para novo prêmio */}
-						<div className="flex flex-col gap-2 p-3 rounded-[10px] bg-white/[0.03] border border-white/[0.08]">
-							<span className="text-xs font-bold text-yellow-300 uppercase">
+						<div className="flex flex-col gap-2 p-3 rounded-[10px] bg-nav-hover/30 border border-border">
+							<span className="text-xs font-bold text-amber-600 dark:text-amber-300 uppercase">
 								+ Novo Prêmio
 							</span>
 							<div className="flex flex-col sm:flex-row gap-2">
@@ -1994,7 +1993,7 @@ export function MassMatchRegistration({
 									placeholder="Nome do prêmio (ex: Camisa, Pix R$ 50, Cerveja)..."
 									value={newPrizeName}
 									onChange={(e) => setNewPrizeName(e.target.value)}
-									className="flex-1 bg-[#1b2845] border border-white/[0.14] rounded-[8px] px-3 py-2 text-xs text-white focus:outline-none focus:border-yellow-500"
+									className="flex-1 bg-background border border-border rounded-[8px] px-3 py-2 text-xs text-main focus:outline-none focus:border-amber-500 placeholder:text-muted"
 								/>
 								<button
 									type="button"
@@ -2007,7 +2006,7 @@ export function MassMatchRegistration({
 											});
 										}
 									}}
-									className="px-4 py-2 rounded-[8px] bg-yellow-600 hover:bg-yellow-500 disabled:opacity-40 text-xs font-bold text-white cursor-pointer transition-colors shrink-0"
+									className="px-4 py-2 rounded-[8px] bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-xs font-bold text-white cursor-pointer transition-colors shrink-0 shadow-sm"
 								>
 									{createPrizeMutation.isPending ? 'Salvando...' : 'Cadastrar'}
 								</button>
@@ -2017,33 +2016,33 @@ export function MassMatchRegistration({
 								placeholder="Descrição / patrocinador (opcional)..."
 								value={newPrizeDesc}
 								onChange={(e) => setNewPrizeDesc(e.target.value)}
-								className="bg-[#1b2845] border border-white/[0.14] rounded-[8px] px-3 py-1.5 text-xs text-[#94a3b8] focus:outline-none focus:border-yellow-500"
+								className="bg-background border border-border rounded-[8px] px-3 py-1.5 text-xs text-main focus:outline-none focus:border-amber-500 placeholder:text-muted"
 							/>
 						</div>
 
 						{/* Lista de Prêmios Cadastrados */}
 						<div className="flex flex-col gap-2">
-							<span className="text-xs font-semibold text-[#94a3b8] uppercase">
+							<span className="text-xs font-semibold text-muted uppercase">
 								Prêmios Cadastrados ({roulettePrizes.length})
 							</span>
 							<div className="flex flex-col gap-1.5 max-h-[220px] overflow-y-auto pr-1">
 								{roulettePrizes.length === 0 ? (
-									<div className="py-6 text-center text-xs text-[#64748b] border border-dashed border-white/[0.08] rounded-[8px]">
+									<div className="py-6 text-center text-xs text-muted border border-dashed border-border rounded-[8px]">
 										Nenhum prêmio cadastrado ainda. Digite acima e clique em Cadastrar.
 									</div>
 								) : (
 									roulettePrizes.map((prz) => (
 										<div
 											key={prz.id_roulette_prize}
-											className="flex items-center justify-between gap-2 p-2.5 rounded-[8px] bg-white/[0.02] border border-white/[0.06]"
+											className="flex items-center justify-between gap-2 p-2.5 rounded-[8px] bg-nav-hover/20 border border-border"
 										>
 											<div className="min-w-0">
-												<div className="text-xs font-bold text-white truncate flex items-center gap-1.5">
+												<div className="text-xs font-bold text-main truncate flex items-center gap-1.5">
 													<span>🎁</span>
 													<span>{prz.name}</span>
 												</div>
 												{prz.description && (
-													<div className="text-[10px] text-[#94a3b8] truncate">
+													<div className="text-[10px] text-muted truncate">
 														{prz.description}
 													</div>
 												)}
@@ -2056,7 +2055,7 @@ export function MassMatchRegistration({
 														deletePrizeMutation.mutate(prz.id_roulette_prize);
 													}
 												}}
-												className="p-1.5 text-[#94a3b8] hover:text-rose-400 hover:bg-rose-500/10 rounded cursor-pointer transition-colors"
+												className="p-1.5 text-muted hover:text-rose-500 hover:bg-rose-500/10 rounded cursor-pointer transition-colors"
 											>
 												<Trash2 size={13} />
 											</button>
@@ -2066,11 +2065,11 @@ export function MassMatchRegistration({
 							</div>
 						</div>
 
-						<div className="flex justify-end pt-2 border-t border-white/[0.08]">
+						<div className="flex justify-end pt-2 border-t border-border">
 							<button
 								type="button"
 								onClick={() => setIsPrizeModalOpen(false)}
-								className="px-4 py-2 rounded-[8px] bg-white/[0.08] hover:bg-white/[0.14] text-xs font-semibold text-white cursor-pointer transition-colors"
+								className="px-4 py-2 rounded-[8px] bg-surface hover:bg-nav-hover border border-border text-xs font-semibold text-main cursor-pointer transition-colors shadow-sm"
 							>
 								Concluído
 							</button>
@@ -2128,19 +2127,19 @@ function GoalConfigModal({
 	}, [allPlayers, activeRoster]);
 
 	return (
-		<div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-			<div className="bg-[#111a2e] border border-white/[0.12] rounded-[16px] max-w-[550px] w-full p-5 flex flex-col gap-4 text-[#e6edf7] shadow-2xl">
-				<div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+		<div className="fixed inset-0 z-50 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+			<div className="bg-surface border border-border rounded-[16px] max-w-[550px] w-full p-5 flex flex-col gap-4 text-main shadow-2xl">
+				<div className="flex items-center justify-between border-b border-border pb-3">
 					<div>
-						<h3 className="text-base font-bold text-white m-0">Configurar Gol ({goalNumber})</h3>
-						<span className="text-xs text-[#94a3b8]">
+						<h3 className="text-base font-bold text-main m-0">Configurar Gol ({goalNumber})</h3>
+						<span className="text-xs text-muted">
 							Selecione quem pontuou e se houve assistência ou ouro.
 						</span>
 					</div>
 					<button
 						type="button"
 						onClick={onClose}
-						className="text-[#94a3b8] hover:text-white p-1 text-sm cursor-pointer"
+						className="text-muted hover:text-main p-1 text-sm cursor-pointer"
 					>
 						✕
 					</button>
@@ -2148,7 +2147,7 @@ function GoalConfigModal({
 
 				{/* 1. Time que pontua */}
 				<div className="flex flex-col gap-1.5">
-					<span className="text-xs font-semibold text-[#94a3b8] uppercase">Gol marcado para:</span>
+					<span className="text-xs font-semibold text-muted uppercase">Gol marcado para:</span>
 					<div className="grid grid-cols-2 gap-2">
 						{(() => {
 							const homeColor = getTeamColor(homeTeam?.color, 0);
@@ -2164,7 +2163,7 @@ function GoalConfigModal({
 										}}
 										className={`min-h-[42px] px-3 rounded-[10px] border text-xs sm:text-sm font-semibold transition-colors cursor-pointer flex items-center justify-center gap-2 ${teamSide === 'home'
 											? `${homeColor.goalBg} ${homeColor.goalBorder} ${homeColor.goalText} shadow-md`
-											: 'border-white/[0.12] bg-white/[0.02] text-[#94a3b8] hover:bg-white/[0.05]'
+											: 'border-border bg-nav-hover/30 text-muted hover:bg-nav-hover'
 											}`}
 									>
 										<span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: homeColor.hex }} />
@@ -2181,7 +2180,7 @@ function GoalConfigModal({
 										}}
 										className={`min-h-[42px] px-3 rounded-[10px] border text-xs sm:text-sm font-semibold transition-colors cursor-pointer flex items-center justify-center gap-2 ${teamSide === 'away'
 											? `${awayColor.goalBg} ${awayColor.goalBorder} ${awayColor.goalText} shadow-md`
-											: 'border-white/[0.12] bg-white/[0.02] text-[#94a3b8] hover:bg-white/[0.05]'
+											: 'border-border bg-nav-hover/30 text-muted hover:bg-nav-hover'
 											}`}
 									>
 										<span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: awayColor.hex }} />
@@ -2197,13 +2196,13 @@ function GoalConfigModal({
 				{/* 2. Autor do Gol */}
 				<div className="flex flex-col gap-2">
 					<div className="flex items-center justify-between">
-						<span className="text-xs font-semibold text-[#94a3b8] uppercase">Autor do Gol:</span>
-						<label className="flex items-center gap-1.5 text-xs text-rose-300 cursor-pointer">
+						<span className="text-xs font-semibold text-muted uppercase">Autor do Gol:</span>
+						<label className="flex items-center gap-1.5 text-xs text-rose-600 dark:text-rose-300 cursor-pointer">
 							<input
 								type="checkbox"
 								checked={isOwnGoal}
 								onChange={(e) => setIsOwnGoal(e.target.checked)}
-								className="rounded border-white/20"
+								className="rounded border-border"
 							/>
 							<span>Gol contra (GC)</span>
 						</label>
@@ -2218,8 +2217,8 @@ function GoalConfigModal({
 									type="button"
 									onClick={() => setPlayerId(isSelected ? null : p.id_player)}
 									className={`min-h-[34px] px-3 rounded-lg border text-xs transition-colors cursor-pointer ${isSelected
-										? 'bg-emerald-600 border-emerald-600 text-white font-bold'
-										: 'border-white/[0.12] bg-white/[0.03] text-[#e6edf7] hover:bg-white/[0.06]'
+										? 'bg-emerald-600 border-emerald-600 text-white font-bold shadow-sm'
+										: 'border-border bg-nav-hover/40 text-main hover:bg-nav-hover'
 										}`}
 								>
 									{p.apelido || p.nome}
@@ -2231,7 +2230,7 @@ function GoalConfigModal({
 						{playerId && !activeRoster.some((p) => p.id_player === playerId) && (
 							<button
 								type="button"
-								className="min-h-[34px] px-3 rounded-lg border bg-emerald-600 border-emerald-600 text-white font-bold text-xs inline-flex items-center gap-1 cursor-pointer"
+								className="min-h-[34px] px-3 rounded-lg border bg-emerald-600 border-emerald-600 text-white font-bold text-xs inline-flex items-center gap-1 cursor-pointer shadow-sm"
 							>
 								<span>
 									{allPlayers.find((p) => p.id_player === playerId)?.apelido ||
@@ -2246,14 +2245,14 @@ function GoalConfigModal({
 						<button
 							type="button"
 							onClick={() => setShowOtherScorers((prev) => !prev)}
-							className="min-h-[34px] px-2.5 rounded-lg border border-dashed border-white/[0.18] text-xs text-[#94a3b8] hover:text-white cursor-pointer"
+							className="min-h-[34px] px-2.5 rounded-lg border border-dashed border-border text-xs text-muted hover:text-main cursor-pointer"
 						>
 							{showOtherScorers ? 'Ocultar outros ⌃' : 'Outros jogadores ⌄'}
 						</button>
 					</div>
 
 					{showOtherScorers && (
-						<div className="mt-1 pt-2 border-t border-white/[0.08] flex flex-wrap gap-1.5 max-h-[110px] overflow-y-auto">
+						<div className="mt-1 pt-2 border-t border-border flex flex-wrap gap-1.5 max-h-[110px] overflow-y-auto">
 							{otherPlayers.map((p) => {
 								const isSelected = playerId === p.id_player;
 								const tName = playerTeamMap.get(p.id_player)?.name;
@@ -2265,13 +2264,13 @@ function GoalConfigModal({
 											setPlayerId(isSelected ? null : p.id_player);
 										}}
 										className={`min-h-[30px] px-2.5 rounded-md border text-xs transition-colors cursor-pointer flex items-center gap-1 ${isSelected
-											? 'bg-emerald-600 border-emerald-600 text-white font-bold'
-											: 'border-white/[0.08] bg-white/[0.015] text-[#94a3b8] hover:bg-white/[0.04]'
+											? 'bg-emerald-600 border-emerald-600 text-white font-bold shadow-sm'
+											: 'border-border bg-nav-hover/20 text-muted hover:bg-nav-hover'
 											}`}
 									>
 										<span>{p.apelido || p.nome}</span>
 										{tName && (
-											<span className="text-[9px] px-1 bg-white/[0.08] rounded text-[#64748b]">
+											<span className="text-[9px] px-1 bg-surface border border-border rounded text-muted">
 												{tName}
 											</span>
 										)}
@@ -2283,8 +2282,8 @@ function GoalConfigModal({
 				</div>
 
 				{/* 3. Assistência / Ouro */}
-				<div className="flex flex-col gap-2 pt-2 border-t border-white/[0.08]">
-					<span className="text-xs font-semibold text-[#94a3b8] uppercase">
+				<div className="flex flex-col gap-2 pt-2 border-t border-border">
+					<span className="text-xs font-semibold text-muted uppercase">
 						Assistência ou Ouro:
 					</span>
 
@@ -2296,8 +2295,8 @@ function GoalConfigModal({
 								setAssistPlayerId(null);
 							}}
 							className={`min-h-[36px] px-2 rounded-lg border text-xs font-semibold transition-colors cursor-pointer ${assistMode === 'none'
-								? 'bg-white/[0.14] border-white/30 text-white'
-								: 'border-white/[0.08] bg-white/[0.02] text-[#94a3b8] hover:bg-white/[0.05]'
+								? 'bg-nav-hover border-border text-main shadow-sm'
+								: 'border-border bg-surface text-muted hover:bg-nav-hover'
 								}`}
 						>
 							Sem assistência
@@ -2309,11 +2308,11 @@ function GoalConfigModal({
 								setAssistPlayerId(null);
 							}}
 							className={`min-h-[36px] px-2 rounded-lg border text-xs font-semibold transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${assistMode === 'assistencia'
-								? 'bg-blue-600/30 border-blue-500/70 text-[#bfdbfe]'
-								: 'border-white/[0.08] bg-white/[0.02] text-[#94a3b8] hover:bg-white/[0.05]'
+								? 'bg-blue-500/15 border-blue-500/60 text-blue-700 dark:text-blue-300 shadow-sm'
+								: 'border-border bg-surface text-muted hover:bg-nav-hover'
 								}`}
 						>
-							<span className="w-2 h-2 rounded-full bg-[#60a5fa]" />
+							<span className="w-2 h-2 rounded-full bg-blue-500" />
 							<span>Assistência</span>
 						</button>
 						<button
@@ -2323,11 +2322,11 @@ function GoalConfigModal({
 								setAssistPlayerId(null);
 							}}
 							className={`min-h-[36px] px-2 rounded-lg border text-xs font-semibold transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${assistMode === 'ouro'
-								? 'bg-blue-600/30 border-blue-500/70 text-[#bfdbfe]'
-								: 'border-white/[0.08] bg-white/[0.02] text-[#94a3b8] hover:bg-white/[0.05]'
+								? 'bg-amber-500/15 border-amber-500/60 text-amber-700 dark:text-amber-300 shadow-sm'
+								: 'border-border bg-surface text-muted hover:bg-nav-hover'
 								}`}
 						>
-							<span className="w-2 h-2.5 rounded-[2px] bg-[#3b82f6]" />
+							<span className="w-2 h-2.5 rounded-[2px] bg-amber-500" />
 							<span>Ouro (falha)</span>
 						</button>
 					</div>
@@ -2335,7 +2334,7 @@ function GoalConfigModal({
 					{/* Lista de jogadores de assistência (companheiros) */}
 					{assistMode === 'assistencia' && (
 						<div className="flex flex-col gap-1.5 mt-1">
-							<div className="text-[11px] text-[#94a3b8]">
+							<div className="text-[11px] text-muted">
 								Selecione o companheiro que deu o passe:
 							</div>
 							<div className="flex flex-wrap gap-1.5 max-h-[120px] overflow-y-auto">
@@ -2351,8 +2350,8 @@ function GoalConfigModal({
 													setAssistPlayerId(isSelected ? null : p.id_player)
 												}
 												className={`min-h-[32px] px-2.5 rounded-lg border text-xs transition-colors cursor-pointer ${isSelected
-													? 'bg-blue-500/30 border-blue-500/80 text-[#bfdbfe] font-bold'
-													: 'border-white/[0.10] bg-white/[0.02] text-[#e6edf7] hover:bg-white/[0.05]'
+													? 'bg-blue-500/20 border-blue-500/80 text-blue-700 dark:text-blue-200 font-bold shadow-sm'
+													: 'border-border bg-nav-hover/30 text-main hover:bg-nav-hover'
 													}`}
 											>
 												{p.apelido || p.nome}
@@ -2363,14 +2362,14 @@ function GoalConfigModal({
 								<button
 									type="button"
 									onClick={() => setShowOtherAssists((prev) => !prev)}
-									className="min-h-[32px] px-2 rounded-lg border border-dashed border-white/[0.18] text-xs text-[#94a3b8]"
+									className="min-h-[32px] px-2 rounded-lg border border-dashed border-border text-xs text-muted hover:text-main cursor-pointer"
 								>
 									{showOtherAssists ? 'Ocultar outros ⌃' : 'Outros jogadores ⌄'}
 								</button>
 							</div>
 
 							{showOtherAssists && (
-								<div className="mt-1 pt-1.5 border-t border-white/[0.08] flex flex-wrap gap-1.5 max-h-[100px] overflow-y-auto">
+								<div className="mt-1 pt-1.5 border-t border-border flex flex-wrap gap-1.5 max-h-[100px] overflow-y-auto">
 									{otherPlayers
 										.filter((p) => p.id_player !== playerId)
 										.map((p) => {
@@ -2383,8 +2382,8 @@ function GoalConfigModal({
 														setAssistPlayerId(isSelected ? null : p.id_player)
 													}
 													className={`min-h-[28px] px-2 rounded border text-[11px] transition-colors cursor-pointer ${isSelected
-														? 'bg-blue-500/30 border-blue-500/80 text-[#bfdbfe] font-bold'
-														: 'border-white/[0.08] bg-white/[0.015] text-[#94a3b8]'
+														? 'bg-blue-500/20 border-blue-500/80 text-blue-700 dark:text-blue-200 font-bold shadow-sm'
+														: 'border-border bg-nav-hover/20 text-muted hover:bg-nav-hover'
 														}`}
 												>
 													{p.apelido || p.nome}
@@ -2399,7 +2398,7 @@ function GoalConfigModal({
 					{/* Lista de jogadores de ouro (adversários) */}
 					{assistMode === 'ouro' && (
 						<div className="flex flex-col gap-1.5 mt-1">
-							<div className="text-[11px] text-[#94a3b8]">
+							<div className="text-[11px] text-muted">
 								Selecione o adversário que entregou o gol (falha):
 							</div>
 							<div className="flex flex-wrap gap-1.5 max-h-[120px] overflow-y-auto">
@@ -2415,11 +2414,11 @@ function GoalConfigModal({
 													setAssistPlayerId(isSelected ? null : p.id_player)
 												}
 												className={`min-h-[32px] px-2.5 rounded-lg border text-xs transition-colors cursor-pointer flex items-center gap-1.5 ${isSelected
-													? 'bg-blue-500/30 border-blue-500/80 text-[#bfdbfe] font-bold'
-													: 'border-white/[0.10] bg-white/[0.02] text-[#e6edf7] hover:bg-white/[0.05]'
+													? 'bg-amber-500/20 border-amber-500/80 text-amber-700 dark:text-amber-200 font-bold shadow-sm'
+													: 'border-border bg-nav-hover/30 text-main hover:bg-nav-hover'
 													}`}
 											>
-												<span className="w-1.5 h-2 bg-[#3b82f6] rounded-[1px]" />
+												<span className="w-1.5 h-2 bg-amber-500 rounded-[1px]" />
 												<span>{p.apelido || p.nome}</span>
 											</button>
 										);
@@ -2428,14 +2427,14 @@ function GoalConfigModal({
 								<button
 									type="button"
 									onClick={() => setShowOtherAssists((prev) => !prev)}
-									className="min-h-[32px] px-2 rounded-lg border border-dashed border-white/[0.18] text-xs text-[#94a3b8]"
+									className="min-h-[32px] px-2 rounded-lg border border-dashed border-border text-xs text-muted hover:text-main cursor-pointer"
 								>
 									{showOtherAssists ? 'Ocultar outros ⌃' : 'Outros jogadores ⌄'}
 								</button>
 							</div>
 
 							{showOtherAssists && (
-								<div className="mt-1 pt-1.5 border-t border-white/[0.08] flex flex-wrap gap-1.5 max-h-[100px] overflow-y-auto">
+								<div className="mt-1 pt-1.5 border-t border-border flex flex-wrap gap-1.5 max-h-[100px] overflow-y-auto">
 									{otherPlayers
 										.filter((p) => p.id_player !== playerId)
 										.map((p) => {
@@ -2448,8 +2447,8 @@ function GoalConfigModal({
 														setAssistPlayerId(isSelected ? null : p.id_player)
 													}
 													className={`min-h-[28px] px-2 rounded border text-[11px] transition-colors cursor-pointer ${isSelected
-														? 'bg-blue-500/30 border-blue-500/80 text-[#bfdbfe] font-bold'
-														: 'border-white/[0.08] bg-white/[0.015] text-[#94a3b8]'
+														? 'bg-amber-500/20 border-amber-500/80 text-amber-700 dark:text-amber-200 font-bold shadow-sm'
+														: 'border-border bg-nav-hover/20 text-muted hover:bg-nav-hover'
 														}`}
 												>
 													{p.apelido || p.nome}
@@ -2463,11 +2462,11 @@ function GoalConfigModal({
 				</div>
 
 				{/* Botões do Modal */}
-				<div className="flex items-center justify-end gap-2 pt-3 border-t border-white/[0.08]">
+				<div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
 					<button
 						type="button"
 						onClick={onClose}
-						className="px-4 py-2 rounded-[10px] border border-white/[0.14] text-xs text-[#94a3b8] hover:text-white cursor-pointer"
+						className="px-4 py-2 rounded-[10px] border border-border bg-surface hover:bg-nav-hover text-xs text-muted hover:text-main cursor-pointer shadow-sm"
 					>
 						Cancelar
 					</button>
@@ -2485,7 +2484,7 @@ function GoalConfigModal({
 								assistPlayerId: assistMode !== 'none' ? assistPlayerId : null,
 							});
 						}}
-						className="px-5 py-2 rounded-[10px] bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-xs font-bold text-white cursor-pointer transition-colors"
+						className="px-5 py-2 rounded-[10px] bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-xs font-bold text-white cursor-pointer transition-colors shadow-sm"
 					>
 						Salvar Gol
 					</button>
