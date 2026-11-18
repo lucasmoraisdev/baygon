@@ -6,6 +6,7 @@ import { Input } from '@/components/Input';
 import { Loading } from '@/components/Loading';
 import { Modal } from '@/components/Modal';
 import { Select } from '@/components/Select';
+import { formatPhone } from '@/lib/masks';
 import { useAuth } from '@/context/AuthContext';
 import { fetchAPI } from '@/lib/api';
 import {
@@ -200,6 +201,23 @@ export default function AdminUsersPage() {
 		}
 
 		return rawLink || '';
+	};
+
+	const maskInviteLink = (rawLink?: string | null) => {
+		if (!rawLink) return '';
+		try {
+			const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+			const url = new URL(rawLink, origin);
+			const token = url.searchParams.get('setup_token');
+			if (token && token.length > 20) {
+				return `${url.origin}${url.pathname}?setup_token=${token.slice(0, 10)}••••••••${token.slice(-6)}`;
+			}
+		} catch {
+			if (rawLink.length > 40) {
+				return `${rawLink.slice(0, 30)}••••••••${rawLink.slice(-6)}`;
+			}
+		}
+		return rawLink;
 	};
 
 	const copyText = async (key: string, text: string) => {
@@ -586,7 +604,7 @@ export default function AdminUsersPage() {
 										{u.email}
 									</div>
 									<div className="text-xs text-muted truncate mt-0.5">
-										{u.phone_number || 'Sem telefone'}
+										{formatPhone(u.phone_number) || 'Sem telefone'}
 									</div>
 								</div>
 
@@ -805,6 +823,8 @@ export default function AdminUsersPage() {
 					<FormField label="E-mail">
 						<Input
 							type="email"
+							mask="email"
+							placeholder="nome@exemplo.com"
 							value={inviteForm.email}
 							onChange={(e) =>
 								setInviteForm({
@@ -830,6 +850,9 @@ export default function AdminUsersPage() {
 						</FormField>
 						<FormField label="Telefone">
 							<Input
+								type="tel"
+								mask="phone"
+								placeholder="(11) 99999-9999"
 								value={inviteForm.phone_number}
 								onChange={(e) =>
 									setInviteForm({
@@ -952,40 +975,55 @@ export default function AdminUsersPage() {
 									<span className="text-[11px] text-muted">Válido por 24 horas</span>
 								</div>
 
-								{/* Container do link com quebra total e texto visível */}
-								<div className="p-3 rounded-xl bg-background border border-border text-xs font-mono text-main break-all select-all leading-relaxed max-h-28 overflow-y-auto font-medium">
-									{displayLink || 'Gerando link de ativação...'}
-								</div>
-
-								{/* Ações do Link com botões bem identificados */}
-								<div className="flex items-center gap-2">
-									<Button
-										type="button"
-										variant={copiedField === 'link' ? 'primary' : 'ghost'}
-										size="sm"
-										className="w-auto flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-semibold"
-										onClick={() => copyText('link', displayLink)}
-									>
-										{copiedField === 'link' ? (
-											<Check className="w-4 h-4 text-emerald-400" />
-										) : (
-											<Copy className="w-4 h-4" />
-										)}
-										<span>{copiedField === 'link' ? 'Link Copiado!' : 'Copiar Link'}</span>
-									</Button>
-
-									{displayLink && (
-										<a
-											href={displayLink}
-											target="_blank"
-											rel="noreferrer"
-											className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-primary hover:bg-primary-hover text-white transition cursor-pointer"
+								{/* Container do link com máscara */}
+								<div className="p-3 rounded-xl bg-background border border-border flex items-center justify-between gap-3">
+									<div className="flex items-center gap-2 min-w-0">
+										<Link2 className="w-4 h-4 text-primary shrink-0" />
+										<span
+											className="font-mono text-xs text-muted truncate select-none"
+											title="Clique em 'Copiar Link' para obter a URL completa"
 										>
-											<span>Abrir Página de Ativação</span>
-											<ExternalLink className="w-3.5 h-3.5" />
-										</a>
-									)}
+											{maskInviteLink(displayLink) || 'Gerando link de ativação...'}
+										</span>
+									</div>
+
+									<div className="flex items-center gap-2 shrink-0">
+										<Button
+											type="button"
+											variant={copiedField === 'link' ? 'primary' : 'ghost'}
+											size="sm"
+											className="w-auto flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold"
+											onClick={() => copyText('link', displayLink)}
+										>
+											{copiedField === 'link' ? (
+												<Check className="w-4 h-4 text-emerald-400" />
+											) : (
+												<Copy className="w-4 h-4" />
+											)}
+											<span>{copiedField === 'link' ? 'Link Copiado!' : 'Copiar Link'}</span>
+										</Button>
+
+										{displayLink && (
+											<a
+												href={displayLink}
+												target="_blank"
+												rel="noreferrer"
+												className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary hover:bg-primary-hover text-white transition cursor-pointer"
+												title="Abrir página de ativação"
+											>
+												<span>Abrir</span>
+												<ExternalLink className="w-3.5 h-3.5" />
+											</a>
+										)}
+									</div>
 								</div>
+
+								<p className="text-[11px] text-muted flex items-start gap-1.5 mt-0.5">
+									<span className="text-amber-500 font-bold shrink-0">💡 Dica:</span>
+									<span>
+										Se for testar a ativação neste mesmo computador, use uma <strong>aba anônima</strong> ou outro navegador para não sobrepor sua sessão de administrador atual.
+									</span>
+								</p>
 							</div>
 
 							{/* Bloco 2: Senha Inicial Temporária */}
@@ -1063,6 +1101,8 @@ export default function AdminUsersPage() {
 					<FormField label="E-mail">
 						<Input
 							type="email"
+							mask="email"
+							placeholder="nome@exemplo.com"
 							value={editForm.email}
 							onChange={(e) =>
 								setEditForm({
@@ -1088,6 +1128,9 @@ export default function AdminUsersPage() {
 						</FormField>
 						<FormField label="Telefone">
 							<Input
+								type="tel"
+								mask="phone"
+								placeholder="(11) 99999-9999"
 								value={editForm.phone_number}
 								onChange={(e) =>
 									setEditForm({

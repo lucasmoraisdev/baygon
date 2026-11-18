@@ -183,6 +183,7 @@ class UserRepository:
         user.updated_at = datetime.now(timezone.utc)
 
         if is_finishing_registration:
+            user.is_active = True
             user.setup_token = None
             user.invite_token_expires = None
         await self.db.commit()

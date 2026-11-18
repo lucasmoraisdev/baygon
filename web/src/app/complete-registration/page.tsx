@@ -4,15 +4,17 @@ import { Button } from '@/components/Button';
 import { FormField } from '@/components/FormField';
 import { Input } from '@/components/Input';
 import { useMutation } from '@tanstack/react-query';
-import { ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, AlertTriangle, Copy, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 const API_URL =
 	process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8001/api/v1';
 
 function CompleteRegistrationForm() {
+	const { user, loading: authLoading, logout } = useAuth();
 	const searchParams = useSearchParams();
 	const tokenFromUrl = searchParams.get('setup_token') ?? '';
 
@@ -20,6 +22,7 @@ function CompleteRegistrationForm() {
 	const [temporaryPassword, setTemporaryPassword] = useState('');
 	const [newPassword, setNewPassword] = useState('');
 	const [confirmPassword, setConfirmPassword] = useState('');
+	const [copiedLink, setCopiedLink] = useState(false);
 	const [completedUser, setCompletedUser] = useState<{
 		username: string;
 		email: string;
@@ -61,6 +64,69 @@ function CompleteRegistrationForm() {
 		},
 	});
 
+	if (user && !authLoading) {
+		return (
+			<div className="bg-surface border border-amber-500/30 rounded-xl p-8 w-full max-w-md shadow-[0_10px_25px_rgba(0,0,0,0.5)] flex flex-col gap-4">
+				<div className="flex flex-col items-center text-center">
+					<div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/25 flex items-center justify-center text-amber-500 mb-3">
+						<AlertTriangle className="w-6 h-6" />
+					</div>
+					<h2 className="text-xl font-semibold text-main mb-1">
+						Sessão Ativa Detectada
+					</h2>
+					<p className="text-sm text-muted">
+						Você já está conectado como{' '}
+						<strong className="text-main">@{user.username}</strong>
+						{user.email ? ` (${user.email})` : ''}.
+					</p>
+				</div>
+
+				<div className="bg-amber-500/10 border border-amber-500/25 rounded-lg p-3.5 text-xs text-amber-500/90 leading-relaxed">
+					<p className="font-semibold mb-1">Aviso importante:</p>
+					Ativar uma conta enquanto você já está conectado a outra pode causar conflito entre as sessões neste navegador.
+				</div>
+
+				<div className="flex flex-col gap-2.5 mt-2">
+					<Button
+						type="button"
+						variant={copiedLink ? 'primary' : 'ghost'}
+						onClick={() => {
+							if (typeof window !== 'undefined') {
+								navigator.clipboard.writeText(window.location.href);
+								setCopiedLink(true);
+								setTimeout(() => setCopiedLink(false), 2500);
+							}
+						}}
+						className="flex items-center justify-center gap-2"
+					>
+						<Copy className="w-4 h-4" />
+						<span>
+							{copiedLink
+								? 'Link Copiado! Abra em Aba Anônima'
+								: 'Copiar Link para Aba Anônima'}
+						</span>
+					</Button>
+
+					<Button
+						type="button"
+						variant="ghost"
+						onClick={() => logout(null)}
+						className="flex items-center justify-center gap-2 text-red-400 hover:text-red-300 border-red-500/30 hover:bg-red-500/10"
+					>
+						<LogOut className="w-4 h-4" />
+						<span>Desconectar e Ativar Conta Aqui</span>
+					</Button>
+
+					<Link href="/" className="w-full">
+						<Button variant="ghost" className="w-full">
+							Voltar ao Painel
+						</Button>
+					</Link>
+				</div>
+			</div>
+		);
+	}
+
 	if (completedUser) {
 		return (
 			<div className="bg-surface border border-green-500/30 rounded-xl p-8 w-full max-w-md flex flex-col items-center text-center gap-4">
@@ -76,8 +142,9 @@ function CompleteRegistrationForm() {
 						</strong>
 					) : (
 						''
-					)}{' '}
-					foi ativada com sucesso. Agora você já pode fazer login.
+					)}
+					{completedUser.email ? ` (${completedUser.email})` : ''}{' '}
+					foi ativada com sucesso. Agora você já pode fazer login usando seu e-mail ou nome de usuário.
 				</p>
 				<Link href="/login" className="w-full">
 					<Button>Ir para o Login</Button>

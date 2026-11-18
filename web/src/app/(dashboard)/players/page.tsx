@@ -2,6 +2,9 @@
 
 import { Loading } from '@/components/Loading';
 import { Modal } from '@/components/Modal';
+import { Input } from '@/components/Input';
+import { Select } from '@/components/Select';
+import { formatPhone } from '@/lib/masks';
 import SuspendModal from '@/components/SuspendModal';
 import { useAuth } from '@/context/AuthContext';
 import { fetchAPI } from '@/lib/api';
@@ -401,7 +404,7 @@ export default function PlayersPage() {
 										{player.email || '—'}
 									</div>
 									<div className="text-[13px] text-muted truncate">
-										{player.telefone || '—'}
+										{formatPhone(player.telefone) || '—'}
 									</div>
 								</div>
 
@@ -615,7 +618,7 @@ export default function PlayersPage() {
 								<label className="block text-[13px] text-muted mb-1.5">
 									Nome *
 								</label>
-								<input
+								<Input
 									type="text"
 									required
 									placeholder="Ex: Lucas Morais"
@@ -626,7 +629,6 @@ export default function PlayersPage() {
 											nome: e.target.value,
 										})
 									}
-									className="box-border min-h-[44px] px-3.5 rounded-[10px] border border-border bg-surface text-main placeholder:text-muted text-sm w-full focus:outline-none focus:border-primary transition-colors"
 								/>
 							</div>
 
@@ -634,7 +636,7 @@ export default function PlayersPage() {
 								<label className="block text-[13px] text-muted mb-1.5">
 									Apelido
 								</label>
-								<input
+								<Input
 									type="text"
 									placeholder="Ex: Lucão"
 									value={form.apelido}
@@ -644,7 +646,6 @@ export default function PlayersPage() {
 											apelido: e.target.value,
 										})
 									}
-									className="box-border min-h-[44px] px-3.5 rounded-[10px] border border-border bg-surface text-main placeholder:text-muted text-sm w-full focus:outline-none focus:border-primary transition-colors"
 								/>
 							</div>
 
@@ -652,8 +653,9 @@ export default function PlayersPage() {
 								<label className="block text-[13px] text-muted mb-1.5">
 									Email
 								</label>
-								<input
+								<Input
 									type="email"
+									mask="email"
 									placeholder="Ex: lucas@example.com"
 									value={form.email}
 									onChange={(e) =>
@@ -662,7 +664,6 @@ export default function PlayersPage() {
 											email: e.target.value,
 										})
 									}
-									className="box-border min-h-[44px] px-3.5 rounded-[10px] border border-border bg-surface text-main placeholder:text-muted text-sm w-full focus:outline-none focus:border-primary transition-colors"
 								/>
 							</div>
 
@@ -670,8 +671,9 @@ export default function PlayersPage() {
 								<label className="block text-[13px] text-muted mb-1.5">
 									Telefone
 								</label>
-								<input
+								<Input
 									type="tel"
+									mask="phone"
 									placeholder="Ex: (11) 98765-4321"
 									value={form.telefone}
 									onChange={(e) =>
@@ -680,7 +682,6 @@ export default function PlayersPage() {
 											telefone: e.target.value,
 										})
 									}
-									className="box-border min-h-[44px] px-3.5 rounded-[10px] border border-border bg-surface text-main placeholder:text-muted text-sm w-full focus:outline-none focus:border-primary transition-colors"
 								/>
 							</div>
 						</div>
@@ -697,7 +698,7 @@ export default function PlayersPage() {
 								<label className="block text-[13px] text-muted mb-1.5">
 									Posição
 								</label>
-								<select
+								<Select
 									value={form.posicao}
 									onChange={(e) =>
 										setForm({
@@ -707,7 +708,6 @@ export default function PlayersPage() {
 												| '',
 										})
 									}
-									className="box-border min-h-[44px] px-3.5 rounded-[10px] border border-border bg-surface text-main text-sm w-full focus:outline-none focus:border-primary transition-colors cursor-pointer"
 								>
 									<option
 										value=""
@@ -739,7 +739,7 @@ export default function PlayersPage() {
 									>
 										Atacantes
 									</option>
-								</select>
+								</Select>
 							</div>
 
 							<div>

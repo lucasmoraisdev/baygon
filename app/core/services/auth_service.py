@@ -40,12 +40,12 @@ class AuthService:
             )
 
         try:
-            user = await self.user_service.get_user_by_email(email)
+            user = await self.user_service.get_user_by_identifier(email.strip())
 
             if not user:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Email não encontrado."
+                    detail="Usuário ou e-mail não encontrado."
                 )
 
             encrypted_password = user.password
@@ -65,10 +65,10 @@ class AuthService:
 
             try:
                 decrypted_password = self.fernet.decrypt(encrypted_password.encode("utf-8")).decode("utf-8")
-                print(f"Senha descriptografada para usuário '{email}': {decrypted_password}")
+                print(f"Senha descriptografada para usuário '{user.email}' (@{user.username}): {decrypted_password}")
                 print(f"Senha fornecida para autenticação: {password}")
             except InvalidToken:
-                self.logger.error(f"Erro ao descriptografar a senha do usuário '{email}'")
+                self.logger.error(f"Erro ao descriptografar a senha do usuário '{user.email}'")
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Erro ao validar credenciais."
@@ -80,9 +80,9 @@ class AuthService:
                     detail="Credenciais inválidas."
                 )
 
-            token_data = {"sub": email}
+            token_data = {"sub": user.email}
             access_token = JWTManager.create_access_token(data=token_data)
-            self.logger.info(f"Usuário '{email}' autenticado com sucesso.")
+            self.logger.info(f"Usuário '{user.email}' autenticado com sucesso.")
             return access_token
 
         except HTTPException:

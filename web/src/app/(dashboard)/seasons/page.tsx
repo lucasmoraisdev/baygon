@@ -10,6 +10,7 @@ import { Input } from '@/components/Input';
 import { FormField } from '@/components/FormField';
 import { Modal } from '@/components/Modal';
 import { DatePicker } from '@/components/DatePicker';
+import { Select } from '@/components/Select';
 import { Plus, Search, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Season {
@@ -121,15 +122,16 @@ export default function SeasonsPage() {
 
         <div className="flex items-center gap-2 self-end sm:self-auto text-xs sm:text-sm text-muted">
           <span>Exibir:</span>
-          <select
+          <Select
+            size="sm"
             value={pageSize}
             onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-            className="bg-background border border-border rounded-lg px-2.5 py-1 text-sm text-main focus:outline-none focus:border-primary cursor-pointer"
+            containerClassName="w-auto min-w-[130px]"
           >
             <option value={4}>4 por página</option>
             <option value={8}>8 por página</option>
             <option value={12}>12 por página</option>
-          </select>
+          </Select>
         </div>
       </div>
 

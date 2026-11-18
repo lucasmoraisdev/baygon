@@ -35,3 +35,8 @@ class PlayerService:
         """Obtém estatísticas completas (geral, temporadas, rodadas, times e prêmios)"""
         return await self.repo.get_player_full_analytics(player_id)
 
+    async def get_player_partnerships(self, player_id: int, season_id: Optional[int] = None) -> Dict[str, Any]:
+        """Obtém estatísticas de química e parcerias (duplas e trios) do jogador"""
+        return await self.repo.get_player_partnerships(player_id, season_id)
+
+

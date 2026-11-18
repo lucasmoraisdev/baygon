@@ -55,7 +55,12 @@ async def submit_round_votes(
     current_user: User = Depends(get_current_user),
     service: RoundVoteService = Depends(get_round_vote_service),
 ):
-    return await service.cast_votes(round_id, current_user, payload.votes)
+    return await service.cast_votes(
+        round_id=round_id,
+        user=current_user,
+        votes=payload.votes,
+        target_user_id=payload.voter_user_id,
+    )
 
 
 @router.post("/apply-awards")

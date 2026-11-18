@@ -215,13 +215,13 @@ export default function PublicMatchesPage() {
 					</div>
 				</div>
 
-				<div className="flex items-center gap-2">
+				<div className="flex items-center sm:justify-end shrink-0 w-full sm:w-auto">
 					<SeasonSelector
 						seasons={seasons}
 						selectedSeasonId={selectedSeason}
 						onSelectSeason={(s) => setSelectedSeasonOverride(String(s.id_season))}
 						isLoading={seasonsQuery.isLoading}
-						className="w-full sm:w-[260px]"
+						className="w-full sm:w-auto sm:min-w-[220px]"
 					/>
 				</div>
 			</div>
@@ -338,14 +338,17 @@ export default function PublicMatchesPage() {
 
 								{/* Placar Central */}
 								<div className="p-4 sm:p-5 flex items-center justify-between gap-3">
-									{/* Time da Casa */}
-									<div className="flex-1 min-w-0 flex flex-col items-center sm:items-end text-center sm:text-right gap-1.5">
+									{/* Time da Casa: Tag à esquerda do nome */}
+									<div className="flex-1 min-w-0 flex items-center justify-end gap-2 text-right">
 										<TeamColorTag
 											color={homeTeam?.color}
 											size="sm"
 											showLabel={true}
 										/>
-										<span className="font-bold text-main text-sm sm:text-base leading-tight truncate w-full" title={homeTeam?.name}>
+										<span
+											className="font-bold text-main text-sm sm:text-base leading-tight truncate"
+											title={homeTeam?.name}
+										>
 											{homeTeam?.name || `Time ${m.home_team_id}`}
 										</span>
 									</div>
@@ -363,16 +366,19 @@ export default function PublicMatchesPage() {
 										</span>
 									</div>
 
-									{/* Time Visitante */}
-									<div className="flex-1 min-w-0 flex flex-col items-center sm:items-start text-center sm:text-left gap-1.5">
+									{/* Time Visitante: Tag à direita do nome */}
+									<div className="flex-1 min-w-0 flex items-center justify-start gap-2 text-left">
+										<span
+											className="font-bold text-main text-sm sm:text-base leading-tight truncate"
+											title={awayTeam?.name}
+										>
+											{awayTeam?.name || `Time ${m.away_team_id}`}
+										</span>
 										<TeamColorTag
 											color={awayTeam?.color}
 											size="sm"
 											showLabel={true}
 										/>
-										<span className="font-bold text-main text-sm sm:text-base leading-tight truncate w-full" title={awayTeam?.name}>
-											{awayTeam?.name || `Time ${m.away_team_id}`}
-										</span>
 									</div>
 								</div>
 

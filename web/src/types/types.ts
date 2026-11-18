@@ -138,6 +138,8 @@ export interface Player {
 	posicao: string | null;
 	potes?: number | null;
 	user_id?: number | null;
+	is_associate?: boolean;
+	is_guest?: boolean;
 }
 
 export interface Match {
@@ -213,6 +215,8 @@ export interface RoundVoter {
 	user_name: string;
 	user_email: string;
 	has_voted: boolean;
+	is_referee?: boolean;
+	votes?: RoundVoteItem[];
 }
 
 export interface RoundVoteItem {
@@ -243,6 +247,8 @@ export interface RoundVotingStatus {
 	is_user_voter: boolean;
 	total_voters_count: number;
 	voted_voters_count: number;
+	referee_user_id?: number | null;
+	referee_name?: string | null;
 	voters: RoundVoter[];
 	user_votes: RoundVoteItem[];
 	tallies: RoundCategoryTally[];

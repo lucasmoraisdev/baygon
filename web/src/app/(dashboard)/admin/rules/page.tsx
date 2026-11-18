@@ -492,13 +492,13 @@ export default function RulesPage() {
 			{/* Season Bar */}
 			<div className="flex flex-wrap gap-3 items-center justify-between bg-blue-500/[0.08] border border-blue-500/[0.22] rounded-xl px-4 py-3">
 				<div className="flex items-center gap-3 flex-wrap">
-					<select
+					<Select
 						aria-label="Selecionar temporada"
 						value={selectedSeason}
 						onChange={(e) =>
 							setSelectedSeasonOverride(e.target.value)
 						}
-						className="min-h-[40px] px-3.5 rounded-[10px] border border-white/[0.14] bg-[#0b1220] text-[#e6edf7] font-semibold text-sm outline-none focus:border-blue-500 cursor-pointer"
+						containerClassName="w-auto min-w-[170px]"
 					>
 						{seasons.map((s) => (
 							<option
@@ -509,7 +509,7 @@ export default function RulesPage() {
 								Temporada {s.number}
 							</option>
 						))}
-					</select>
+					</Select>
 
 					{currentSelectedSeasonObj?.is_active ? (
 						<span className="text-xs font-semibold px-2.5 py-[3px] rounded-full bg-emerald-500/[0.14] text-[#4ade80]">

@@ -25,6 +25,40 @@ class RoundVoteService:
     def __init__(self, repo: RoundVoteRepository):
         self.repo = repo
 
+    async def ensure_referee_user(self, round_obj: Round) -> Optional[User]:
+        referee_name = (round_obj.referee or "").strip()
+        if not referee_name or referee_name.lower() in ["sem nome", "sem juiz", "n/a", "nenhum", ""]:
+            return None
+
+        slug = "".join(c for c in referee_name.lower() if c.isalnum() or c == "_")
+        if not slug:
+            slug = "referee"
+
+        query = select(User).where(
+            (User.username == f"juiz_{slug}") | 
+            (User.email == f"juiz_{slug}@baygon.local") |
+            (User.name == f"{referee_name} (Juiz)") |
+            (User.name == referee_name)
+        )
+        result = await self.repo.db.execute(query)
+        user = result.scalars().first()
+        if user:
+            return user
+
+        new_user = User(
+            name=f"{referee_name} (Juiz)",
+            username=f"juiz_{slug}",
+            email=f"juiz_{slug}@baygon.local",
+            phone_number="",
+            is_admin=False,
+            is_active=True,
+            password="pending_setup",
+        )
+        self.repo.db.add(new_user)
+        await self.repo.db.commit()
+        await self.repo.db.refresh(new_user)
+        return new_user
+
     async def get_voting_status(
         self,
         round_id: int,
@@ -34,15 +68,26 @@ class RoundVoteService:
         if not round_obj:
             raise HTTPException(status_code=404, detail="Rodada não encontrada.")
 
+        referee_user = await self.ensure_referee_user(round_obj)
+        referee_user_id = referee_user.id_user if referee_user else None
+        referee_name = round_obj.referee if round_obj.referee and round_obj.referee.lower() != 'sem nome' else None
+
         voters = await self.repo.list_voters(round_id)
         all_votes = await self.repo.list_votes_by_round(round_id)
 
-        # Usuários que já votaram (qualquer categoria)
-        voted_user_ids = {v.user_id for v in all_votes}
+        # Mapa de votos por usuário: user_id -> List[RoundVoteItem]
+        votes_by_user: dict[int, list[RoundVoteItem]] = defaultdict(list)
+        for v in all_votes:
+            votes_by_user[v.user_id].append(
+                RoundVoteItem(award_type=v.award_type, player_id=v.player_id)
+            )
+
+        voted_user_ids = set(votes_by_user.keys())
 
         voters_read: List[RoundVoterRead] = []
         for v in voters:
             u = v.user
+            is_ref = (referee_user_id is not None and v.user_id == referee_user_id) or (u is not None and getattr(u, 'role', '') == 'referee')
             voters_read.append(
                 RoundVoterRead(
                     id_voter=v.id_voter,
@@ -51,6 +96,8 @@ class RoundVoteService:
                     user_name=u.name if u else f"Usuário #{v.user_id}",
                     user_email=u.email if u else "",
                     has_voted=v.user_id in voted_user_ids,
+                    is_referee=is_ref,
+                    votes=votes_by_user.get(v.user_id, []),
                 )
             )
 
@@ -130,6 +177,8 @@ class RoundVoteService:
             is_user_voter=is_user_voter,
             total_voters_count=len(voters),
             voted_voters_count=voted_voters_count,
+            referee_user_id=referee_user_id,
+            referee_name=referee_name,
             voters=voters_read,
             user_votes=user_votes_list,
             tallies=tallies,
@@ -159,6 +208,7 @@ class RoundVoteService:
         round_id: int,
         user: User,
         votes: List[RoundVoteItem],
+        target_user_id: Optional[int] = None,
     ) -> RoundVotingStatusRead:
         round_obj = await self.repo.get_round(round_id)
         if not round_obj:
@@ -167,13 +217,38 @@ class RoundVoteService:
         if not round_obj.is_voting_open and not user.is_admin:
             raise HTTPException(status_code=400, detail="A votação para esta rodada não está aberta.")
 
+        # Determinar quem é o eleitor real cujos votos estão sendo registrados
+        effective_voter_id = user.id_user
+        if target_user_id is not None:
+            if not user.is_admin and target_user_id != user.id_user:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Apenas administradores podem registrar votos em nome de outros jurados.",
+                )
+            effective_voter_id = target_user_id
+
         # Verificar se o usuário é um dos jurados designados pelo admin
-        is_voter = await self.repo.is_user_voter(round_id, user.id_user)
-        if not is_voter and not user.is_admin:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Apenas os usuários designados pela administração podem votar nesta rodada.",
-            )
+        is_voter = await self.repo.is_user_voter(round_id, effective_voter_id)
+        if not is_voter:
+            # Se o próprio admin está votando por si sem estar previamente na lista de jurados:
+            if user.is_admin and effective_voter_id == user.id_user:
+                pass
+            # Se o admin está registrando para o juiz da rodada e ele ainda não estava designado:
+            else:
+                referee_user = await self.ensure_referee_user(round_obj)
+                if user.is_admin and referee_user and effective_voter_id == referee_user.id_user:
+                    current_voters = await self.repo.list_voters(round_id)
+                    all_uids = [v.user_id for v in current_voters] + [referee_user.id_user]
+                    await self.repo.set_round_voters(round_id, all_uids)
+                elif user.is_admin:
+                    current_voters = await self.repo.list_voters(round_id)
+                    all_uids = [v.user_id for v in current_voters] + [effective_voter_id]
+                    await self.repo.set_round_voters(round_id, all_uids)
+                else:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Apenas os usuários designados pela administração podem votar nesta rodada.",
+                    )
 
         # Validar categorias
         for item in votes:
@@ -183,9 +258,9 @@ class RoundVoteService:
                     detail=f"Categoria de votação inválida: {item.award_type}.",
                 )
 
-        # Salvar votos
+        # Salvar votos para o eleitor efetivo
         votes_data = [{"award_type": v.award_type, "player_id": v.player_id} for v in votes]
-        await self.repo.save_user_votes(round_id, user.id_user, votes_data)
+        await self.repo.save_user_votes(round_id, effective_voter_id, votes_data)
 
         return await self.get_voting_status(round_id, user)
 

@@ -19,6 +19,8 @@ class RoundVoterRead(BaseModel):
     user_name: str
     user_email: str
     has_voted: bool = False
+    is_referee: bool = False
+    votes: List[RoundVoteItem] = []
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -34,6 +36,7 @@ class RoundVoteItem(BaseModel):
 
 class RoundVoteSubmitRequest(BaseModel):
     votes: List[RoundVoteItem]
+    voter_user_id: Optional[int] = None
 
 
 class RoundVoteCandidateCount(BaseModel):
@@ -59,6 +62,8 @@ class RoundVotingStatusRead(BaseModel):
     is_user_voter: bool
     total_voters_count: int
     voted_voters_count: int
+    referee_user_id: Optional[int] = None
+    referee_name: Optional[str] = None
     voters: List[RoundVoterRead] = []
     user_votes: List[RoundVoteItem] = []
     tallies: List[RoundCategoryTally] = []

@@ -17,6 +17,7 @@ from app.api.v1 import (
     roulette_prizes,
     polls,
     round_votes,
+    financial,
 )
 
 app = FastAPI(title="Baygon API", version="1.0.0")
@@ -45,6 +46,7 @@ app.include_router(attendance.router, prefix="/api/v1")
 app.include_router(roulette_prizes.router, prefix="/api/v1")
 app.include_router(polls.router, prefix="/api/v1")
 app.include_router(round_votes.router, prefix="/api/v1")
+app.include_router(financial.router, prefix="/api/v1")
 
 @app.get("/")
 async def root():

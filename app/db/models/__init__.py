@@ -15,6 +15,7 @@ from app.db.models.roulette_prize import RoulettePrize
 from app.db.models.round_roulette_winner import RoundRouletteWinner
 from app.db.models.season_poll import SeasonPoll, SeasonPollOption, SeasonPollVote
 from app.db.models.round_award_vote import RoundAwardVoter, RoundAwardVote
+from app.db.models.financial import FinancialMonthlyFee, FinancialCost
 
 __all__ = [
     "User",
@@ -37,4 +38,6 @@ __all__ = [
     "SeasonPollVote",
     "RoundAwardVoter",
     "RoundAwardVote",
+    "FinancialMonthlyFee",
+    "FinancialCost",
 ]

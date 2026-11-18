@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
-from typing import Optional, Sequence, Dict, Any, List
-from sqlalchemy import select, and_, func, distinct, Integer
+from typing import Optional, Sequence, Dict, Any, List, Tuple
+from sqlalchemy import select, and_, or_, func, distinct, Integer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -431,3 +431,274 @@ class PlayerRepository:
     async def get_player_season_stats(self, player_id: int) -> Sequence[Dict[str, Any]]:
         data = await self.get_player_full_analytics(player_id)
         return data["season_stats"]
+
+    async def get_player_partnerships(self, player_id: int, season_id: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Calcula as estatísticas de parcerias (duplas e trios) do jogador:
+        - Quantidade de jogos juntos (para o Treemap)
+        - Vitórias, empates, derrotas, aproveitamento
+        - Gols e assistências cruzadas e individuais
+        """
+        target_player = await self.get_by_id(player_id)
+        if not target_player:
+            return {"player_id": player_id, "player_name": "", "player_apelido": "", "season_id": season_id, "pairs": [], "trios": []}
+
+        # Carregar rodadas (filtradas por season_id se informado)
+        round_stmt = select(Round).where(Round.deleted_at.is_(None))
+        if season_id is not None:
+            round_stmt = round_stmt.where(Round.season_id == season_id)
+        rounds_list = list((await self.db.execute(round_stmt)).scalars().all())
+        valid_round_ids = {r.id_round for r in rounds_list}
+
+        if not valid_round_ids:
+            return {
+                "player_id": player_id,
+                "player_name": target_player.nome,
+                "player_apelido": target_player.apelido or target_player.nome,
+                "season_id": season_id,
+                "total_matches_evaluated": 0,
+                "pairs": [],
+                "trios": [],
+            }
+
+        # Carregar times com jogadores
+        all_teams = list(
+            (
+                await self.db.execute(
+                    select(Teams)
+                    .options(selectinload(Teams.players))
+                    .where(
+                        Teams.deleted_at.is_(None),
+                        Teams.round_id.in_(valid_round_ids),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+        player_teams_map: Dict[int, Teams] = {}
+        for t in all_teams:
+            if any(p.id_player == player_id for p in (t.players or [])):
+                player_teams_map[t.id_team] = t
+
+        player_team_ids = set(player_teams_map.keys())
+        if not player_team_ids:
+            return {
+                "player_id": player_id,
+                "player_name": target_player.nome,
+                "player_apelido": target_player.apelido or target_player.nome,
+                "season_id": season_id,
+                "total_matches_evaluated": 0,
+                "pairs": [],
+                "trios": [],
+            }
+
+        # Buscar todas as partidas dos times do jogador
+        matches_stmt = select(Match).where(
+            Match.deleted_at.is_(None),
+            Match.round_id.in_(valid_round_ids),
+            or_(
+                Match.home_team_id.in_(player_team_ids),
+                Match.away_team_id.in_(player_team_ids),
+            ),
+        )
+        matches = list((await self.db.execute(matches_stmt)).scalars().all())
+        match_ids = [m.id_match for m in matches]
+
+        events: List[MatchEvent] = []
+        if match_ids:
+            events_stmt = select(MatchEvent).where(
+                MatchEvent.deleted_at.is_(None),
+                MatchEvent.match_id.in_(match_ids),
+            )
+            events = list((await self.db.execute(events_stmt)).scalars().all())
+
+        events_by_match: Dict[int, List[MatchEvent]] = {}
+        for ev in events:
+            events_by_match.setdefault(ev.match_id, []).append(ev)
+
+        pairs_data: Dict[int, Dict[str, Any]] = {}
+        trios_data: Dict[Tuple[int, int], Dict[str, Any]] = {}
+
+        for m in matches:
+            in_home = m.home_team_id in player_teams_map
+            in_away = m.away_team_id in player_teams_map
+
+            team_obj = player_teams_map.get(m.home_team_id if in_home else m.away_team_id)
+            if not team_obj:
+                continue
+
+            sh = m.score_home or 0
+            sa = m.score_away or 0
+            if in_home:
+                gf = sh
+                ga = sa
+            else:
+                gf = sa
+                ga = sh
+
+            is_win = gf > ga
+            is_draw = gf == ga
+            is_loss = gf < ga
+
+            teammates = [p for p in (team_obj.players or []) if p.id_player != player_id]
+            teammate_ids = [p.id_player for p in teammates]
+
+            m_events = events_by_match.get(m.id_match, [])
+            player_goals_count = 0
+            player_assists_count = 0
+            goals_by_player: Dict[int, int] = {}
+            assists_by_player: Dict[int, int] = {}
+
+            goals_plays: Dict[int, int] = {}
+            assists_plays: Dict[int, int] = {}
+
+            for ev in m_events:
+                ev_type = ev.event_type.value if hasattr(ev.event_type, "value") else str(ev.event_type)
+                if ev_type in ("gol", EventTypeEnum.GOAL.value):
+                    goals_by_player[ev.player_id] = goals_by_player.get(ev.player_id, 0) + 1
+                    if ev.player_id == player_id:
+                        player_goals_count += 1
+                    if ev.play_id is not None:
+                        goals_plays[ev.play_id] = ev.player_id
+                elif ev_type in ("assistencia", EventTypeEnum.ASSIST.value):
+                    assists_by_player[ev.player_id] = assists_by_player.get(ev.player_id, 0) + 1
+                    if ev.player_id == player_id:
+                        player_assists_count += 1
+                    if ev.play_id is not None:
+                        assists_plays[ev.play_id] = ev.player_id
+
+            # Acumular Duplas
+            for p2 in teammates:
+                pid2 = p2.id_player
+                if pid2 not in pairs_data:
+                    pairs_data[pid2] = {
+                        "partner_id": pid2,
+                        "partner_name": p2.nome,
+                        "partner_apelido": p2.apelido or p2.nome,
+                        "partner_posicao": p2.posicao or "linha",
+                        "partner_pe": p2.pe,
+                        "matches_together": 0,
+                        "wins": 0,
+                        "draws": 0,
+                        "losses": 0,
+                        "goals_for": 0,
+                        "goals_against": 0,
+                        "player_goals": 0,
+                        "player_assists": 0,
+                        "partner_goals": 0,
+                        "partner_assists": 0,
+                        "player_assisted_by_partner": 0,
+                        "partner_assisted_by_player": 0,
+                    }
+
+                entry = pairs_data[pid2]
+                entry["matches_together"] += 1
+                if is_win:
+                    entry["wins"] += 1
+                elif is_draw:
+                    entry["draws"] += 1
+                else:
+                    entry["losses"] += 1
+                entry["goals_for"] += gf
+                entry["goals_against"] += ga
+                entry["player_goals"] += player_goals_count
+                entry["player_assists"] += player_assists_count
+                entry["partner_goals"] += goals_by_player.get(pid2, 0)
+                entry["partner_assists"] += assists_by_player.get(pid2, 0)
+
+                for play_id_val, scorer in goals_plays.items():
+                    passer = assists_plays.get(play_id_val)
+                    if scorer == player_id and passer == pid2:
+                        entry["player_assisted_by_partner"] += 1
+                    elif scorer == pid2 and passer == player_id:
+                        entry["partner_assisted_by_player"] += 1
+
+            # Acumular Trios
+            if len(teammate_ids) >= 2:
+                from itertools import combinations
+                for combo in combinations(sorted(teammates, key=lambda x: x.id_player), 2):
+                    p2, p3 = combo
+                    key = (p2.id_player, p3.id_player)
+                    if key not in trios_data:
+                        trios_data[key] = {
+                            "id": f"{p2.id_player}-{p3.id_player}",
+                            "partner_1": {
+                                "id_player": p2.id_player,
+                                "name": p2.nome,
+                                "apelido": p2.apelido or p2.nome,
+                                "posicao": p2.posicao or "linha",
+                            },
+                            "partner_2": {
+                                "id_player": p3.id_player,
+                                "name": p3.nome,
+                                "apelido": p3.apelido or p3.nome,
+                                "posicao": p3.posicao or "linha",
+                            },
+                            "matches_together": 0,
+                            "wins": 0,
+                            "draws": 0,
+                            "losses": 0,
+                            "goals_for": 0,
+                            "goals_against": 0,
+                            "player_goals": 0,
+                            "player_assists": 0,
+                            "partner_1_goals": 0,
+                            "partner_1_assists": 0,
+                            "partner_2_goals": 0,
+                            "partner_2_assists": 0,
+                            "mutual_trio_goals": 0,
+                        }
+
+                    t_entry = trios_data[key]
+                    t_entry["matches_together"] += 1
+                    if is_win:
+                        t_entry["wins"] += 1
+                    elif is_draw:
+                        t_entry["draws"] += 1
+                    else:
+                        t_entry["losses"] += 1
+                    t_entry["goals_for"] += gf
+                    t_entry["goals_against"] += ga
+                    t_entry["player_goals"] += player_goals_count
+                    t_entry["player_assists"] += player_assists_count
+                    t_entry["partner_1_goals"] += goals_by_player.get(p2.id_player, 0)
+                    t_entry["partner_1_assists"] += assists_by_player.get(p2.id_player, 0)
+                    t_entry["partner_2_goals"] += goals_by_player.get(p3.id_player, 0)
+                    t_entry["partner_2_assists"] += assists_by_player.get(p3.id_player, 0)
+
+                    trio_ids = {player_id, p2.id_player, p3.id_player}
+                    for play_id_val, scorer in goals_plays.items():
+                        passer = assists_plays.get(play_id_val)
+                        if scorer in trio_ids and passer in trio_ids and scorer != passer:
+                            t_entry["mutual_trio_goals"] += 1
+
+        pairs_list = []
+        for p in pairs_data.values():
+            m_cnt = p["matches_together"]
+            p["win_rate"] = round((p["wins"] / m_cnt * 100), 1) if m_cnt > 0 else 0.0
+            p["mutual_goals"] = p["player_assisted_by_partner"] + p["partner_assisted_by_player"]
+            pairs_list.append(p)
+
+        pairs_list.sort(key=lambda x: (x["matches_together"], x["wins"], x["win_rate"]), reverse=True)
+
+        trios_list = []
+        for t in trios_data.values():
+            m_cnt = t["matches_together"]
+            t["win_rate"] = round((t["wins"] / m_cnt * 100), 1) if m_cnt > 0 else 0.0
+            t["total_trio_goals"] = t["player_goals"] + t["partner_1_goals"] + t["partner_2_goals"]
+            t["total_trio_assists"] = t["player_assists"] + t["partner_1_assists"] + t["partner_2_assists"]
+            trios_list.append(t)
+
+        trios_list.sort(key=lambda x: (x["matches_together"], x["wins"], x["win_rate"]), reverse=True)
+
+        return {
+            "player_id": player_id,
+            "player_name": target_player.nome,
+            "player_apelido": target_player.apelido or target_player.nome,
+            "season_id": season_id,
+            "total_matches_evaluated": len(matches),
+            "pairs": pairs_list,
+            "trios": trios_list,
+        }

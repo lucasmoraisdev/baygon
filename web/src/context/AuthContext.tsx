@@ -16,7 +16,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (accessToken: string, refreshToken: string, userData: User) => void;
-  logout: () => void;
+  logout: (redirectTo?: string | null | unknown) => void;
 }
 
 export const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -53,12 +53,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     router.push("/");
   };
 
-  const logout = () => {
+  const logout = (redirectTo?: string | null | unknown) => {
     localStorage.removeItem("auth_token");
     localStorage.removeItem("refresh_token");
     localStorage.removeItem("user_data");
     setUser(null);
-    router.push("/login");
+    if (typeof redirectTo === "string") {
+      router.push(redirectTo);
+    } else if (redirectTo === undefined || (redirectTo && typeof redirectTo === "object")) {
+      router.push("/login");
+    }
   };
 
   return (

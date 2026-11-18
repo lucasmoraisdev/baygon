@@ -29,18 +29,18 @@ async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
     
     user_service = UserService.UserService(UserRepository(db))
     auth_service = AuthService(user_service)
-    email = data.email
+    identifier = data.email.strip()
     password = data.password
-    print(f"Tentativa de login: email {email}, password {password}")
+    print(f"Tentativa de login: identifier {identifier}, password {password}")
     
     # authenticate_user raises HTTPException if auth fails
     try:
-        await auth_service.authenticate_user(email, password)
+        await auth_service.authenticate_user(identifier, password)
     except HTTPException:
         raise
     
-    # Get user data for token creation
-    user = await user_service.get_user_by_email(email)
+    # Get user data for token creation (supports email or username)
+    user = await user_service.get_user_by_identifier(identifier)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -49,7 +49,7 @@ async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
     
     # Criar access token com email e username
     access_token = JWTManager.create_access_token(data={
-        "sub": email,
+        "sub": user.email,
         "email": user.email,
         "username": user.username,
         "role": user.role,
@@ -59,7 +59,7 @@ async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
     
     # Criar refresh token
     refresh_token = JWTManager.create_refresh_token(data={
-        "sub": email,
+        "sub": user.email,
         "email": user.email,
         "username": user.username,
         "user_id": user.id_user

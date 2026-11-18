@@ -8,6 +8,7 @@ import { Modal } from '@/components/Modal';
 import { Select } from '@/components/Select';
 import { SeasonSelector } from '@/components/SeasonSelector';
 import { SearchableSelect } from '@/components/SearchableSelect';
+import { TeamColorTag } from '@/components/TeamColorTag';
 import { Plus, Play } from 'lucide-react';
 import { fetchAPI } from '@/lib/api';
 import { DEFAULT_MATCH, DEFAULT_ROUND } from '@/utils/helpers';
@@ -168,6 +169,9 @@ export default function MatchesPage() {
 
 	const getTeamName = (id: number) =>
 		allTeams.find((t) => t.id_team === id)?.name ?? `Time ${id}`;
+
+	const getTeamColor = (id: number) =>
+		allTeams.find((t) => t.id_team === id)?.color ?? null;
 
 	const createMatchMutation = useMutation({
 		mutationFn: (body: object) =>
@@ -352,16 +356,30 @@ export default function MatchesPage() {
 							key={m.id}
 							className="bg-surface border border-border rounded-xl p-5 hover:border-primary transition-colors"
 						>
-							<div className="flex items-center justify-between gap-3 mb-3">
-								<span className="text-sm font-semibold text-main flex-1 text-right">
-									{getTeamName(m.home_team_id)}
-								</span>
-								<span className="text-xl font-bold text-primary shrink-0">
+							<div className="flex items-center justify-between gap-2.5 mb-3">
+								<div className="flex items-center justify-end gap-1.5 flex-1 min-w-0 text-right">
+									<TeamColorTag
+										color={getTeamColor(m.home_team_id)}
+										size="sm"
+										showLabel={true}
+									/>
+									<span className="text-sm font-semibold text-main truncate">
+										{getTeamName(m.home_team_id)}
+									</span>
+								</div>
+								<span className="text-lg sm:text-xl font-bold text-primary shrink-0 px-2 py-0.5 rounded-lg bg-background border border-border">
 									{m.home_score} x {m.away_score}
 								</span>
-								<span className="text-sm font-semibold text-main flex-1">
-									{getTeamName(m.away_team_id)}
-								</span>
+								<div className="flex items-center justify-start gap-1.5 flex-1 min-w-0 text-left">
+									<span className="text-sm font-semibold text-main truncate">
+										{getTeamName(m.away_team_id)}
+									</span>
+									<TeamColorTag
+										color={getTeamColor(m.away_team_id)}
+										size="sm"
+										showLabel={true}
+									/>
+								</div>
 							</div>
 							<div className="flex items-center justify-between text-xs text-muted">
 								<span>

@@ -16,7 +16,82 @@ import {
 	UserCheck,
 	Goal,
 	Swords,
+	Compass,
+	Target,
+	Hand,
+	X,
+	LucideIcon,
 } from 'lucide-react';
+
+interface PositionInfo {
+	label: string;
+	icon: LucideIcon;
+	colorCls: string;
+}
+
+function getPositionInfo(pos?: string | null): PositionInfo | null {
+	if (!pos) return null;
+	const clean = pos.trim().toLowerCase();
+
+	if (clean === 'goleiro' || clean.includes('goleir')) {
+		return {
+			label: 'Goleiro',
+			icon: Hand,
+			colorCls: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+		};
+	}
+
+	if (
+		clean === 'defensores' ||
+		clean === 'defensor' ||
+		clean === 'zagueiro' ||
+		clean === 'lateral' ||
+		clean === 'fixo'
+	) {
+		const label = clean === 'fixo' ? 'Fixo' : 'Defensor';
+		return {
+			label,
+			icon: Shield,
+			colorCls: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
+		};
+	}
+
+	if (
+		clean === 'meias' ||
+		clean === 'meia' ||
+		clean.includes('meio') ||
+		clean === 'volante' ||
+		clean === 'ala'
+	) {
+		return {
+			label: 'Meia',
+			icon: Compass,
+			colorCls: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+		};
+	}
+
+	if (
+		clean === 'atacantes' ||
+		clean === 'atacante' ||
+		clean === 'pivo' ||
+		clean === 'pivô' ||
+		clean.includes('centrov')
+	) {
+		return {
+			label: 'Atacante',
+			icon: Target,
+			colorCls: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
+		};
+	}
+
+	// Fallback em Title Case
+	const title = clean.charAt(0).toUpperCase() + clean.slice(1);
+	return {
+		label: title,
+		icon: Shield,
+		colorCls: 'bg-surface text-muted border-border',
+	};
+}
 
 export default function PublicTeamsPage() {
 	const [selectedSeasonOverride, setSelectedSeasonOverride] = useState<string>('');
@@ -208,13 +283,13 @@ export default function PublicTeamsPage() {
 					</div>
 				</div>
 
-				<div className="flex items-center gap-2">
+				<div className="flex items-center sm:justify-end shrink-0 w-full sm:w-auto">
 					<SeasonSelector
 						seasons={seasons}
 						selectedSeasonId={selectedSeason}
 						onSelectSeason={(s) => setSelectedSeasonOverride(String(s.id_season))}
 						isLoading={seasonsQuery.isLoading}
-						className="w-full sm:w-[260px]"
+						className="w-full sm:w-auto sm:min-w-[220px]"
 					/>
 				</div>
 			</div>
@@ -233,23 +308,29 @@ export default function PublicTeamsPage() {
 						onChange={(val) => setSelectedRound(val)}
 					/>
 
-					<div className="flex flex-col gap-1.5">
-						<label className="text-xs font-semibold text-muted">
-							Buscar Time ou Boleiro
-						</label>
-						<div className="relative">
-							<Search
-								size={14}
-								className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
-							/>
-							<input
-								type="text"
-								value={searchPlayer}
-								onChange={(e) => setSearchPlayer(e.target.value)}
-								placeholder="Nome do jogador ou time..."
-								className="w-full pl-8 pr-3 py-2 text-xs bg-background border border-border rounded-lg text-main placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary min-h-[44px]"
-							/>
-						</div>
+					<div className="relative flex items-center">
+						<Search
+							size={16}
+							className="absolute left-3.5 text-muted pointer-events-none"
+						/>
+						<input
+							type="text"
+							value={searchPlayer}
+							onChange={(e) => setSearchPlayer(e.target.value)}
+							placeholder="Buscar time ou boleiro..."
+							aria-label="Buscar time ou boleiro"
+							className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm bg-background border border-border rounded-xl text-main placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary min-h-[46px] transition-all"
+						/>
+						{searchPlayer && (
+							<button
+								type="button"
+								onClick={() => setSearchPlayer('')}
+								className="absolute right-3 p-1 rounded-md text-muted hover:text-main hover:bg-surface transition-colors cursor-pointer"
+								title="Limpar busca"
+							>
+								<X size={14} />
+							</button>
+						)}
 					</div>
 				</div>
 
@@ -393,11 +474,20 @@ export default function PublicTeamsPage() {
 													</div>
 
 													<div className="flex items-center gap-2">
-														{p.posicao && (
-															<span className="text-[10px] text-muted bg-surface px-1.5 py-0.5 rounded border border-border">
-																{p.posicao}
-															</span>
-														)}
+														{(() => {
+															const posInfo = getPositionInfo(p.posicao);
+															if (!posInfo) return null;
+															const PosIcon = posInfo.icon;
+															return (
+																<span
+																	title={`Posição: ${posInfo.label}`}
+																	className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-md border ${posInfo.colorCls} shrink-0 transition-colors`}
+																>
+																	<PosIcon size={11} className="shrink-0" />
+																	<span>{posInfo.label}</span>
+																</span>
+															);
+														})()}
 														{p.potes != null && (
 															<span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
 																P{p.potes}

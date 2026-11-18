@@ -30,7 +30,6 @@ const NAV_ITEMS = [
 	{ label: 'Ranking', href: '/public', icon: Trophy },
 	{ label: 'Partidas', href: '/public/matches', icon: Swords },
 	{ label: 'Times', href: '/public/teams', icon: Users },
-	{ label: 'Temporadas', href: '/public/seasons', icon: Calendar },
 	{ label: 'Recordes', href: '/public/records', icon: Award },
 ];
 
@@ -90,7 +89,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
 											Público
 										</span>
 									</div>
-									<span className="text-[10px] text-muted hidden sm:inline -mt-0.5 truncate">
+									<span className="text-[10px] text-muted hidden lg:inline -mt-0.5 truncate">
 										Associação & Baba da Galera
 									</span>
 								</div>
@@ -267,8 +266,8 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
 						<Link href="/public/teams" className="hover:text-primary transition-colors">
 							Times
 						</Link>
-						<Link href="/public/seasons" className="hover:text-primary transition-colors">
-							Temporadas
+						<Link href="/public/records" className="hover:text-primary transition-colors">
+							Recordes
 						</Link>
 						<Link href="/login" className="hover:text-primary transition-colors font-medium">
 							Área Administrativa

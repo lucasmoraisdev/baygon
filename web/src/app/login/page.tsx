@@ -8,9 +8,10 @@ import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { FormField } from '@/components/FormField';
 import Link from 'next/link';
+import { UserCheck, LogOut, ArrowRight } from 'lucide-react';
 
 export default function LoginPage() {
-	const { login } = useAuth();
+	const { user, loading, login, logout } = useAuth();
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
 	const [forgotMode, setForgotMode] = useState(false);
@@ -59,7 +60,52 @@ export default function LoginPage() {
 			<div className="bg-surface border border-border rounded-xl p-8 w-full max-w-sm shadow-[0_10px_25px_rgba(0,0,0,0.5)]">
 				<div className="text-center text-2xl font-bold text-primary mb-6">Baygon</div>
 
-				{forgotMode ? (
+				{user && !loading ? (
+					<div className="flex flex-col gap-4">
+						<div className="flex flex-col items-center text-center">
+							<div className="w-12 h-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary mb-3">
+								<UserCheck className="w-6 h-6" />
+							</div>
+							<h2 className="text-xl font-semibold text-main mb-1">Sessão Ativa Detectada</h2>
+							<p className="text-xs text-muted leading-relaxed">
+								Você já está conectado como{' '}
+								<strong className="text-main">@{user.username}</strong>
+								{user.email ? ` (${user.email})` : ''}.
+							</p>
+						</div>
+
+						<div className="bg-amber-500/10 border border-amber-500/25 rounded-lg p-3 text-xs text-amber-500/90 leading-relaxed">
+							Para acessar com outra conta, desconecte-se antes para evitar misturar dados de sessões diferentes.
+						</div>
+
+						<div className="flex flex-col gap-2.5 mt-1">
+							<Link href="/" className="w-full">
+								<Button className="w-full flex items-center justify-center gap-2">
+									<span>Ir para o Painel</span>
+									<ArrowRight className="w-4 h-4" />
+								</Button>
+							</Link>
+							<Button
+								type="button"
+								variant="ghost"
+								onClick={() => logout(null)}
+								className="w-full flex items-center justify-center gap-2"
+							>
+								<LogOut className="w-4 h-4 text-muted" />
+								<span>Desconectar desta Conta</span>
+							</Button>
+						</div>
+
+						<div className="mt-4 pt-4 border-t border-border text-center">
+							<Link
+								href="/public"
+								className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-primary hover:text-primary-hover hover:underline transition-colors"
+							>
+								⚽ Acompanhar partidas e classificação pública →
+							</Link>
+						</div>
+					</div>
+				) : forgotMode ? (
 					<>
 						<h2 className="text-xl font-semibold text-main mb-1">Recuperar Senha</h2>
 						<p className="text-sm text-muted mb-6">
@@ -125,13 +171,13 @@ export default function LoginPage() {
 							onSubmit={(e) => { e.preventDefault(); loginMutation.mutate(); }}
 							className="flex flex-col gap-4"
 						>
-							<FormField label="E-mail">
+							<FormField label="E-mail ou Usuário">
 								<Input
 									id="email"
 									type="text"
 									value={email}
 									onChange={(e) => setEmail(e.target.value)}
-									placeholder="admin@baygon.com"
+									placeholder="admin@baygon.com ou @usuario"
 									required
 								/>
 							</FormField>

@@ -245,13 +245,13 @@ export default function PublicRankingPage() {
 					</div>
 				</div>
 
-				<div className="flex items-center gap-2">
+				<div className="flex items-center sm:justify-end shrink-0 w-full sm:w-auto">
 					<SeasonSelector
 						seasons={seasons}
 						selectedSeasonId={selectedSeason}
 						onSelectSeason={(s) => setSelectedSeasonOverride(String(s.id_season))}
 						isLoading={seasonsQuery.isLoading}
-						className="w-full sm:w-[260px]"
+						className="w-full sm:w-auto sm:min-w-[220px]"
 					/>
 				</div>
 			</div>

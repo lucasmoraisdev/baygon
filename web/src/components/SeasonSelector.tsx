@@ -63,6 +63,14 @@ function getSeasonDisplayName(season: Season): string {
 	return `${season.number}ª Temporada${period ? ` (${period})` : ''}`;
 }
 
+// Retorna o rótulo compacto para o gatilho do botão
+function getSeasonTriggerLabel(season: Season): string {
+	if (season.number >= 1990 && season.number <= 2100) {
+		return `Temporada ${season.number}`;
+	}
+	return `${season.number}ª Temporada`;
+}
+
 // Retorna o slug/identificador para a URL
 function getSeasonSlug(season: Season): string {
 	const period = getSeasonYearPeriod(season);
@@ -378,7 +386,7 @@ export function SeasonSelector({
 	return (
 		<div
 			ref={containerRef}
-			className={`relative inline-block ${className}`}
+			className={`relative ${className}`}
 			onKeyDown={handleKeyDown}
 		>
 			{/* Gatilho (Botão fechado) - min-height 44px */}
@@ -389,23 +397,23 @@ export function SeasonSelector({
 				aria-haspopup="listbox"
 				aria-expanded={isOpen}
 				aria-controls="season-dropdown-panel"
-				className={`min-h-[44px] px-3.5 py-1.5 flex items-center justify-between gap-3 bg-surface border border-border rounded-xl hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all text-left group cursor-pointer ${
-					isOpen ? 'border-primary shadow-sm' : ''
+				className={`w-full min-h-[44px] px-3.5 py-1.5 flex items-center justify-between gap-2.5 bg-surface border border-border rounded-xl hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all text-left group cursor-pointer ${
+					isOpen ? 'border-primary ring-2 ring-primary/10 shadow-sm' : ''
 				}`}
 				disabled={isLoading}
 			>
-				<div className="flex flex-col justify-center">
+				<div className="flex flex-col justify-center min-w-0 flex-1">
 					<span className="text-[10px] sm:text-[11px] font-semibold text-muted uppercase tracking-wider leading-none">
 						Temporada
 					</span>
-					<div className="flex items-center gap-2 mt-0.5">
-						<span className="text-sm font-bold text-main whitespace-nowrap">
+					<div className="flex items-center gap-2 mt-0.5 min-w-0">
+						<span className="text-xs sm:text-sm font-semibold text-main whitespace-nowrap truncate">
 							{currentSeason
-								? getSeasonDisplayName(currentSeason)
+								? getSeasonTriggerLabel(currentSeason)
 								: 'Selecione'}
 						</span>
 						{isCurrentOngoing && (
-							<span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+							<span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 whitespace-nowrap shrink-0">
 								<span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
 								Em andamento
 							</span>
@@ -414,7 +422,7 @@ export function SeasonSelector({
 				</div>
 
 				<ChevronDown
-					className={`w-4 h-4 text-muted transition-transform duration-200 motion-reduce:transition-none group-hover:text-main shrink-0 ${
+					className={`w-4 h-4 text-muted transition-transform duration-200 motion-reduce:transition-none group-hover:text-main shrink-0 ml-1.5 ${
 						isOpen ? 'rotate-180 text-primary' : ''
 					}`}
 				/>

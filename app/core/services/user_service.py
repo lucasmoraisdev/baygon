@@ -132,6 +132,8 @@ class UserService:
         user = await self.repo.get_by_id(user_id)
         if not user:
             raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+        if user.is_active:
+            raise HTTPException(status_code=400, detail="Usuário já está ativo. Utilize o link de redefinição de senha se necessário.")
 
         setup_token = str(uuid.uuid4())
         default_password = get_random_password(self.default_passwords)
@@ -269,7 +271,9 @@ class UserService:
 
         user.password = encrypt_data(new_password, self.key)
         user.is_active = True
-        updated_user = await self.repo.update_password(user.id_user, user.password, True)
+        updated_user = await self.repo.update_password(user.id_user, user.password, is_finishing_registration=True)
+        if not updated_user:
+            raise HTTPException(status_code=500, detail="Erro ao finalizar ativação do usuário.")
 
         auth_token = generate_jwt_token(user_id=user.id_user)
 

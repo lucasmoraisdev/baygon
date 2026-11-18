@@ -22,6 +22,7 @@ import {
 	Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
+import { Select } from '@/components/Select';
 
 export default function PollsPage() {
 	const { user } = useAuth();
@@ -259,20 +260,17 @@ export default function PollsPage() {
 
 				<div className="flex items-center gap-3">
 					{/* Seletor de Temporada */}
-					<div className="flex items-center gap-2 bg-surface border border-border rounded-lg px-3 py-2 text-sm">
-						<Calendar className="w-4 h-4 text-muted" />
-						<select
-							value={selectedSeasonId ?? ''}
-							onChange={(e) => setSelectedSeasonId(Number(e.target.value))}
-							className="bg-transparent text-main font-medium focus:outline-none cursor-pointer"
-						>
-							{seasons.map((s) => (
-								<option key={s.id_season} value={s.id_season} className="bg-surface text-main">
-									Temporada {s.number} {s.is_active ? '(Ativa)' : ''}
-								</option>
-							))}
-						</select>
-					</div>
+					<Select
+						value={selectedSeasonId ?? ''}
+						onChange={(e) => setSelectedSeasonId(Number(e.target.value))}
+						containerClassName="w-auto min-w-[180px]"
+					>
+						{seasons.map((s) => (
+							<option key={s.id_season} value={s.id_season} className="bg-surface text-main">
+								Temporada {s.number} {s.is_active ? '(Ativa)' : ''}
+							</option>
+						))}
+					</Select>
 
 					{/* Botão Admin: Nova Enquete */}
 					{isAdmin && (

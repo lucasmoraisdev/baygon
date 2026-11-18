@@ -1,7 +1,10 @@
 'use client';
 
 import { Input } from '@/components/Input';
+import { Select } from '@/components/Select';
+import { formatPhone } from '@/lib/masks';
 import { Loading } from '@/components/Loading';
+import { PartnershipTreemap, PartnershipData } from '@/components/PartnershipTreemap';
 import {
 	MultiSeriesTimeChart,
 	TimeSeriesPoint,
@@ -196,6 +199,19 @@ export default function PlayerProfilePage() {
 		enabled: isAdmin,
 	});
 
+	const { data: partnershipsData, isLoading: partnershipsLoading } =
+		useQuery<PartnershipData>({
+			queryKey: ['player-partnerships', playerId, selectedSeasonId],
+			queryFn: () =>
+				fetchAPI(
+					`/players/${playerId}/partnerships${
+						selectedSeasonId !== 'all'
+							? `?season_id=${selectedSeasonId}`
+							: ''
+					}`,
+				).catch(() => null),
+		});
+
 	const invalidate = () => {
 		queryClient.invalidateQueries({ queryKey: ['player', playerId] });
 		queryClient.invalidateQueries({
@@ -203,6 +219,9 @@ export default function PlayerProfilePage() {
 		});
 		queryClient.invalidateQueries({
 			queryKey: ['player-actions', playerId],
+		});
+		queryClient.invalidateQueries({
+			queryKey: ['player-partnerships', playerId],
 		});
 	};
 
@@ -731,7 +750,7 @@ export default function PlayerProfilePage() {
 								{player.telefone && (
 									<span className="inline-flex items-center gap-1.5 text-xs text-muted bg-background/50 border border-border/60 px-2.5 py-0.5 rounded-lg">
 										<Phone className="w-3.5 h-3.5 text-muted/70" />
-										{player.telefone}
+										{formatPhone(player.telefone)}
 									</span>
 								)}
 							</div>
@@ -741,35 +760,29 @@ export default function PlayerProfilePage() {
 					{/* Controles à Direita: Filtro de Temporada + Ações Admin */}
 					<div className="flex flex-wrap items-center gap-2.5 self-start lg:self-center shrink-0">
 						{/* Filtro de Temporada */}
-						<div className="flex items-center gap-2 bg-background/80 border border-border rounded-xl px-3.5 py-2">
-							<Calendar className="w-4 h-4 text-primary shrink-0" />
-							<span className="text-xs font-semibold text-muted uppercase tracking-wider whitespace-nowrap">
-								Temporada:
-							</span>
-							<select
-								value={selectedSeasonId}
-								onChange={(e) =>
-									setSelectedSeasonId(e.target.value)
-								}
-								className="bg-transparent text-sm font-semibold text-main focus:outline-none cursor-pointer pr-1 min-w-[175px]"
+						<Select
+							value={selectedSeasonId}
+							onChange={(e) =>
+								setSelectedSeasonId(e.target.value)
+							}
+							containerClassName="w-auto min-w-[200px]"
+						>
+							<option
+								value="all"
+								className="bg-[#0f172a] text-main"
 							>
+								Todas as Temporadas
+							</option>
+							{seasonOptions.map((s) => (
 								<option
-									value="all"
+									key={s.id}
+									value={String(s.id)}
 									className="bg-[#0f172a] text-main"
 								>
-									Todas as Temporadas
+									{s.label}
 								</option>
-								{seasonOptions.map((s) => (
-									<option
-										key={s.id}
-										value={String(s.id)}
-										className="bg-[#0f172a] text-main"
-									>
-										{s.label}
-									</option>
-								))}
-							</select>
-						</div>
+							))}
+						</Select>
 
 						{isAdmin && (
 							<>
@@ -1305,7 +1318,14 @@ export default function PlayerProfilePage() {
 				height={295}
 			/>
 
-			{/* 5. Galeria de Prêmios Conquistados & Gráfico de Quantidade/Distribuição */}
+			{/* 5. Análise de Química & Parcerias em Campo (Treemap de Duplas e Trios) */}
+			<PartnershipTreemap
+				data={partnershipsData}
+				playerName={player.apelido || player.nome}
+				isLoading={partnershipsLoading}
+			/>
+
+			{/* 6. Galeria de Prêmios Conquistados & Gráfico de Quantidade/Distribuição */}
 			<div className="bg-surface border border-border rounded-xl p-5 sm:p-6 flex flex-col gap-6">
 				<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
 					<div>

@@ -142,6 +142,9 @@ export default function RoundVotingTab({
 	const [formVotes, setFormVotes] = useState<Record<string, number>>({});
 	const [formInitialized, setFormInitialized] = useState(false);
 
+	// Jurado ativo no formulário (especialmente útil para Admin lançar votos recebidos via WhatsApp/campo)
+	const [activeVoterId, setActiveVoterId] = useState<number | null>(null);
+
 	// Estado para modal de designação de jurados
 	const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
 	const [selectedVoterUserIds, setSelectedVoterUserIds] = useState<number[]>([]);
@@ -174,33 +177,52 @@ export default function RoundVotingTab({
 		enabled: isAdmin,
 	});
 
-	// Preencher votos existentes do usuário no formulário
+	// Preencher votos e sincronizar jurado ativo no formulário
 	React.useEffect(() => {
-		if (votingStatus && !formInitialized) {
-			const initial: Record<string, number> = {};
-			votingStatus.user_votes.forEach((v) => {
-				initial[v.award_type] = v.player_id;
-			});
-
-			// Se o usuário ainda não tiver votos salvos, mas a rodada já possui vencedores cadastrados,
-			// auto-preenche o formulário com os vencedores registrados para facilitar a visualização e voto
-			if (votingStatus.user_votes.length === 0 && officialAwards.length > 0) {
-				Object.keys(CATEGORY_META).forEach((cat) => {
-					const official = officialAwardsMap.get(cat);
-					const pid = official?.players?.[0]?.id_player;
-					if (pid) {
-						initial[cat] = pid;
-					}
-				});
+		if (votingStatus) {
+			// Definir jurado ativo inicial caso ainda não esteja selecionado
+			if (activeVoterId === null) {
+				if (votingStatus.is_user_voter && user?.id_user) {
+					setActiveVoterId(user.id_user);
+				} else if (isAdmin && votingStatus.voters.length > 0) {
+					setActiveVoterId(votingStatus.voters[0].user_id);
+				} else if (user?.id_user) {
+					setActiveVoterId(user.id_user);
+				}
 			}
 
-			setFormVotes(initial);
-			setFormInitialized(true);
+			if (!formInitialized) {
+				const initial: Record<string, number> = {};
+				// Se o jurado ativo tiver votos prévios registrados, carrega eles
+				const activeVoter = votingStatus.voters.find((v) => v.user_id === activeVoterId);
+				if (activeVoter?.votes && activeVoter.votes.length > 0) {
+					activeVoter.votes.forEach((v) => {
+						initial[v.award_type] = v.player_id;
+					});
+				} else if (votingStatus.user_votes && votingStatus.user_votes.length > 0) {
+					votingStatus.user_votes.forEach((v) => {
+						initial[v.award_type] = v.player_id;
+					});
+				} else if (officialAwards.length > 0) {
+					// Se ainda não tiver votos salvos, mas a rodada já possui vencedores cadastrados,
+					// auto-preenche o formulário com os vencedores registrados para facilitar a visualização e voto
+					Object.keys(CATEGORY_META).forEach((cat) => {
+						const official = officialAwardsMap.get(cat);
+						const pid = official?.players?.[0]?.id_player;
+						if (pid) {
+							initial[cat] = pid;
+						}
+					});
+				}
 
-			// Preencher lista de jurados selecionados
+				setFormVotes(initial);
+				setFormInitialized(true);
+			}
+
+			// Sincronizar jurados selecionados
 			setSelectedVoterUserIds(votingStatus.voters.map((v) => v.user_id));
 		}
-	}, [votingStatus, formInitialized, officialAwards, officialAwardsMap]);
+	}, [votingStatus, activeVoterId, formInitialized, officialAwards, officialAwardsMap, user?.id_user, isAdmin]);
 
 	const handleFillFromOfficial = () => {
 		const updated: Record<string, number> = { ...formVotes };
@@ -265,15 +287,20 @@ export default function RoundVotingTab({
 
 	// Mutação: Submeter Votos
 	const submitVotesMutation = useMutation({
-		mutationFn: async (votes: RoundVoteItem[]) => {
+		mutationFn: async (payload: { votes: RoundVoteItem[]; voter_user_id?: number }) => {
 			return await fetchAPI(`/rounds/${roundId}/voting/vote`, {
 				method: 'POST',
-				body: JSON.stringify({ votes }),
+				body: JSON.stringify(payload),
 			});
 		},
-		onSuccess: (data) => {
+		onSuccess: (data, variables) => {
 			queryClient.setQueryData(['round_voting', roundId], data);
-			setFeedbackMsg({ type: 'success', text: 'Seus votos foram registrados com sucesso!' });
+			const targetVoter = data.voters.find((v: any) => v.user_id === variables.voter_user_id);
+			const voterLabel = targetVoter ? targetVoter.user_name : 'Seus votos';
+			setFeedbackMsg({
+				type: 'success',
+				text: `Votos de ${voterLabel} foram registrados com sucesso!`,
+			});
 		},
 		onError: (err: any) => {
 			setFeedbackMsg({ type: 'error', text: err?.message || 'Erro ao salvar votos.' });
@@ -333,29 +360,51 @@ export default function RoundVotingTab({
 		return map;
 	}, [players]);
 
-	// Usuários elegíveis para o júri: APENAS jogadores que estavam na rodada
+	// Usuários elegíveis para o júri: jogadores que estavam na rodada + juiz da rodada
 	const roundEligibleUsers = useMemo(() => {
-		return allUsers.filter((u) => {
-			// 1. Verifica se tem player nos u.players que esteve na rodada
-			const hasInUserPlayers = (u.players || []).some((p: any) =>
-				roundPlayerIdSet.has(p.id_player),
-			);
-			if (hasInUserPlayers) return true;
+		const refereeId = votingStatus?.referee_user_id;
 
-			// 2. Verifica se está vinculado a um player pelo user_id
-			const linkedPlayer = userToPlayerMap.get(u.id_user);
-			if (linkedPlayer && roundPlayerIdSet.has(linkedPlayer.id_player)) {
-				return true;
-			}
+		return allUsers
+			.filter((u) => {
+				// 0. O juiz da rodada é SEMPRE elegível
+				if (refereeId && u.id_user === refereeId) return true;
+				if (u.email?.startsWith('juiz_') || u.name?.toLowerCase().includes('(juiz)')) {
+					return true;
+				}
 
-			// 3. Se já era um jurado previamente salvo nesta rodada, mantém na lista para permitir desmarcar
-			if (selectedVoterUserIds.includes(u.id_user)) {
-				return true;
-			}
+				// 1. Verifica se tem player nos u.players que esteve na rodada
+				const hasInUserPlayers = (u.players || []).some((p: any) =>
+					roundPlayerIdSet.has(p.id_player),
+				);
+				if (hasInUserPlayers) return true;
 
-			return false;
-		});
-	}, [allUsers, roundPlayerIdSet, userToPlayerMap, selectedVoterUserIds]);
+				// 2. Verifica se está vinculado a um player pelo user_id
+				const linkedPlayer = userToPlayerMap.get(u.id_user);
+				if (linkedPlayer && roundPlayerIdSet.has(linkedPlayer.id_player)) {
+					return true;
+				}
+
+				// 3. Se já era um jurado previamente salvo nesta rodada, mantém na lista para permitir desmarcar
+				if (selectedVoterUserIds.includes(u.id_user)) {
+					return true;
+				}
+
+				return false;
+			})
+			.sort((a, b) => {
+				const aIsRef =
+					(refereeId && a.id_user === refereeId) ||
+					a.email?.startsWith('juiz_') ||
+					a.name?.toLowerCase().includes('(juiz)');
+				const bIsRef =
+					(refereeId && b.id_user === refereeId) ||
+					b.email?.startsWith('juiz_') ||
+					b.name?.toLowerCase().includes('(juiz)');
+				if (aIsRef && !bIsRef) return -1;
+				if (!aIsRef && bIsRef) return 1;
+				return (a.name || a.username).localeCompare(b.name || b.username);
+			});
+	}, [allUsers, roundPlayerIdSet, userToPlayerMap, selectedVoterUserIds, votingStatus?.referee_user_id]);
 
 	// Usuários filtrados para o modal de designar jurados
 	const filteredUsers = useMemo(() => {
@@ -374,6 +423,47 @@ export default function RoundVotingTab({
 		setFeedbackMsg(null);
 	};
 
+	const handleSelectActiveVoter = (targetUserId: number) => {
+		setActiveVoterId(targetUserId);
+		const targetVoter = votingStatus?.voters.find((v) => v.user_id === targetUserId);
+		const votes: Record<string, number> = {};
+		if (targetVoter?.votes && targetVoter.votes.length > 0) {
+			targetVoter.votes.forEach((item) => {
+				votes[item.award_type] = item.player_id;
+			});
+		} else if (targetUserId === user?.id_user && votingStatus?.user_votes && votingStatus.user_votes.length > 0) {
+			votingStatus.user_votes.forEach((item) => {
+				votes[item.award_type] = item.player_id;
+			});
+		}
+		setFormVotes(votes);
+		setFeedbackMsg(null);
+	};
+
+	const handleAddRefereeToJury = () => {
+		const refereeId = votingStatus?.referee_user_id;
+		if (!refereeId) return;
+		const currentIds = votingStatus?.voters.map((v) => v.user_id) || [];
+		if (!currentIds.includes(refereeId)) {
+			const newIds = [...currentIds, refereeId];
+			assignVotersMutation.mutate(newIds);
+		}
+	};
+
+	const activeVoterObj = useMemo(() => {
+		if (!activeVoterId) return null;
+		return votingStatus?.voters.find((v) => v.user_id === activeVoterId) || null;
+	}, [activeVoterId, votingStatus]);
+
+	const activeVoterDisplayName = useMemo(() => {
+		if (!activeVoterObj) {
+			if (activeVoterId === user?.id_user) return 'Meus Votos (Admin)';
+			return 'Jurado';
+		}
+		if (activeVoterObj.is_referee) return `${activeVoterObj.user_name} (Juiz)`;
+		return activeVoterObj.user_name;
+	}, [activeVoterObj, activeVoterId, user?.id_user]);
+
 	const handleSaveVotes = () => {
 		const items: RoundVoteItem[] = Object.entries(formVotes)
 			.filter(([_, pid]) => Boolean(pid))
@@ -384,7 +474,10 @@ export default function RoundVotingTab({
 			return;
 		}
 
-		submitVotesMutation.mutate(items);
+		submitVotesMutation.mutate({
+			votes: items,
+			voter_user_id: isAdmin && activeVoterId ? activeVoterId : undefined,
+		});
 	};
 
 	const handleToggleUserSelection = (userId: number) => {
@@ -634,32 +727,45 @@ export default function RoundVotingTab({
 					</h3>
 					<div className="flex flex-wrap items-center gap-2">
 						{isAdmin && (
-							<button
-								onClick={() => {
-									if (!isVotingOpen) return;
-									setIsAssignModalOpen(true);
-								}}
-								disabled={!isVotingOpen}
-								title={
-									!isVotingOpen
-										? hasOfficialAwards
-											? 'Clique em "Editar Votação" acima para gerenciar os jurados'
-											: 'Abra a votação para designar jurados'
-										: 'Designar ou alterar jurados da rodada'
-								}
-								className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border transition ${
-									isVotingOpen
-										? 'bg-surface hover:bg-background border-border text-main cursor-pointer'
-										: 'bg-background/50 border-border/60 text-muted opacity-50 cursor-not-allowed'
-								}`}
-							>
-								{isVotingOpen ? (
-									<UserPlus className="w-3.5 h-3.5 text-primary" />
-								) : (
-									<Lock className="w-3.5 h-3.5 text-muted" />
+							<div className="flex items-center gap-2">
+								{isVotingOpen && votingStatus.referee_user_id && !votingStatus.voters.some((v) => v.user_id === votingStatus.referee_user_id) && (
+									<button
+										onClick={handleAddRefereeToJury}
+										disabled={assignVotersMutation.isPending}
+										className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 transition cursor-pointer"
+										title="Adicionar o juiz da rodada ao júri de votação"
+									>
+										<Sparkles className="w-3.5 h-3.5" />
+										<span>+ Adicionar Juiz ({votingStatus.referee_name || 'Juiz'})</span>
+									</button>
 								)}
-								{isVotingOpen ? 'Gerenciar Jurados' : 'Jurados Bloqueados'}
-							</button>
+								<button
+									onClick={() => {
+										if (!isVotingOpen) return;
+										setIsAssignModalOpen(true);
+									}}
+									disabled={!isVotingOpen}
+									title={
+										!isVotingOpen
+											? hasOfficialAwards
+												? 'Clique em "Editar Votação" acima para gerenciar os jurados'
+												: 'Abra a votação para designar jurados'
+											: 'Designar ou alterar jurados da rodada'
+									}
+									className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border transition ${
+										isVotingOpen
+											? 'bg-surface hover:bg-background border-border text-main cursor-pointer'
+											: 'bg-background/50 border-border/60 text-muted opacity-50 cursor-not-allowed'
+									}`}
+								>
+									{isVotingOpen ? (
+										<UserPlus className="w-3.5 h-3.5 text-primary" />
+									) : (
+										<Lock className="w-3.5 h-3.5 text-muted" />
+									)}
+									{isVotingOpen ? 'Gerenciar Jurados' : 'Jurados Bloqueados'}
+								</button>
+							</div>
 						)}
 						{isActualJuror && (
 							<span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30 font-semibold flex items-center gap-1">
@@ -709,12 +815,19 @@ export default function RoundVotingTab({
 										: 'bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/30'
 								}`}
 							>
-								{voter.has_voted ? (
+								{voter.is_referee ? (
+									<span>⚖️</span>
+								) : voter.has_voted ? (
 									<CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
 								) : (
 									<Clock className="w-3.5 h-3.5 text-zinc-400" />
 								)}
 								<span>{voter.user_name}</span>
+								{voter.is_referee && (
+									<span className="text-[10px] text-amber-500 font-semibold">
+										(Juiz)
+									</span>
+								)}
 								<span className="text-[10px] opacity-75">
 									{voter.has_voted ? '(Votou)' : '(Pendente)'}
 								</span>
@@ -732,9 +845,16 @@ export default function RoundVotingTab({
 							<div className="flex items-center gap-2">
 								<h3 className="text-lg font-bold text-main flex items-center gap-2">
 									<Save className="w-5 h-5 text-primary" />
-									{isActualJuror
-										? 'Seus Votos de Jurado'
-										: 'Registro / Edição de Votos (Admin)'}
+									{isAdmin ? (
+										<span>
+											Lançamento de Votos:{' '}
+											<span className="text-primary">{activeVoterDisplayName}</span>
+										</span>
+									) : isActualJuror ? (
+										'Seus Votos de Jurado'
+									) : (
+										'Registro / Edição de Votos'
+									)}
 								</h3>
 								{isAdmin && !isVotingOpen && (
 									<span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25">
@@ -743,9 +863,9 @@ export default function RoundVotingTab({
 								)}
 							</div>
 							<p className="text-xs text-muted mt-0.5">
-								{isActualJuror
-									? 'Selecione um jogador para cada categoria de destaque abaixo.'
-									: 'Como administrador, você pode registrar e editar votos para esta rodada diretamente.'}
+								{isAdmin
+									? 'Como administrador, você pode registrar e editar votos de cada jurado individualmente (inclusive votos recebidos via WhatsApp).'
+									: 'Selecione um jogador para cada categoria de destaque abaixo.'}
 							</p>
 							{hasOfficialAwards && canEditVotes && (
 								<button
@@ -754,7 +874,7 @@ export default function RoundVotingTab({
 									className="mt-2 inline-flex items-center gap-1.5 text-xs text-primary hover:underline font-semibold cursor-pointer"
 								>
 									<Sparkles className="w-3.5 h-3.5" />
-									Preencher meus votos com os vencedores já cadastrados
+									Preencher votos com os vencedores já cadastrados
 								</button>
 							)}
 						</div>
@@ -768,8 +888,8 @@ export default function RoundVotingTab({
 								<Save className="w-4 h-4" />
 								{submitVotesMutation.isPending
 									? 'Salvando Votos...'
-									: isAdmin && !isVotingOpen
-									? 'Salvar Votos (Admin)'
+									: isAdmin
+									? `Salvar Votos de ${activeVoterDisplayName}`
 									: 'Salvar Meus Votos'}
 							</button>
 						) : (
@@ -778,6 +898,82 @@ export default function RoundVotingTab({
 							</div>
 						)}
 					</div>
+
+					{/* Seletor de Jurado Ativo (Para Admin poder registrar votos individuais recebidos via WhatsApp) */}
+					{isAdmin && votingStatus.voters.length > 0 && (
+						<div className="bg-background/70 border border-primary/20 rounded-xl p-4 space-y-3">
+							<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+								<div>
+									<span className="text-xs font-bold text-main flex items-center gap-1.5 uppercase tracking-wider">
+										<UserCheck className="w-4 h-4 text-primary" />
+										Lançar Votos em Nome de:
+									</span>
+									<p className="text-[11px] text-muted mt-0.5">
+										Clique em um jurado para preencher os votos que ele enviou via WhatsApp ou em campo:
+									</p>
+								</div>
+								<span className="text-[11px] font-semibold text-primary bg-primary/10 border border-primary/25 px-2.5 py-1 rounded-lg">
+									Jurado selecionado: <strong>{activeVoterDisplayName}</strong>
+								</span>
+							</div>
+
+							<div className="flex flex-wrap gap-2 pt-1">
+								{votingStatus.voters.map((v) => {
+									const isSelected = activeVoterId === v.user_id;
+									return (
+										<button
+											key={v.id_voter}
+											type="button"
+											onClick={() => handleSelectActiveVoter(v.user_id)}
+											className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
+												isSelected
+													? 'bg-primary text-white border-primary shadow-sm'
+													: v.has_voted
+													? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
+													: 'bg-surface text-main border-border hover:border-primary/50'
+											}`}
+										>
+											{v.is_referee ? (
+												<span className="text-sm">⚖️</span>
+											) : v.has_voted ? (
+												<CheckCircle2 className={`w-3.5 h-3.5 ${isSelected ? 'text-white' : 'text-emerald-500'}`} />
+											) : (
+												<Clock className={`w-3.5 h-3.5 ${isSelected ? 'text-white' : 'text-muted'}`} />
+											)}
+											<span>{v.user_name}</span>
+											<span
+												className={`text-[10px] px-1.5 py-0.2 rounded font-normal ${
+													isSelected
+														? 'bg-white/20 text-white'
+														: v.has_voted
+														? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+														: 'bg-zinc-500/15 text-muted'
+												}`}
+											>
+												{v.is_referee ? 'Juiz' : v.has_voted ? 'Votou' : 'Pendente'}
+											</span>
+										</button>
+									);
+								})}
+
+								{/* Opção para o próprio Admin caso não esteja entre os jurados */}
+								{user?.id_user && !votingStatus.voters.some((v) => v.user_id === user.id_user) && (
+									<button
+										type="button"
+										onClick={() => handleSelectActiveVoter(user.id_user)}
+										className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
+											activeVoterId === user.id_user
+												? 'bg-primary text-white border-primary shadow-sm'
+												: 'bg-surface text-main border-border hover:border-primary/50'
+										}`}
+									>
+										<Shield className={`w-3.5 h-3.5 ${activeVoterId === user.id_user ? 'text-white' : 'text-purple-400'}`} />
+										<span>Eu mesmo (Admin)</span>
+									</button>
+								)}
+							</div>
+						</div>
+					)}
 
 					{/* Grade das 6 categorias */}
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1053,6 +1249,7 @@ export default function RoundVotingTab({
 							) : (
 								filteredUsers.map((u) => {
 									const isSelected = selectedVoterUserIds.includes(u.id_user);
+									const isReferee = Boolean(votingStatus?.referee_user_id && u.id_user === votingStatus.referee_user_id);
 									const linkedPlayer =
 										userToPlayerMap.get(u.id_user) ||
 										(u.players || []).find((p: any) => roundPlayerIdSet.has(p.id_player));
@@ -1070,6 +1267,11 @@ export default function RoundVotingTab({
 											<div>
 												<div className="font-semibold text-main flex items-center gap-1.5">
 													<span>{u.name || u.username}</span>
+													{isReferee && (
+														<span className="text-[10px] bg-amber-500/15 text-amber-500 border border-amber-500/30 px-1.5 py-0.5 rounded font-medium">
+															⚖️ Juiz da Rodada
+														</span>
+													)}
 													{linkedPlayer && (
 														<span className="text-[10px] bg-primary/15 text-primary px-1.5 py-0.2 rounded font-medium">
 															{linkedPlayer.apelido

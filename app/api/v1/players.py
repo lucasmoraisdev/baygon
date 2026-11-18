@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
@@ -80,6 +80,20 @@ async def get_player_profile(
         teams=analytics["teams"],
         awards=analytics["awards"],
     )
+
+@router.get("/{player_id}/partnerships", status_code=status.HTTP_200_OK)
+async def get_player_partnerships(
+    player_id: int,
+    season_id: Optional[int] = None,
+    db: AsyncSession = Depends(get_db)
+):
+    """Retorna estatísticas de parcerias (duplas e trios) do jogador para o Treemap"""
+    repo = PlayerRepository(db)
+    service = PlayerService(repo)
+    player_obj = await service.get_player_by_id(player_id)
+    if not player_obj:
+        raise HTTPException(status_code=404, detail="Player not found")
+    return await service.get_player_partnerships(player_id, season_id)
 
 @router.get("/{player_id}", response_model=PlayerRead, status_code=status.HTTP_200_OK)
 async def get_player(

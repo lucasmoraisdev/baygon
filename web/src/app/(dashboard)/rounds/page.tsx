@@ -5,6 +5,7 @@ import { FormField } from '@/components/FormField';
 import { Input } from '@/components/Input';
 import { Loading } from '@/components/Loading';
 import { Modal } from '@/components/Modal';
+import { Select } from '@/components/Select';
 import { StatCard2 } from '@/components/StatCard/two';
 import { fetchAPI } from '@/lib/api';
 import { Player, Round, RoundStats, Season } from '@/types/types';
@@ -191,10 +192,10 @@ export default function RoundsPage() {
 					</p>
 				</div>
 				<div className="flex items-center gap-3">
-					<select
+					<Select
 						value={selectedSeason}
 						onChange={(e) => handleSeasonChange(e.target.value)}
-						className="px-3 py-2.5 bg-background/80 border border-border rounded-md text-main text-sm focus:outline-none focus:border-primary transition-colors"
+						containerClassName="w-auto min-w-[170px]"
 					>
 						{seasons.map((s) => (
 							<option key={s.id_season} value={s.id_season}>
@@ -202,7 +203,7 @@ export default function RoundsPage() {
 								{s.is_active ? '(Atual)' : ''}
 							</option>
 						))}
-					</select>
+					</Select>
 					{!activeRound && (
 						<Button
 							onClick={() => setIsModalOpen(true)}
