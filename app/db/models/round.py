@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from app.db.models.award import Awards
     from app.db.models.player_score import PlayerScore
     from app.db.models.round_award_vote import RoundAwardVoter, RoundAwardVote
+    from app.db.models.round_media import RoundMedia
 
 class Round(Base, Timestamp):
     __tablename__ = "round"
@@ -64,6 +65,13 @@ class Round(Base, Timestamp):
 
     votes: Mapped[list["RoundAwardVote"]] = relationship(
         "RoundAwardVote",
+        back_populates="round",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+    media: Mapped[list["RoundMedia"]] = relationship(
+        "RoundMedia",
         back_populates="round",
         cascade="all, delete-orphan",
         lazy="selectin",

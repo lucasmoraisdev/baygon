@@ -254,3 +254,14 @@ export interface RoundVotingStatus {
 	tallies: RoundCategoryTally[];
 }
 
+export interface RoundMedia {
+	id_round_media: number;
+	round_id: number;
+	media_type: 'youtube' | 'instagram' | 'tiktok' | 'other' | string;
+	url: string;
+	title?: string | null;
+	description?: string | null;
+	created_at?: string;
+	updated_at?: string;
+}
+

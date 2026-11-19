@@ -13,6 +13,7 @@ from app.db.models.player_admin_action import PlayerAdminAction
 from app.db.models.round_attendance import RoundAttendance
 from app.db.models.roulette_prize import RoulettePrize
 from app.db.models.round_roulette_winner import RoundRouletteWinner
+from app.db.models.round_media import RoundMedia
 from app.db.models.season_poll import SeasonPoll, SeasonPollOption, SeasonPollVote
 from app.db.models.round_award_vote import RoundAwardVoter, RoundAwardVote
 from app.db.models.financial import FinancialMonthlyFee, FinancialCost
@@ -42,6 +43,7 @@ __all__ = [
     "RoundAttendance",
     "RoulettePrize",
     "RoundRouletteWinner",
+    "RoundMedia",
     "SeasonPoll",
     "SeasonPollOption",
     "SeasonPollVote",

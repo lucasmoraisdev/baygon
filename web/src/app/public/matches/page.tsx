@@ -7,6 +7,8 @@ import { SeasonSelector, Season } from '@/components/SeasonSelector';
 import { SearchableSelect } from '@/components/SearchableSelect';
 import { TeamColorTag } from '@/components/TeamColorTag';
 import { Loading } from '@/components/Loading';
+import { RoundMediaSection } from '@/components/RoundMedia/RoundMediaSection';
+import { RoundMedia } from '@/types/types';
 import {
 	Swords,
 	Calendar,
@@ -19,6 +21,8 @@ import {
 	Users,
 	AlertCircle,
 	CheckCircle2,
+	Film,
+	Video,
 } from 'lucide-react';
 
 interface MatchEvent {
@@ -51,6 +55,7 @@ export default function PublicMatchesPage() {
 	const [selectedRound, setSelectedRound] = useState<string>('');
 	const [selectedTeam, setSelectedTeam] = useState<string>('');
 	const [expandedMatchId, setExpandedMatchId] = useState<number | null>(null);
+	const [activeTab, setActiveTab] = useState<'matches' | 'media'>('matches');
 
 	// Busca de temporadas, temporada atual, times e jogadores
 	const [seasonsQuery, currentSeasonQuery, teamsQuery, playersQuery] = useQueries({
@@ -138,6 +143,19 @@ export default function PublicMatchesPage() {
 		rounds.forEach((r) => map.set(r.id_round, r));
 		return map;
 	}, [rounds]);
+
+	const effectiveRoundId = selectedRound || (rounds[0]?.id_round ? String(rounds[0].id_round) : '');
+
+	const roundMediaQuery = useQuery<RoundMedia[]>({
+		queryKey: ['public-round-media', effectiveRoundId],
+		queryFn: () =>
+			fetchAPI(
+				effectiveRoundId ? `/rounds/${effectiveRoundId}/media` : ''
+			).catch(() => []),
+		enabled: Boolean(effectiveRoundId),
+	});
+
+	const roundMediaList = roundMediaQuery.data ?? [];
 
 	// Opções para SearchableSelect de Rodadas
 	const roundOptions = useMemo(() => {
@@ -274,8 +292,64 @@ export default function PublicMatchesPage() {
 				</div>
 			</div>
 
-			{/* Lista de Partidas */}
-			{matchesQuery.isLoading ? (
+			{/* Navegação entre Partidas e Mídias */}
+			<div className="flex items-center justify-between border-b border-border pb-1 gap-2 flex-wrap">
+				<div className="flex items-center gap-2">
+					<button
+						type="button"
+						onClick={() => setActiveTab('matches')}
+						className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+							activeTab === 'matches'
+								? 'bg-primary text-white shadow-md shadow-primary/20'
+								: 'text-muted hover:text-main hover:bg-nav-hover'
+						}`}
+					>
+						<Swords size={16} />
+						<span>Jogos & Placares</span>
+						<span className="text-xs opacity-75">({filteredMatches.length})</span>
+					</button>
+
+					<button
+						type="button"
+						onClick={() => setActiveTab('media')}
+						className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+							activeTab === 'media'
+								? 'bg-primary text-white shadow-md shadow-primary/20'
+								: 'text-muted hover:text-main hover:bg-nav-hover'
+						}`}
+					>
+						<Film size={16} />
+						<span>Vídeos & Mídias da Rodada</span>
+						{roundMediaList.length > 0 && (
+							<span className="text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30 font-bold">
+								{roundMediaList.length}
+							</span>
+						)}
+					</button>
+				</div>
+
+				{roundMediaList.length > 0 && activeTab === 'matches' && (
+					<button
+						type="button"
+						onClick={() => setActiveTab('media')}
+						className="inline-flex items-center gap-1.5 text-xs text-primary font-semibold hover:underline cursor-pointer"
+					>
+						<Sparkles size={14} />
+						<span>Ver {roundMediaList.length} vídeo(s) desta rodada →</span>
+					</button>
+				)}
+			</div>
+
+			{/* Conteúdo: Mídias ou Partidas */}
+			{activeTab === 'media' ? (
+				<RoundMediaSection
+					roundId={Number(effectiveRoundId)}
+					roundNumber={roundMap.get(Number(effectiveRoundId))?.round_number}
+					mediaList={roundMediaList}
+					isLoading={roundMediaQuery.isLoading}
+					isAdmin={false}
+				/>
+			) : matchesQuery.isLoading ? (
 				<div className="py-12">
 					<Loading />
 				</div>

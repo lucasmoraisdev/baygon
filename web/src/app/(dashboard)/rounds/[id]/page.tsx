@@ -9,12 +9,13 @@ import { Modal } from '@/components/Modal';
 import { Select } from '@/components/Select';
 import { TeamColorTag } from '@/components/TeamColorTag';
 import RoundVotingTab from '@/components/RoundVoting/RoundVotingTab';
+import { RoundMediaSection } from '@/components/RoundMedia/RoundMediaSection';
 import { TEAM_COLORS } from '@/lib/teamColors';
 import { useAuth } from '@/context/AuthContext';
 import { fetchAPI } from '@/lib/api';
-import { Player, PlayerScore, Round, RoundRouletteWinner, Team } from '@/types/types';
+import { Player, PlayerScore, Round, RoundMedia, RoundRouletteWinner, Team } from '@/types/types';
 import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Award, CheckCircle2, ClipboardList, ExternalLink, Gift, Medal, Sparkles, Trophy, Users, Zap } from 'lucide-react';
+import { ArrowLeft, Award, CheckCircle2, ClipboardList, ExternalLink, Film, Gift, Medal, Sparkles, Trophy, Users, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -83,12 +84,14 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 		Record<number, 'confirmed' | 'waiting' | 'declined' | ''>
 	>({});
 	const [attendanceSearch, setAttendanceSearch] = useState('');
-	const [activeTab, setActiveTab] = useState<'pontuacao' | 'detalhes' | 'votacao'>('pontuacao');
+	const [activeTab, setActiveTab] = useState<'pontuacao' | 'detalhes' | 'votacao' | 'midias'>('pontuacao');
 
 	useEffect(() => {
 		const tab = searchParams.get('tab');
 		if (tab === 'voting' || tab === 'votacao') {
 			setActiveTab('votacao');
+		} else if (tab === 'media' || tab === 'midias') {
+			setActiveTab('midias');
 		}
 	}, [searchParams]);
 
@@ -102,6 +105,7 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 		scoresQuery,
 		rouletteWinnersQuery,
 		ourosQuery,
+		mediaQuery,
 	] = useQueries({
 		queries: [
 			{
@@ -153,6 +157,11 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 				queryFn: () =>
 					fetchAPI(`/events/round/${params.id}/ouros`).catch(() => []),
 			},
+			{
+				queryKey: ['round-media', params.id],
+				queryFn: () =>
+					fetchAPI(`/rounds/${params.id}/media`).catch(() => []),
+			},
 		],
 	});
 
@@ -163,6 +172,7 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 	const scores: any[] = scoresQuery.data ?? [];
 	const rouletteWinners: RoundRouletteWinner[] = rouletteWinnersQuery.data ?? [];
 	const roundOuros: Array<{ player_id: number; count: number }> = ourosQuery.data ?? [];
+	const roundMediaList: RoundMedia[] = mediaQuery.data ?? [];
 	const attendance: {
 		confirmed_count: number;
 		declined_count: number;
@@ -533,6 +543,35 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 		},
 		onError: (err: Error) =>
 			alert(`Erro ao salvar lista de presença: ${err.message}`),
+	});
+
+	const addMediaMutation = useMutation({
+		mutationFn: (body: {
+			url: string;
+			title?: string;
+			media_type?: string;
+		}) =>
+			fetchAPI(`/rounds/${params.id}/media`, {
+				method: 'POST',
+				body: JSON.stringify(body),
+			}),
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: ['round-media', params.id],
+			});
+		},
+	});
+
+	const deleteMediaMutation = useMutation({
+		mutationFn: (mediaId: number) =>
+			fetchAPI(`/rounds/${params.id}/media/${mediaId}`, {
+				method: 'DELETE',
+			}),
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: ['round-media', params.id],
+			});
+		},
 	});
 
 	const removeAttendanceMutation = useMutation({
@@ -976,6 +1015,24 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 				>
 					<Sparkles size={16} />
 					<span>Votação dos Destaques</span>
+				</button>
+
+				<button
+					type="button"
+					onClick={() => setActiveTab('midias')}
+					className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+						activeTab === 'midias'
+							? 'bg-primary text-white shadow-md shadow-primary/20'
+							: 'text-muted hover:text-main hover:bg-nav-hover'
+					}`}
+				>
+					<Film size={16} />
+					<span>Mídias & Vídeos</span>
+					{roundMediaList.length > 0 && (
+						<span className="text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30 font-bold">
+							{roundMediaList.length}
+						</span>
+					)}
 				</button>
 			</div>
 
@@ -1866,6 +1923,23 @@ export default function RoundDetail({ params }: { params: { id: string } }) {
 					awards={awards}
 					roundTeams={teams}
 					rouletteWinners={rouletteWinners}
+				/>
+			)}
+
+			{/* Conteúdo da Aba 4: Mídias & Vídeos da Rodada */}
+			{activeTab === 'midias' && (
+				<RoundMediaSection
+					roundId={parseInt(params.id, 10)}
+					roundNumber={roundQuery.data?.round_number}
+					mediaList={roundMediaList}
+					isLoading={mediaQuery.isLoading}
+					isAdmin={isAdmin}
+					onAddMedia={async (payload) => {
+						await addMediaMutation.mutateAsync(payload);
+					}}
+					onDeleteMedia={async (mediaId) => {
+						await deleteMediaMutation.mutateAsync(mediaId);
+					}}
 				/>
 			)}
 
