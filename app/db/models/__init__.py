@@ -16,6 +16,15 @@ from app.db.models.round_roulette_winner import RoundRouletteWinner
 from app.db.models.season_poll import SeasonPoll, SeasonPollOption, SeasonPollVote
 from app.db.models.round_award_vote import RoundAwardVoter, RoundAwardVote
 from app.db.models.financial import FinancialMonthlyFee, FinancialCost
+from app.db.models.fantasy import (
+    FantasySetting,
+    FantasyRoundConfig,
+    FantasyRoundSlotRule,
+    FantasyPlayer,
+    FantasyTeam,
+    FantasyLineup,
+    FantasyLineupPlayer,
+)
 
 __all__ = [
     "User",
@@ -40,4 +49,11 @@ __all__ = [
     "RoundAwardVote",
     "FinancialMonthlyFee",
     "FinancialCost",
+    "FantasySetting",
+    "FantasyRoundConfig",
+    "FantasyRoundSlotRule",
+    "FantasyPlayer",
+    "FantasyTeam",
+    "FantasyLineup",
+    "FantasyLineupPlayer",
 ]

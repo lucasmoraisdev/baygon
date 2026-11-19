@@ -48,7 +48,7 @@ function getPositionInfo(pos?: string | null): PositionInfo | null {
 		clean === 'lateral' ||
 		clean === 'fixo'
 	) {
-		const label = clean === 'fixo' ? 'Fixo' : 'Defensor';
+		const label = 'Defensor';
 		return {
 			label,
 			icon: Shield,

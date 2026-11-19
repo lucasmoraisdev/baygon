@@ -499,15 +499,15 @@ export default function DashboardPage() {
 
 			{/* Notificação de Rodada Aberta + Confirmação de Presença */}
 			{openRound && (
-				<div className="bg-gradient-to-r from-blue-950/40 via-surface to-slate-900 border border-primary/40 rounded-xl p-4 sm:p-5 shadow-lg relative overflow-hidden animate-slide-down">
+				<div className="bg-surface bg-gradient-to-r from-amber-500/[0.06] via-surface to-primary/[0.04] dark:from-amber-500/15 dark:via-surface dark:to-blue-950/40 border border-amber-500/30 dark:border-primary/40 rounded-xl p-4 sm:p-5 shadow-xs dark:shadow-lg relative overflow-hidden animate-slide-down">
 					<div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
 						<div className="flex items-start gap-3.5">
-							<div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-amber-500/15 border border-amber-500/35 flex items-center justify-center text-amber-400 shrink-0 mt-0.5 shadow-inner">
+							<div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0 mt-0.5 shadow-xs">
 								<Bell className="w-5 h-5 animate-pulse" />
 							</div>
 							<div>
 								<div className="flex items-center gap-2 flex-wrap">
-									<span className="text-[11px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/30">
+									<span className="text-[11px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
 										Rodada Aberta
 									</span>
 									<h2 className="text-base sm:text-lg font-bold text-main">
@@ -550,19 +550,19 @@ export default function DashboardPage() {
 						{/* Ações de Presença e Status Atual */}
 						<div className="flex flex-col sm:flex-row sm:items-center gap-2.5 lg:self-center">
 							{userAttendance?.status === 'confirmed' && (
-								<span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+								<span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
 									<CheckCircle2 className="w-4 h-4" />
 									Presença Confirmada
 								</span>
 							)}
 							{userAttendance?.status === 'waiting' && (
-								<span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-yellow-500/15 text-yellow-400 border border-yellow-500/30">
+								<span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
 									<Clock className="w-4 h-4" />
 									Lista de Espera
 								</span>
 							)}
 							{userAttendance?.status === 'declined' && (
-								<span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-500/15 text-red-400 border border-red-500/30">
+								<span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-500/15 text-red-700 dark:text-red-400 border border-red-500/30">
 									<XCircle className="w-4 h-4" />
 									Ausência Informada
 								</span>
@@ -576,7 +576,7 @@ export default function DashboardPage() {
 									className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
 										userAttendance?.status === 'confirmed'
 											? 'bg-emerald-600 text-white shadow-sm'
-											: 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 border border-emerald-500/30'
+											: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/30'
 									}`}
 								>
 									<Check className="w-3.5 h-3.5" />
@@ -589,8 +589,8 @@ export default function DashboardPage() {
 									onClick={() => confirmAttendanceMutation.mutate('waiting')}
 									className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
 										userAttendance?.status === 'waiting'
-											? 'bg-yellow-600 text-white shadow-sm'
-											: 'bg-yellow-500/15 text-yellow-400 hover:bg-yellow-500/25 border border-yellow-500/30'
+											? 'bg-amber-600 text-white shadow-sm'
+											: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 border border-amber-500/30'
 									}`}
 								>
 									<Clock className="w-3.5 h-3.5" />
@@ -604,7 +604,7 @@ export default function DashboardPage() {
 									className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
 										userAttendance?.status === 'declined'
 											? 'bg-red-600 text-white shadow-sm'
-											: 'bg-red-500/15 text-red-400 hover:bg-red-500/25 border border-red-500/30'
+											: 'bg-red-500/10 text-red-700 dark:text-red-400 hover:bg-red-500/20 border border-red-500/30'
 									}`}
 								>
 									<XCircle className="w-3.5 h-3.5" />
@@ -613,7 +613,7 @@ export default function DashboardPage() {
 
 								<Link
 									href={`/rounds/${openRound.id_round}`}
-									className="px-3 py-1.5 rounded-lg bg-background/80 border border-border text-xs font-medium text-muted hover:text-main hover:border-primary flex items-center gap-1 transition-colors"
+									className="px-3 py-1.5 rounded-lg bg-surface border border-border text-xs font-medium text-muted hover:text-main hover:border-primary flex items-center gap-1 transition-colors"
 								>
 									<span>Ver Rodada</span>
 									<ExternalLink className="w-3 h-3" />
@@ -627,19 +627,19 @@ export default function DashboardPage() {
 						<div className="flex items-center gap-3">
 							<span>
 								Confirmados:{' '}
-								<strong className="text-emerald-400">
+								<strong className="text-emerald-600 dark:text-emerald-400">
 									{openRoundAttendanceQuery.data?.confirmed_count ?? 0}
 								</strong>
 							</span>
 							<span>
 								Espera:{' '}
-								<strong className="text-yellow-400">
+								<strong className="text-amber-600 dark:text-amber-400">
 									{openRoundAttendanceQuery.data?.waiting_count ?? 0}
 								</strong>
 							</span>
 						</div>
 						{attendanceFeedback && (
-							<span className="text-emerald-400 font-semibold animate-fade-in">
+							<span className="text-emerald-600 dark:text-emerald-400 font-semibold animate-fade-in">
 								{attendanceFeedback}
 							</span>
 						)}
@@ -752,17 +752,17 @@ export default function DashboardPage() {
 
 			{/* Card de Destaque da Posição do Usuário no Ranking */}
 			{myRankingStats && (
-				<div className="bg-gradient-to-r from-blue-950/60 via-surface to-slate-900 border-2 border-primary/40 rounded-xl p-4 sm:p-5 shadow-lg relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-4">
+				<div className="bg-surface bg-gradient-to-r from-primary/[0.06] via-surface to-primary/[0.03] dark:from-blue-950/40 dark:via-surface dark:to-blue-950/20 border-2 border-primary/30 dark:border-primary/40 rounded-xl p-4 sm:p-5 shadow-xs dark:shadow-lg relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-4">
 					<div className="flex items-start sm:items-center gap-3.5">
-						<div className="w-12 h-12 rounded-xl bg-primary/20 border border-primary/40 flex items-center justify-center text-primary shrink-0 shadow-inner">
-							<Trophy className="w-6 h-6 text-yellow-400" />
+						<div className="w-12 h-12 rounded-xl bg-primary/10 dark:bg-primary/20 border border-primary/25 dark:border-primary/40 flex items-center justify-center text-primary shrink-0 shadow-xs">
+							<Trophy className="w-6 h-6 text-amber-500 dark:text-yellow-400" />
 						</div>
 						<div>
 							<div className="flex items-center gap-2 flex-wrap">
 								<span className="text-xs font-semibold uppercase tracking-wider text-primary">
 									Sua Posição no Ranking Oficial
 								</span>
-								<span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-primary/20 text-blue-300 border border-primary/30">
+								<span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-primary/15 text-primary dark:text-blue-300 border border-primary/25 dark:border-primary/30">
 									{myRankingStats.row.boleiro}
 								</span>
 							</div>
@@ -778,31 +778,31 @@ export default function DashboardPage() {
 					</div>
 
 					<div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs">
-						<div className="bg-background/80 border border-border rounded-lg px-3 py-2 flex flex-col items-center min-w-[70px]">
+						<div className="bg-surface border border-border rounded-lg px-3 py-2 flex flex-col items-center min-w-[70px] shadow-xs dark:shadow-none">
 							<span className="text-muted text-[11px]">Pontos</span>
 							<strong className="text-sm font-bold text-primary">
 								{myRankingStats.row.ranking_geral}
 							</strong>
 						</div>
-						<div className="bg-background/80 border border-border rounded-lg px-3 py-2 flex flex-col items-center min-w-[70px]">
+						<div className="bg-surface border border-border rounded-lg px-3 py-2 flex flex-col items-center min-w-[70px] shadow-xs dark:shadow-none">
 							<span className="text-muted text-[11px]">Gols</span>
 							<strong className="text-sm font-bold text-main">
 								{myRankingStats.row.artilharia}
 							</strong>
 						</div>
-						<div className="bg-background/80 border border-border rounded-lg px-3 py-2 flex flex-col items-center min-w-[70px]">
+						<div className="bg-surface border border-border rounded-lg px-3 py-2 flex flex-col items-center min-w-[70px] shadow-xs dark:shadow-none">
 							<span className="text-muted text-[11px]">Assist.</span>
 							<strong className="text-sm font-bold text-main">
 								{myRankingStats.row.assistencias}
 							</strong>
 						</div>
-						<div className="bg-background/80 border border-border rounded-lg px-3 py-2 flex flex-col items-center min-w-[70px]">
+						<div className="bg-surface border border-border rounded-lg px-3 py-2 flex flex-col items-center min-w-[70px] shadow-xs dark:shadow-none">
 							<span className="text-muted text-[11px]">Babas</span>
-							<strong className="text-sm font-bold text-emerald-400">
+							<strong className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
 								{myRankingStats.row.babas_conquistados}
 							</strong>
 						</div>
-						<div className="bg-background/80 border border-border rounded-lg px-3 py-2 flex flex-col items-center min-w-[70px]">
+						<div className="bg-surface border border-border rounded-lg px-3 py-2 flex flex-col items-center min-w-[70px] shadow-xs dark:shadow-none">
 							<span className="text-muted text-[11px]">Presenças</span>
 							<strong className="text-sm font-bold text-main">
 								{myRankingStats.row.presenca_baba}
@@ -937,8 +937,8 @@ export default function DashboardPage() {
 											}
 											className={`transition-colors ${
 												isCurrentUser
-													? 'bg-primary/20 hover:bg-primary/30 border-y-2 border-primary/60 font-semibold shadow-[inset_0_0_12px_rgba(59,130,246,0.25)]'
-													: 'hover:bg-white/[0.03]'
+													? 'bg-primary/10 dark:bg-primary/20 hover:bg-primary/15 dark:hover:bg-primary/25 border-y-2 border-primary/60 font-semibold shadow-[inset_0_0_12px_rgba(59,130,246,0.1)] dark:shadow-[inset_0_0_12px_rgba(59,130,246,0.25)]'
+													: 'hover:bg-black/[0.02] dark:hover:bg-white/[0.03]'
 											}`}
 										>
 											<td
@@ -953,7 +953,7 @@ export default function DashboardPage() {
 											<td
 												className={`py-2 px-3 font-semibold text-main sticky left-0 ${
 													isCurrentUser
-														? 'bg-primary/20'
+														? 'bg-blue-50/90 dark:bg-surface'
 														: 'bg-surface'
 												}`}
 											>
