@@ -35,6 +35,7 @@ import {
 	Sparkles,
 	Search,
 	Minus,
+	Eye,
 } from 'lucide-react';
 import { Select } from '@/components/Select';
 
@@ -90,6 +91,13 @@ export default function FantasyPage() {
 	// Mensagens de feedback
 	const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+	// Inspecionar escalação de outro participante
+	const [inspectingTeam, setInspectingTeam] = useState<{
+		teamId: number;
+		teamName: string;
+		userName: string;
+	} | null>(null);
+
 	// 1. Buscar Temporadas
 	const { data: seasons = [] } = useQuery<Season[]>({
 		queryKey: ['seasons'],
@@ -121,6 +129,8 @@ export default function FantasyPage() {
 			setSelectedRoundId(sorted[0].id_round);
 		}
 	}, [rounds, selectedRoundId]);
+
+	const currentRound = useMemo(() => rounds.find((r) => r.id_round === selectedRoundId), [rounds, selectedRoundId]);
 
 	// 3. Status e Configurações do Fantasy
 	const { data: fantasyStatus, isLoading: isLoadingStatus } = useQuery<{ is_enabled: boolean; initial_budget: number }>({
@@ -200,6 +210,21 @@ export default function FantasyPage() {
 			return fetchAPI(`/fantasy/rankings/season?season_id=${selectedSeasonId}`);
 		},
 		enabled: !!selectedSeasonId && fantasyStatus?.is_enabled === true && activeTab === 'season_ranking',
+	});
+
+	// Escalação inspecionada de outro participante
+	const {
+		data: inspectedLineup,
+		isLoading: isLoadingInspectedLineup,
+		error: inspectedLineupError,
+	} = useQuery<FantasyLineup | null>({
+		queryKey: ['fantasy_inspected_lineup', selectedRoundId, inspectingTeam?.teamId],
+		queryFn: async () => {
+			if (!selectedRoundId || !inspectingTeam) return null;
+			return fetchAPI(`/fantasy/rounds/${selectedRoundId}/lineup?team_id=${inspectingTeam.teamId}`);
+		},
+		enabled: !!selectedRoundId && !!inspectingTeam,
+		retry: false,
 	});
 
 	// Sincroniza escalação salva com o draft ao carregar
@@ -1059,12 +1084,24 @@ export default function FantasyPage() {
 										</td>
 										<td className="py-3 px-4 text-center">
 											{entry.has_lineup ? (
-												<span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-500">
-													Escalou
-												</span>
+												<button
+													type="button"
+													onClick={() =>
+														setInspectingTeam({
+															teamId: entry.team_id,
+															teamName: entry.team_name,
+															userName: entry.user_name,
+														})
+													}
+													className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-[#635bff]/10 text-[#635bff] hover:bg-[#635bff] hover:text-white transition-all shadow-xs cursor-pointer"
+													title="Ver escalação deste time"
+												>
+													<Eye size={13} />
+													Ver Time
+												</button>
 											) : (
-												<span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/10 text-rose-500">
-													Não escalou (0 pts)
+												<span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-surface text-muted border border-border/50">
+													Não escalou
 												</span>
 											)}
 										</td>
@@ -1088,6 +1125,7 @@ export default function FantasyPage() {
 									<th className="py-3 px-4">Dono</th>
 									<th className="py-3 px-4 text-right">Pontos Totais</th>
 									<th className="py-3 px-4 text-right">Patrimônio Acumulado</th>
+									<th className="py-3 px-4 text-center">Escalação</th>
 								</tr>
 							</thead>
 							<tbody className="divide-y divide-border">
@@ -1121,6 +1159,23 @@ export default function FantasyPage() {
 										</td>
 										<td className="py-3 px-4 text-right font-bold text-amber-500">
 											C$ {Number(entry.total_wealth).toFixed(2)}
+										</td>
+										<td className="py-3 px-4 text-center">
+											<button
+												type="button"
+												onClick={() =>
+													setInspectingTeam({
+														teamId: entry.team_id,
+														teamName: entry.team_name,
+														userName: entry.user_name,
+													})
+												}
+												className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-surface border border-border text-muted hover:text-main hover:border-[#635bff]/40 transition-all cursor-pointer"
+												title="Ver time deste participante na rodada selecionada"
+											>
+												<Eye size={13} />
+												Ver Time
+											</button>
 										</td>
 									</tr>
 								))}
@@ -1294,6 +1349,164 @@ export default function FantasyPage() {
 									);
 								})
 							)}
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* MODAL DE VISUALIZAÇÃO DE TIME DE OUTRO PARTICIPANTE */}
+			{inspectingTeam !== null && (
+				<div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+					<div className="bg-surface border border-border rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl">
+						{/* Header */}
+						<div className="p-4 border-b border-border flex items-center justify-between">
+							<div>
+								<div className="flex items-center gap-2">
+									<h3 className="font-bold text-main text-base">
+										{inspectingTeam.teamName}
+									</h3>
+									{inspectingTeam.teamId === myTeam?.id_fantasy_team && (
+										<span className="px-1.5 py-0.5 rounded text-[10px] bg-[#635bff] text-white font-bold">
+											Seu Time
+										</span>
+									)}
+								</div>
+								<p className="text-xs text-muted">
+									Treinador(a): <strong className="text-main">{inspectingTeam.userName}</strong> • {currentRound?.round_number ? `Rodada ${currentRound.round_number}` : 'Rodada'}
+								</p>
+							</div>
+							<button
+								type="button"
+								onClick={() => setInspectingTeam(null)}
+								className="text-muted hover:text-main p-1.5 rounded-lg transition-colors cursor-pointer"
+								title="Fechar"
+							>
+								<X size={18} />
+							</button>
+						</div>
+
+						{/* Content */}
+						<div className="p-5 overflow-y-auto space-y-4 flex-1">
+							{isLoadingInspectedLineup ? (
+								<div className="py-12 flex flex-col items-center justify-center gap-2 text-muted">
+									<RefreshCw className="animate-spin text-[#635bff]" size={24} />
+									<span className="text-xs">Carregando escalação...</span>
+								</div>
+							) : inspectedLineupError ? (
+								<div className="py-10 px-4 text-center space-y-3 bg-surface/50 border border-border rounded-2xl">
+									<div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-500 mx-auto flex items-center justify-center">
+										<Lock size={22} />
+									</div>
+									<h4 className="font-bold text-main text-sm">Escalação em Sigilo</h4>
+									<p className="text-xs text-muted max-w-sm mx-auto leading-relaxed">
+										{inspectedLineupError instanceof Error
+											? inspectedLineupError.message
+											: 'A escalação de outros participantes fica oculta enquanto o mercado da rodada estiver aberto.'}
+									</p>
+								</div>
+							) : !inspectedLineup ? (
+								<div className="py-12 text-center space-y-2">
+									<p className="text-sm font-bold text-main">Nenhuma escalação enviada</p>
+									<p className="text-xs text-muted">Este participante não confirmou atletas para esta rodada.</p>
+								</div>
+							) : (
+								<div className="space-y-4">
+									{/* Resumo da Escalação */}
+									<div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+										<div className="p-3 rounded-xl bg-background border border-border">
+											<span className="text-[11px] text-muted block">Pontos na Rodada</span>
+											<span className="text-base font-black text-emerald-500">
+												+{Number(inspectedLineup.points_scored).toFixed(1)} pts
+											</span>
+										</div>
+										<div className="p-3 rounded-xl bg-background border border-border">
+											<span className="text-[11px] text-muted block">Gasto Total</span>
+											<span className="text-base font-black text-main">
+												C$ {Number(inspectedLineup.total_spent).toFixed(2)}
+											</span>
+										</div>
+										<div className="p-3 rounded-xl bg-background border border-border">
+											<span className="text-[11px] text-muted block">Saldo Restante</span>
+											<span className="text-base font-black text-muted">
+												C$ {Number(inspectedLineup.cash_remaining).toFixed(2)}
+											</span>
+										</div>
+										<div className="p-3 rounded-xl bg-background border border-border">
+											<span className="text-[11px] text-muted block">Variação Patrimonial</span>
+											<span className={`text-base font-black ${
+												Number(inspectedLineup.wealth_variation) >= 0 ? 'text-emerald-500' : 'text-rose-500'
+											}`}>
+												{Number(inspectedLineup.wealth_variation) >= 0 ? '+' : ''}
+												C$ {Number(inspectedLineup.wealth_variation).toFixed(2)}
+											</span>
+										</div>
+									</div>
+
+									{/* Lista dos Atletas */}
+									<div className="rounded-xl border border-border overflow-hidden">
+										<table className="w-full text-left text-sm">
+											<thead>
+												<tr className="border-b border-border text-muted text-xs uppercase bg-surface/50">
+													<th className="py-2.5 px-3">Vaga</th>
+													<th className="py-2.5 px-3">Atleta</th>
+													<th className="py-2.5 px-3 text-right">Preço Pago</th>
+													<th className="py-2.5 px-3 text-right">Pontos</th>
+													<th className="py-2.5 px-3 text-right">Variação</th>
+												</tr>
+											</thead>
+											<tbody className="divide-y divide-border">
+												{inspectedLineup.players.map((lp) => (
+													<tr key={lp.id_lineup_player} className="hover:bg-background/50">
+														<td className="py-2.5 px-3 font-bold text-xs text-[#635bff]">
+															{lp.slot_label}
+														</td>
+														<td className="py-2.5 px-3">
+															<div className="font-bold text-main text-xs">
+																{lp.player_nickname || lp.player_name}
+															</div>
+															{lp.player_nickname && (
+																<div className="text-[11px] text-muted">
+																	{lp.player_name}
+																</div>
+															)}
+														</td>
+														<td className="py-2.5 px-3 text-right text-muted text-xs">
+															C$ {Number(lp.purchase_price).toFixed(2)}
+														</td>
+														<td className="py-2.5 px-3 text-right font-black text-main text-xs">
+															{Number(lp.points_earned).toFixed(1)} pts
+														</td>
+														<td className="py-2.5 px-3 text-right font-semibold text-xs">
+															{Number(lp.price_variation) >= 0 ? (
+																<span className="text-emerald-500 inline-flex items-center justify-end gap-0.5">
+																	<TrendingUp size={12} />
+																	+C$ {Number(lp.price_variation).toFixed(2)}
+																</span>
+															) : (
+																<span className="text-rose-500 inline-flex items-center justify-end gap-0.5">
+																	<TrendingDown size={12} />
+																	-C$ {Math.abs(Number(lp.price_variation)).toFixed(2)}
+																</span>
+															)}
+														</td>
+													</tr>
+												))}
+											</tbody>
+										</table>
+									</div>
+								</div>
+							)}
+						</div>
+
+						{/* Footer */}
+						<div className="p-4 border-t border-border flex justify-end">
+							<button
+								type="button"
+								onClick={() => setInspectingTeam(null)}
+								className="px-4 py-2 rounded-xl bg-background border border-border text-xs font-bold text-main hover:bg-surface transition-colors cursor-pointer"
+							>
+								Fechar
+							</button>
 						</div>
 					</div>
 				</div>

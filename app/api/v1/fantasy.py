@@ -137,10 +137,11 @@ async def update_my_team(
 @router.get("/rounds/{round_id}/lineup", response_model=Optional[FantasyLineupRead], status_code=status.HTTP_200_OK)
 async def get_lineup(
     round_id: int,
+    team_id: Optional[int] = Query(None, description="ID do time fantasy a visualizar. Se omitido, retorna a escalação do usuário atual."),
     service: FantasyService = Depends(get_fantasy_service),
     current_user: User = Depends(get_current_user),
 ):
-    return await service.get_lineup(current_user.id_user, round_id)
+    return await service.get_lineup(current_user, round_id, team_id=team_id)
 
 
 @router.post("/rounds/{round_id}/lineup", response_model=FantasyLineupRead, status_code=status.HTTP_200_OK)

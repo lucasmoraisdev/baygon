@@ -71,6 +71,8 @@ export interface FantasyLineup {
   points_scored: number;
   wealth_variation: number;
   is_finalized: boolean;
+  team_name?: string | null;
+  user_name?: string | null;
   players: FantasyLineupPlayer[];
 }
 

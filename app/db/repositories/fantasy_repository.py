@@ -3,7 +3,7 @@ import unicodedata
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import List, Optional, Tuple, Dict, Any
-from sqlalchemy import func, select, and_, or_
+from sqlalchemy import func, select, and_, or_, update, case
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -88,11 +88,16 @@ class FantasyRepository:
     async def get_or_create_round_config(self, round_id: int) -> FantasyRoundConfig:
         config = await self.get_round_config(round_id)
         if not config:
+            # Verifica se a rodada já possui scores computados (já foi jogada/encerrada)
+            score_count_q = select(func.count(PlayerScore.id_player_score)).where(PlayerScore.round_id == round_id)
+            score_res = await self.db.execute(score_count_q)
+            has_scores = (score_res.scalar() or 0) > 0
+
             config = FantasyRoundConfig(
                 round_id=round_id,
                 total_slots=5,
-                is_market_open=True,
-                status="OPEN",
+                is_market_open=False,  # Mercado nasce fechado por segurança
+                status="FINALIZED" if has_scores else "CLOSED",
             )
             self.db.add(config)
             await self.db.flush()
@@ -115,6 +120,25 @@ class FantasyRepository:
         data: dict,
         slot_rules_data: Optional[List[dict]] = None
     ) -> FantasyRoundConfig:
+        # Regra de Exclusividade: Ao abrir o mercado desta rodada, fecha o mercado de qualquer outra rodada da temporada
+        if data.get("is_market_open") is True:
+            round_obj = (await self.db.execute(select(Round).where(Round.id_round == config.round_id))).scalars().first()
+            if round_obj:
+                season_rounds_subq = select(Round.id_round).where(
+                    and_(Round.season_id == round_obj.season_id, Round.id_round != config.round_id)
+                )
+                await self.db.execute(
+                    update(FantasyRoundConfig)
+                    .where(FantasyRoundConfig.round_id.in_(season_rounds_subq))
+                    .values(
+                        is_market_open=False,
+                        status=case(
+                            (FantasyRoundConfig.status == "OPEN", "CLOSED"),
+                            else_=FantasyRoundConfig.status
+                        )
+                    )
+                )
+
         for key, value in data.items():
             if value is not None and hasattr(config, key):
                 setattr(config, key, value)
@@ -259,7 +283,8 @@ class FantasyRepository:
             select(FantasyLineup)
             .where(and_(FantasyLineup.fantasy_team_id == team_id, FantasyLineup.round_id == round_id))
             .options(
-                selectinload(FantasyLineup.players).selectinload(FantasyLineupPlayer.player)
+                selectinload(FantasyLineup.players).selectinload(FantasyLineupPlayer.player),
+                selectinload(FantasyLineup.fantasy_team).selectinload(FantasyTeam.user),
             )
         )
         res = await self.db.execute(query)

@@ -2,6 +2,7 @@ from decimal import Decimal
 from typing import Dict, List, Optional
 from fastapi import HTTPException, status
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.fantasy import (
@@ -116,7 +117,12 @@ class FantasyService:
         updated = await self.repo.update_team_name(team, payload.name)
         return FantasyTeamRead.model_validate(updated)
 
-    async def get_lineup(self, user_id: int, round_id: int) -> Optional[FantasyLineupRead]:
+    async def get_lineup(
+        self,
+        current_user: User,
+        round_id: int,
+        team_id: Optional[int] = None,
+    ) -> Optional[FantasyLineupRead]:
         # Busca season da round
         round_q = select(Round).where(Round.id_round == round_id)
         round_res = await self.db.execute(round_q)
@@ -125,12 +131,36 @@ class FantasyService:
             raise HTTPException(status_code=404, detail="Rodada não encontrada.")
 
         await self.check_feature_active(round_obj.season_id)
-        team = await self.repo.get_or_create_team(user_id, round_obj.season_id)
+
+        if team_id is not None:
+            team_q = (
+                select(FantasyTeam)
+                .where(FantasyTeam.id_fantasy_team == team_id)
+                .options(selectinload(FantasyTeam.user))
+            )
+            team_res = await self.db.execute(team_q)
+            team = team_res.scalars().first()
+            if not team:
+                raise HTTPException(status_code=404, detail="Time não encontrado.")
+        else:
+            team = await self.repo.get_or_create_team(current_user.id_user, round_obj.season_id)
+
+        # Regra de confidencialidade: se o mercado ainda estiver aberto e o usuário não for dono nem admin
+        round_config = await self.repo.get_or_create_round_config(round_id)
+        is_owner = team.user_id == current_user.id_user
+        is_admin = getattr(current_user, "role", None) == "admin"
+
+        if round_config.is_market_open and round_config.status == "OPEN" and not is_owner and not is_admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="A escalação deste participante fica oculta enquanto o mercado da rodada estiver aberto."
+            )
+
         lineup = await self.repo.get_lineup(team.id_fantasy_team, round_id)
         if not lineup:
             return None
 
-        return self._format_lineup(lineup)
+        return self._format_lineup(lineup, team=team)
 
     async def save_lineup(self, user_id: int, round_id: int, payload: FantasyLineupSavePayload) -> FantasyLineupRead:
         round_q = select(Round).where(Round.id_round == round_id)
@@ -185,7 +215,7 @@ class FantasyService:
 
         return self._format_lineup(lineup)
 
-    def _format_lineup(self, lineup: FantasyLineup) -> FantasyLineupRead:
+    def _format_lineup(self, lineup: FantasyLineup, team: Optional[FantasyTeam] = None) -> FantasyLineupRead:
         players_list = []
         for lp in lineup.players:
             p = lp.player
@@ -204,6 +234,13 @@ class FantasyService:
                 )
             )
 
+        team_name = team.name if team else (lineup.fantasy_team.name if lineup.fantasy_team else None)
+        user_name = None
+        if team and team.user:
+            user_name = team.user.name
+        elif lineup.fantasy_team and lineup.fantasy_team.user:
+            user_name = lineup.fantasy_team.user.name
+
         return FantasyLineupRead(
             id_fantasy_lineup=lineup.id_fantasy_lineup,
             fantasy_team_id=lineup.fantasy_team_id,
@@ -213,6 +250,8 @@ class FantasyService:
             points_scored=lineup.points_scored,
             wealth_variation=lineup.wealth_variation,
             is_finalized=lineup.is_finalized,
+            team_name=team_name,
+            user_name=user_name,
             players=players_list,
         )
 

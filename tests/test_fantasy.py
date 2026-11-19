@@ -92,6 +92,14 @@ class TestFantasyModule(unittest.IsolatedAsyncioTestCase):
                 res_srk = await client.get(f"/api/v1/fantasy/rankings/season?season_id={season.id_season}")
                 self.assertEqual(res_srk.status_code, 200)
 
+                # 9. Lineups (Self & Inspected)
+                res_my_lineup = await client.get(f"/api/v1/fantasy/rounds/{round_obj.id_round}/lineup")
+                self.assertEqual(res_my_lineup.status_code, 200)
+
+                team_id = team["id_fantasy_team"]
+                res_inspect_lineup = await client.get(f"/api/v1/fantasy/rounds/{round_obj.id_round}/lineup?team_id={team_id}")
+                self.assertEqual(res_inspect_lineup.status_code, 200)
+
         finally:
             app.dependency_overrides.clear()
             await trans.rollback()

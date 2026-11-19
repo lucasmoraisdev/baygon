@@ -136,6 +136,8 @@ class FantasyLineupRead(BaseModel):
     points_scored: Decimal
     wealth_variation: Decimal
     is_finalized: bool
+    team_name: Optional[str] = None
+    user_name: Optional[str] = None
     players: List[FantasyLineupPlayerRead] = []
 
 
