@@ -16,7 +16,16 @@ from app.db.models.user import User
 from app.main import app
 
 
+from app.core.tenant_context import set_current_tenant_id, clear_tenant_context
+
 class TestFinancialModule(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        set_current_tenant_id("00000000-0000-0000-0000-000000000001")
+
+    async def asyncTearDown(self):
+        clear_tenant_context()
+        await engine.dispose()
+
     async def test_financial_fees_costs_and_summary(self):
         conn = await engine.connect()
         trans = await conn.begin()

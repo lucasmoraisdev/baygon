@@ -2,13 +2,14 @@ from typing import TYPE_CHECKING, Optional
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import DateTime, Integer, String, Boolean, func
 from app.db.base import Base, Timestamp
+from app.db.tenant_mixin import TenantMixin
 
 if TYPE_CHECKING:
     from app.db.models.player import Player
     from app.db.models.match import Match
 
 
-class User(Base, Timestamp):
+class User(Base, Timestamp, TenantMixin):
     __tablename__ = "users"
 
     id_user: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -22,6 +23,7 @@ class User(Base, Timestamp):
     is_active: Mapped[bool] = mapped_column(Boolean, default=False)
 
     invite_token_expires: Mapped[Optional[DateTime]] = mapped_column(DateTime, nullable=True)
+    tenant_id: Mapped[Optional[str]] = mapped_column(String(36), index=True, nullable=True)
 
     players: Mapped[list["Player"]] = relationship(
         "Player", 

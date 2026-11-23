@@ -8,6 +8,9 @@ from app.db.repositories.season_repository import SeasonRepository
 from app.schemas.season_schema import SeasonCreate, SeasonRead, SeasonUpdate
 
 
+from app.core.tenant_context import get_current_tenant_id
+from app.core.services.tournament_quota_service import TournamentQuotaService
+
 router = APIRouter(prefix="/seasons", tags=["Seasons"])
 
 @router.post("/", response_model=Union[SeasonRead, List[SeasonRead]], status_code=status.HTTP_201_CREATED)
@@ -16,6 +19,10 @@ async def create_season(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(user_has_permission)
 ):
+    active_tenant = get_current_tenant_id()
+    quota_service = TournamentQuotaService(db)
+    await quota_service.assert_can_create_tournament(active_tenant)
+
     repo = SeasonRepository(db)
     service = SeasonService(repo)
 
@@ -51,7 +58,13 @@ async def get_season(
 ):
     repo = SeasonRepository(db)
     service = SeasonService(repo)
-    return await service.get_season_by_id(season_id)
+    season = await service.get_season_by_id(season_id)
+    if not season:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Temporada não encontrada.",
+        )
+    return season
 
 @router.put("/{season_id}", response_model=SeasonRead, status_code=status.HTTP_200_OK)
 async def update_season(

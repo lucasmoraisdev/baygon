@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1 import users, auth, rounds, teams, players, matches, events, awards, rules, rankings, sumulas
+from app.api.v1 import users, auth, rounds, teams, players, matches, events, awards, rules, rankings, sumulas, tenants, checkout, storage, tournaments
 
 router = APIRouter()
 router.include_router(users.router)
@@ -13,3 +13,8 @@ router.include_router(awards.router)
 router.include_router(rules.router)
 router.include_router(rankings.router)
 router.include_router(sumulas.router)
+router.include_router(tenants.router)
+router.include_router(checkout.router)
+router.include_router(storage.router)
+router.include_router(tournaments.router)
+

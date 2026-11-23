@@ -14,7 +14,13 @@ from app.schemas.roulette_prize_schema import (
     RoulettePrizeUpdate,
 )
 
-router = APIRouter(prefix="/roulette-prizes", tags=["Roulette Prizes"])
+from app.core.dependencies.modules import require_module
+
+router = APIRouter(
+    prefix="/roulette-prizes", 
+    tags=["Roulette Prizes"], 
+    dependencies=[Depends(require_module("gamification"))]
+)
 
 
 @router.get("/", response_model=List[RoulettePrizeRead], status_code=status.HTTP_200_OK)

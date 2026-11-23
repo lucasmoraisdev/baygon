@@ -39,6 +39,11 @@ class MatchUpdate(BaseModel):
     filmed_by_player_id: Optional[int] = None
     event_type: Optional[EventTypeEnum] = None
     is_finished: Optional[bool] = None
+    penalties_home: Optional[int] = Field(None, ge=0)
+    penalties_away: Optional[int] = Field(None, ge=0)
+    stage: Optional[str] = None
+    bracket_position: Optional[int] = None
+    leg: Optional[int] = None
     events: Optional[list[MatchEventUpdate]] = []
 
 
@@ -51,6 +56,11 @@ class MatchRead(BaseModel):
     event_type: EventTypeEnum
     score_home: int = 0
     score_away: int = 0
+    penalties_home: int = 0
+    penalties_away: int = 0
+    stage: str = "regular"
+    bracket_position: Optional[int] = None
+    leg: int = 1
     is_finished: bool = False
     finished_at: Optional[datetime] = None
     events: Optional[list[MatchEventRead]] = []

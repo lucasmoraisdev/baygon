@@ -2,12 +2,13 @@ from typing import TYPE_CHECKING, Optional
 from sqlalchemy import ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base, Timestamp
+from app.db.tenant_mixin import TenantMixin
 
 if TYPE_CHECKING:
     from app.db.models.round import Round
 
 
-class RoundMedia(Base, Timestamp):
+class RoundMedia(Base, Timestamp, TenantMixin):
     __tablename__ = "round_media"
 
     id_round_media: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -16,6 +17,7 @@ class RoundMedia(Base, Timestamp):
     url: Mapped[str] = mapped_column(String(1000), nullable=False)
     title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    tenant_id: Mapped[Optional[str]] = mapped_column(String(36), index=True, nullable=True)
 
     round: Mapped["Round"] = relationship("Round", back_populates="media")
 

@@ -110,6 +110,19 @@ class AuthService:
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token inválido."
             )
+
+        # Validação antecipada de Tenant Binding no JWT (Zero Cross-Tenant Leakage)
+        from app.core.tenant_context import get_current_tenant_id
+        current_tenant = get_current_tenant_id()
+        token_tenant = payload.get("tenant_id")
+        if current_tenant and token_tenant and token_tenant != current_tenant:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "error": "tenant_mismatch",
+                    "message": "Este usuário não possui autorização para operar nesta associação.",
+                }
+            )
         
         # Try to get user_id from payload, fall back to getting user by email (sub)
         user_id = payload.get("user_id")

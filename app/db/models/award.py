@@ -1,7 +1,8 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 from app.core.enum.events_enum import EventTypeEnum
 from app.db.base import Base, Timestamp
-from sqlalchemy import Enum, ForeignKey, Integer
+from app.db.tenant_mixin import TenantMixin
+from sqlalchemy import Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if TYPE_CHECKING:
@@ -10,12 +11,13 @@ if TYPE_CHECKING:
     from app.db.models.player import Player
 
 
-class Awards(Base, Timestamp):
+class Awards(Base, Timestamp, TenantMixin):
     __tablename__ = "awards"
 
     id_award: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     round_id: Mapped[int] = mapped_column(ForeignKey("round.id_round"), nullable=False)
     event_type: Mapped[EventTypeEnum] = mapped_column(Enum(EventTypeEnum), nullable=False)
+    tenant_id: Mapped[Optional[str]] = mapped_column(String(36), index=True, nullable=True)
 
     round: Mapped["Round"] = relationship(
         "Round",

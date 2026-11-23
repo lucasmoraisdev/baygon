@@ -5,6 +5,7 @@ from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, Timestamp
+from app.db.tenant_mixin import TenantMixin
 
 if TYPE_CHECKING:
     from app.db.models.player import Player
@@ -13,7 +14,7 @@ if TYPE_CHECKING:
     from app.db.models.user import User
 
 
-class FantasySetting(Base, Timestamp):
+class FantasySetting(Base, Timestamp, TenantMixin):
     __tablename__ = "fantasy_settings"
 
     id_fantasy_setting: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -23,11 +24,12 @@ class FantasySetting(Base, Timestamp):
     min_player_price: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=Decimal("1.00"), nullable=False)
     max_price_variation: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=Decimal("5.00"), nullable=False)
     appreciation_factor: Mapped[Decimal] = mapped_column(Numeric(10, 4), default=Decimal("0.5000"), nullable=False)
+    tenant_id: Mapped[Optional[str]] = mapped_column(String(36), index=True, nullable=True)
 
     season: Mapped["Seasons"] = relationship("Seasons")
 
 
-class FantasyRoundConfig(Base, Timestamp):
+class FantasyRoundConfig(Base, Timestamp, TenantMixin):
     __tablename__ = "fantasy_round_configs"
 
     id_round_config: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -36,6 +38,7 @@ class FantasyRoundConfig(Base, Timestamp):
     is_market_open: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     market_closes_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="OPEN", nullable=False)  # OPEN, CLOSED, FINALIZED
+    tenant_id: Mapped[Optional[str]] = mapped_column(String(36), index=True, nullable=True)
 
     round: Mapped["Round"] = relationship("Round")
     slot_rules: Mapped[List["FantasyRoundSlotRule"]] = relationship(
@@ -72,7 +75,7 @@ class FantasyPlayer(Base, Timestamp):
     season: Mapped["Seasons"] = relationship("Seasons")
 
 
-class FantasyTeam(Base, Timestamp):
+class FantasyTeam(Base, Timestamp, TenantMixin):
     __tablename__ = "fantasy_teams"
 
     id_fantasy_team: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -82,13 +85,14 @@ class FantasyTeam(Base, Timestamp):
     budget: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=Decimal("100.00"), nullable=False)
     total_wealth: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=Decimal("100.00"), nullable=False)
     total_points: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=Decimal("0.00"), nullable=False)
+    tenant_id: Mapped[Optional[str]] = mapped_column(String(36), index=True, nullable=True)
 
     user: Mapped["User"] = relationship("User")
     season: Mapped["Seasons"] = relationship("Seasons")
     lineups: Mapped[List["FantasyLineup"]] = relationship("FantasyLineup", back_populates="fantasy_team", cascade="all, delete-orphan")
 
 
-class FantasyLineup(Base, Timestamp):
+class FantasyLineup(Base, Timestamp, TenantMixin):
     __tablename__ = "fantasy_lineups"
 
     id_fantasy_lineup: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -99,6 +103,7 @@ class FantasyLineup(Base, Timestamp):
     points_scored: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=Decimal("0.00"), nullable=False)
     wealth_variation: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=Decimal("0.00"), nullable=False)
     is_finalized: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    tenant_id: Mapped[Optional[str]] = mapped_column(String(36), index=True, nullable=True)
 
     fantasy_team: Mapped["FantasyTeam"] = relationship("FantasyTeam", back_populates="lineups")
     round: Mapped["Round"] = relationship("Round")

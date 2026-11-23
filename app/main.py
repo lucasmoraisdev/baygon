@@ -20,7 +20,13 @@ from app.api.v1 import (
     financial,
     fantasy,
     round_media,
+    tenants,
+    checkout,
+    storage,
+    tournaments,
 )
+from app.core.middlewares.tenant_middleware import TenantResolutionMiddleware
+from app.core.middlewares.rate_limit_middleware import TenantRateLimitMiddleware
 
 app = FastAPI(title="Baygon API", version="1.0.0")
 
@@ -31,7 +37,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(TenantRateLimitMiddleware)
+app.add_middleware(TenantResolutionMiddleware)
 
+app.include_router(tournaments.router, prefix="/api/v1")
+app.include_router(storage.router, prefix="/api/v1")
+app.include_router(checkout.router, prefix="/api/v1")
+app.include_router(tenants.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1")
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(rounds.router, prefix="/api/v1")

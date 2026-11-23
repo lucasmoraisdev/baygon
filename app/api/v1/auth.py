@@ -47,13 +47,14 @@ async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
             detail="Credenciais inválidas."
         )
     
-    # Criar access token com email e username
+    # Criar access token com email, username e tenant_id
     access_token = JWTManager.create_access_token(data={
         "sub": user.email,
         "email": user.email,
         "username": user.username,
         "role": user.role,
-        "user_id": user.id_user    
+        "user_id": user.id_user,
+        "tenant_id": user.tenant_id,
         }
     )
     
@@ -62,7 +63,8 @@ async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
         "sub": user.email,
         "email": user.email,
         "username": user.username,
-        "user_id": user.id_user
+        "user_id": user.id_user,
+        "tenant_id": user.tenant_id,
     })
     
     return {

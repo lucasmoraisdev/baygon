@@ -27,12 +27,15 @@ if not DATABASE_URL:
 
 if not DATABASE_URL.startswith("mysql+aiomysql://"):
     raise ValueError("DATABASE_URL precisa usar um driver assíncrono, ex: mysql+aiomysql://")
-print(f"📦 Conectando ao banco de dados... {DATABASE_URL}")
+print(f"[DB] Conectando ao banco de dados... {DATABASE_URL}")
 engine = create_async_engine(
     DATABASE_URL,
     echo=False,
     pool_pre_ping=True
 )
+
+from app.db.tenant_filter import setup_tenant_isolation
+setup_tenant_isolation(engine)
 
 @event.listens_for(engine.sync_engine, "connect")
 def set_sql_mode(dbapi_connection, connection_record):

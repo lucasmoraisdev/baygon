@@ -4,8 +4,9 @@ from app.core.enum.events_enum import EventTypeEnum
 from app.db.base import Base, Timestamp
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from app.db.tenant_mixin import TenantMixin
 
 from app.db.models.user import User
 
@@ -14,7 +15,7 @@ if TYPE_CHECKING:
     from app.db.models.team import Teams
     from app.db.models.match_event import MatchEvent
 
-class Match(Base, Timestamp):
+class Match(Base, Timestamp, TenantMixin):
     __tablename__ = "matches"
 
     id_match: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -28,8 +29,15 @@ class Match(Base, Timestamp):
     score_home: Mapped[int] = mapped_column(Integer, default=0)
     score_away: Mapped[int] = mapped_column(Integer, default=0)
 
+    stage: Mapped[str] = mapped_column(String(30), default="regular", nullable=False)
+    bracket_position: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    leg: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    penalties_home: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    penalties_away: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
     is_finished: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="0")
     finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    tenant_id: Mapped[Optional[str]] = mapped_column(String(36), index=True, nullable=True)
 
     round: Mapped["Round"] = relationship(
         "Round", 

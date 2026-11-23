@@ -22,7 +22,13 @@ from app.schemas.fantasy_schema import (
     FantasyTeamUpdate,
 )
 
-router = APIRouter(prefix="/fantasy", tags=["Fantasy Game"])
+from app.core.dependencies.modules import require_module
+
+router = APIRouter(
+    prefix="/fantasy", 
+    tags=["Fantasy Game"], 
+    dependencies=[Depends(require_module("fantasy"))]
+)
 
 
 def get_fantasy_service(db: AsyncSession = Depends(get_db)) -> FantasyService:

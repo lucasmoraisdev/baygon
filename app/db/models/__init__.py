@@ -27,7 +27,16 @@ from app.db.models.fantasy import (
     FantasyLineupPlayer,
 )
 
+from app.db.models.tenant import Tenant
+from app.db.models.plan import Plan
+from app.db.models.tenant_module import TenantModule
+from app.db.models.tenant_audit import TenantAuditLog
+
 __all__ = [
+    "Tenant",
+    "Plan",
+    "TenantModule",
+    "TenantAuditLog",
     "User",
     "Player",
     "Round",

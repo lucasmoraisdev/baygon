@@ -3,6 +3,7 @@
 import { useAuth } from '@/context/AuthContext';
 import { useSidebar } from '@/context/SidebarContext';
 import { useTheme } from '@/context/ThemeContext';
+import { useTenant } from '@/context/TenantContext';
 import {
 	Award,
 	Calendar,
@@ -19,7 +20,9 @@ import {
 	Moon,
 	Shield,
 	Sliders,
+	Sparkles,
 	Sun,
+	Swords,
 	Trophy,
 	UserCog,
 	Users,
@@ -35,6 +38,7 @@ interface MenuItem {
 	path: string;
 	icon: LucideIcon;
 	adminOnly?: boolean;
+	module?: 'fantasy' | 'financial' | 'gamification' | 'competitions';
 }
 
 interface MenuSection {
@@ -48,13 +52,14 @@ const MENU_SECTIONS: MenuSection[] = [
 		title: 'Competições',
 		items: [
 			{ name: 'Dashboard', path: '/', icon: LayoutDashboard },
+			{ name: 'Torneios & Ligas', path: '/tournaments', icon: Swords, module: 'competitions' },
 			{ name: 'Temporadas', path: '/seasons', icon: Calendar },
 			{ name: 'Partidas', path: '/matches', icon: Trophy },
 			{ name: 'Times', path: '/teams', icon: Shield },
 			{ name: 'Jogadores', path: '/players', icon: Users },
 			{ name: 'Premiações', path: '/awards', icon: Award },
 			{ name: 'Votações', path: '/polls', icon: Vote },
-			{ name: 'Fantasy Game', path: '/fantasy', icon: Gamepad2 },
+			{ name: 'Fantasy Game', path: '/fantasy', icon: Gamepad2, module: 'fantasy' },
 			{ name: 'Portal Público ↗', path: '/public', icon: ExternalLink },
 		],
 	},
@@ -62,6 +67,7 @@ const MENU_SECTIONS: MenuSection[] = [
 		title: 'Administração',
 		adminOnly: true,
 		items: [
+			{ name: 'Planos & Assinatura', path: '/subscription', icon: Sparkles, adminOnly: true },
 			{ name: 'Regras', path: '/admin/rules', icon: Sliders, adminOnly: true },
 			{
 				name: 'Importar Súmula',
@@ -80,6 +86,7 @@ const MENU_SECTIONS: MenuSection[] = [
 				path: '/admin/financeiro',
 				icon: CircleDollarSign,
 				adminOnly: true,
+				module: 'financial',
 			},
 		],
 	},
@@ -89,6 +96,7 @@ export default function Sidebar() {
 	const pathname = usePathname();
 	const { user, logout } = useAuth();
 	const { theme, toggleTheme } = useTheme();
+	const { tenant, hasModule } = useTenant();
 	const { isCollapsed, toggleSidebar, isMobileOpen, setIsMobileOpen } =
 		useSidebar();
 	const isAdmin = Boolean(user?.is_admin || user?.role === 'admin');
@@ -148,29 +156,45 @@ export default function Sidebar() {
 				>
 					{!isCollapsed ? (
 						<div className="flex items-center gap-3 overflow-hidden">
-							<div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#635bff] to-[#533afd] flex items-center justify-center font-black text-white text-base shadow-sm shadow-[#635bff]/25 shrink-0 ring-1 ring-black/[0.06] dark:ring-white/20">
-								B
-							</div>
+							{tenant?.logo_url ? (
+								<img
+									src={tenant.logo_url}
+									alt={tenant.name || 'Liga'}
+									className="w-9 h-9 rounded-xl object-contain bg-white dark:bg-slate-800 p-0.5 shrink-0 border border-slate-200 dark:border-white/10"
+								/>
+							) : (
+								<div
+									style={{
+										background: `linear-gradient(135deg, ${tenant?.primary_color || '#059669'}, ${tenant?.secondary_color || '#10b981'})`,
+									}}
+									className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-white text-base shadow-sm shrink-0 ring-1 ring-black/[0.06] dark:ring-white/20"
+								>
+									{(tenant?.name || 'B').charAt(0).toUpperCase()}
+								</div>
+							)}
 							<div className="flex flex-col min-w-0">
 								<div className="flex items-center gap-1.5">
 									<h2 className="text-base font-bold text-[#1a2c44] dark:text-white tracking-tight m-0 truncate">
-										Baygon
+										{tenant?.name || 'Baygon'}
 									</h2>
-									<span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#e5e8fe] dark:bg-blue-500/20 text-[#4e11e2] dark:text-blue-400 border border-[#c3b6fb]/60 dark:border-blue-500/30 leading-none">
-										API
+									<span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 leading-none">
+										{tenant?.plan?.code === 'pro_all_inclusive' ? 'PRO' : (tenant?.slug || 'LIGA').toUpperCase()}
 									</span>
 								</div>
 								<span className="text-[11px] text-[#667691] dark:text-slate-400 truncate">
-									Painel do Torneio
+									Painel da Associação
 								</span>
 							</div>
 						</div>
 					) : (
 						<div
-							title="Baygon API"
-							className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#635bff] to-[#533afd] flex items-center justify-center font-black text-white text-base shadow-sm shadow-[#635bff]/25 ring-1 ring-black/[0.06] dark:ring-white/20"
+							title={tenant?.name || 'Associação'}
+							style={{
+								background: `linear-gradient(135deg, ${tenant?.primary_color || '#059669'}, ${tenant?.secondary_color || '#10b981'})`,
+							}}
+							className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-white text-base shadow-sm ring-1 ring-black/[0.06] dark:ring-white/20"
 						>
-							B
+							{(tenant?.name || 'B').charAt(0).toUpperCase()}
 						</div>
 					)}
 
@@ -218,6 +242,13 @@ export default function Sidebar() {
 
 								{/* Itens da Seção */}
 								{section.items.map((item) => {
+									const isSubscribed = item.module ? hasModule(item.module) : true;
+
+									// Se o módulo NÃO está contratado e o usuário NÃO é admin: Oculta 100% para não gerar ruído
+									if (!isSubscribed && !isAdmin) {
+										return null;
+									}
+
 									const Icon = item.icon;
 									const isActive = isItemActive(item.path);
 
@@ -257,6 +288,13 @@ export default function Sidebar() {
 												</span>
 											)}
 
+											{/* Badge de Upgrade para Admin em módulos adicionais não contratados */}
+											{!isCollapsed && !isSubscribed && (
+												<span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 leading-none">
+													UPGRADE
+												</span>
+											)}
+
 											{/* Tooltip flutuante quando colapsado */}
 											{isCollapsed && (
 												<div
@@ -265,7 +303,12 @@ export default function Sidebar() {
 												>
 													<span className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 rotate-45 bg-[#1a2c44] dark:bg-[#0d1527] border-l border-b border-[#3c4f69] dark:border-white/15" />
 													<span>{item.name}</span>
-													{item.adminOnly && (
+													{!isSubscribed && (
+														<span className="text-[9px] px-1 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+															Upgrade
+														</span>
+													)}
+													{item.adminOnly && isSubscribed && (
 														<span className="text-[9px] px-1 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
 															Admin
 														</span>

@@ -1,9 +1,11 @@
 from datetime import datetime
+from typing import Optional
 from git import TYPE_CHECKING
 from sqlalchemy import Boolean, Date, ForeignKey, Integer, String, DateTime, func
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.orm import relationship
 from app.db.base import Base, Timestamp
+from app.db.tenant_mixin import TenantMixin
 
 if TYPE_CHECKING:
     from app.db.models.team import Teams
@@ -14,7 +16,7 @@ if TYPE_CHECKING:
     from app.db.models.round_award_vote import RoundAwardVoter, RoundAwardVote
     from app.db.models.round_media import RoundMedia
 
-class Round(Base, Timestamp):
+class Round(Base, Timestamp, TenantMixin):
     __tablename__ = "round"
 
     id_round: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -26,6 +28,7 @@ class Round(Base, Timestamp):
     round_number: Mapped[int] = mapped_column(Integer, nullable=False)
     season_id: Mapped[int] = mapped_column(ForeignKey("seasons.id_season"), nullable=False)
     is_voting_open: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0", nullable=False)
+    tenant_id: Mapped[Optional[str]] = mapped_column(String(36), index=True, nullable=True)
 
     teams: Mapped[list["Teams"]] = relationship(
         "Teams", 

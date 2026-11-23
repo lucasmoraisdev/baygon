@@ -1,12 +1,34 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8001/api/v1";
 
+export function getActiveTenantSlug(): string {
+  if (typeof window !== "undefined") {
+    // 1. Tenta ler do cookie injetado pelo Edge Middleware
+    const match = document.cookie.match(/(?:^|;\s*)baygon_tenant_slug=([^;]+)/);
+    if (match && match[1]) {
+      return decodeURIComponent(match[1]);
+    }
+    // 2. Fallback de extração via hostname
+    const host = window.location.hostname.toLowerCase();
+    const parts = host.split('.');
+    if (parts.length > 1 && parts[0] !== 'localhost' && parts[0] !== '127') {
+      return parts[0];
+    }
+  }
+  return process.env.NEXT_PUBLIC_DEFAULT_TENANT || "baygon";
+}
+
 export async function fetchAPI(endpoint: string, options: RequestInit = {}): Promise<any> {
   let token = null;
   if (typeof window !== "undefined") {
     token = localStorage.getItem("auth_token");
   }
 
+  const tenantSlug = getActiveTenantSlug();
   const headers = new Headers(options.headers || {});
+
+  if (!headers.has("x-tenant-slug")) {
+    headers.set("x-tenant-slug", tenantSlug);
+  }
 
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
@@ -31,6 +53,7 @@ export async function fetchAPI(endpoint: string, options: RequestInit = {}): Pro
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "x-tenant-slug": tenantSlug,
           },
           body: JSON.stringify({ refresh_token: refreshToken }),
         });

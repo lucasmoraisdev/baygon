@@ -20,7 +20,13 @@ from app.schemas.financial_schema import (
     MonthlyFeeUpdate,
 )
 
-router = APIRouter(prefix="/financial", tags=["Financial"])
+from app.core.dependencies.modules import require_module
+
+router = APIRouter(
+    prefix="/financial", 
+    tags=["Financial"], 
+    dependencies=[Depends(require_module("financial"))]
+)
 
 
 def get_financial_service(db: AsyncSession = Depends(get_db)) -> FinancialService:

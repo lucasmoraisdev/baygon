@@ -3,13 +3,14 @@ from typing import TYPE_CHECKING, Optional, List
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base, Timestamp
+from app.db.tenant_mixin import TenantMixin
 
 if TYPE_CHECKING:
     from app.db.models.season import Seasons
     from app.db.models.user import User
 
 
-class SeasonPoll(Base, Timestamp):
+class SeasonPoll(Base, Timestamp, TenantMixin):
     __tablename__ = "season_polls"
 
     id_poll: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -21,6 +22,7 @@ class SeasonPoll(Base, Timestamp):
     starts_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     ends_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_by_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id_user", ondelete="SET NULL"), nullable=True)
+    tenant_id: Mapped[Optional[str]] = mapped_column(String(36), index=True, nullable=True)
 
     season: Mapped["Seasons"] = relationship("Seasons")
     created_by: Mapped[Optional["User"]] = relationship("User")

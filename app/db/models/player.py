@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING, Optional
 from sqlalchemy import ForeignKey, Integer, String, Boolean, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base, Timestamp
+from app.db.tenant_mixin import TenantMixin
 from app.core.enum.events_enum import PosicaoEnum, PeEnum
 
 from app.db.models.user import User
@@ -14,7 +15,7 @@ if TYPE_CHECKING:
     from app.db.models.player_season_score import PlayerSeasonScore
 
 
-class Player(Base, Timestamp):
+class Player(Base, Timestamp, TenantMixin):
     __tablename__ = "players"
 
     id_player: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -28,6 +29,7 @@ class Player(Base, Timestamp):
     user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id_user"), nullable=True)
     is_associate: Mapped[bool] = mapped_column(Boolean, default=True)
     is_guest: Mapped[bool] = mapped_column(Boolean, default=False)
+    tenant_id: Mapped[Optional[str]] = mapped_column(String(36), index=True, nullable=True)
 
     user: Mapped[Optional["User"]] = relationship(
         "User", 

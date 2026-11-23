@@ -10,6 +10,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base, Timestamp
+from app.db.tenant_mixin import TenantMixin
 
 if TYPE_CHECKING:
     from app.db.models.player import Player
@@ -17,7 +18,7 @@ if TYPE_CHECKING:
     from app.db.models.user import User
 
 
-class FinancialMonthlyFee(Base, Timestamp):
+class FinancialMonthlyFee(Base, Timestamp, TenantMixin):
     __tablename__ = "financial_monthly_fees"
 
     id_fee: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -31,6 +32,7 @@ class FinancialMonthlyFee(Base, Timestamp):
     notes: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     season_id: Mapped[Optional[int]] = mapped_column(ForeignKey("seasons.id_season", ondelete="SET NULL"), nullable=True)
     created_by_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id_user", ondelete="SET NULL"), nullable=True)
+    tenant_id: Mapped[Optional[str]] = mapped_column(String(36), index=True, nullable=True)
 
     player: Mapped["Player"] = relationship("Player", lazy="selectin")
     season: Mapped[Optional["Seasons"]] = relationship("Seasons", lazy="selectin")
@@ -40,7 +42,7 @@ class FinancialMonthlyFee(Base, Timestamp):
     )
 
 
-class FinancialCost(Base, Timestamp):
+class FinancialCost(Base, Timestamp, TenantMixin):
     __tablename__ = "financial_costs"
 
     id_cost: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -54,5 +56,6 @@ class FinancialCost(Base, Timestamp):
     notes: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     season_id: Mapped[Optional[int]] = mapped_column(ForeignKey("seasons.id_season", ondelete="SET NULL"), nullable=True)
     created_by_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id_user", ondelete="SET NULL"), nullable=True)
+    tenant_id: Mapped[Optional[str]] = mapped_column(String(36), index=True, nullable=True)
 
     season: Mapped[Optional["Seasons"]] = relationship("Seasons", lazy="selectin")
