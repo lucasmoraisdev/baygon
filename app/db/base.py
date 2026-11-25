@@ -23,15 +23,51 @@ for module_info in pkgutil.iter_modules([str(models_dir)]):
     importlib.import_module(module_name)
 
 if not DATABASE_URL:
-    raise ValueError("DATABASE_URL não foi configurada corretamente.")
+    raise ValueError(
+        "DATABASE_URL não foi configurada. Configure a variável de ambiente DATABASE_URL no seu provedor (ex: Render)."
+    )
+
+DATABASE_URL = DATABASE_URL.strip().strip("'\"")
+
+if DATABASE_URL.startswith("mysql://"):
+    DATABASE_URL = DATABASE_URL.replace("mysql://", "mysql+aiomysql://", 1)
+elif DATABASE_URL.startswith("mysql+pymysql://"):
+    DATABASE_URL = DATABASE_URL.replace("mysql+pymysql://", "mysql+aiomysql://", 1)
 
 if not DATABASE_URL.startswith("mysql+aiomysql://"):
-    raise ValueError("DATABASE_URL precisa usar um driver assíncrono, ex: mysql+aiomysql://")
-print(f"[DB] Conectando ao banco de dados... {DATABASE_URL}")
+    scheme = DATABASE_URL.split("://")[0] if "://" in DATABASE_URL else DATABASE_URL
+    raise ValueError(
+        f"DATABASE_URL inválida (esquema recebido: '{scheme}://'). "
+        f"O Baygon requer um banco de dados MySQL compatível com aiomysql (ex: mysql://usuario:senha@host:port/banco). "
+        f"Certifique-se de usar um serviço MySQL (como TiDB Cloud Serverless gratuito) e não PostgreSQL."
+    )
+
+import os
+import ssl
+
+connect_args = {}
+if (
+    any(k in DATABASE_URL.lower() for k in ["ssl", "tidbcloud.com", "aivencloud.com"])
+    or os.getenv("DB_SSL", "").lower() in ("true", "1")
+):
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    connect_args["ssl"] = ctx
+
+# Mascara senha nos logs
+safe_log_url = DATABASE_URL
+if "@" in DATABASE_URL and ":" in DATABASE_URL.split("@")[0]:
+    prefix, rest = DATABASE_URL.split("@", 1)
+    scheme_user = prefix.rsplit(":", 1)[0]
+    safe_log_url = f"{scheme_user}:****@{rest}"
+
+print(f"[DB] Conectando ao banco de dados... {safe_log_url}")
 engine = create_async_engine(
     DATABASE_URL,
     echo=False,
-    pool_pre_ping=True
+    pool_pre_ping=True,
+    connect_args=connect_args,
 )
 
 from app.db.tenant_filter import setup_tenant_isolation

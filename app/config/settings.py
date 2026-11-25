@@ -28,7 +28,13 @@ if db_config:
     )
 else:
     DATABASE_URL = os.getenv("DATABASE_URL")
-    
+
+if DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.strip().strip("'\"")
+    if DATABASE_URL.startswith("mysql://"):
+        DATABASE_URL = DATABASE_URL.replace("mysql://", "mysql+aiomysql://", 1)
+    elif DATABASE_URL.startswith("mysql+pymysql://"):
+        DATABASE_URL = DATABASE_URL.replace("mysql+pymysql://", "mysql+aiomysql://", 1)
 DEFAULT_USER_PERMISSION = {
     "logged_in": True,
     "is_admin": True,

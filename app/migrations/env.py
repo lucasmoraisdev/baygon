@@ -40,9 +40,21 @@ async def run_migrations_online():
     """Run migrations in 'online' mode."""
     if not DATABASE_URL:
         raise ValueError("DATABASE_URL não foi configurada corretamente.")
+    connect_args = {}
+    if (
+        any(k in DATABASE_URL.lower() for k in ["ssl", "tidbcloud.com", "aivencloud.com"])
+        or os.getenv("DB_SSL", "").lower() in ("true", "1")
+    ):
+        import ssl
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        connect_args["ssl"] = ctx
+
     connectable = create_async_engine(
         DATABASE_URL,
         poolclass=pool.NullPool,
+        connect_args=connect_args,
     )
 
     async with connectable.connect() as connection:

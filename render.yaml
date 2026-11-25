@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: baygon-api
+    runtime: python
+    plan: free
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: PHRASE_ENCODE
+        value: y2SYNH59mqp_7guwTmebiRz5IVRFeNit-_em-A-wYCQ=
+      - key: PHRASE_DECODE
+        value: gAAAAABq5PUfJV4vWTQ83yCXQ7K8QAuToY4AxF5Uuism9lH_5QgW264QKsK1X9Ynuw3L7Pkb4N5vILWxnJSPWtRdCMcGOKykX09mOiuKnWUzrrUTiSQPzaaGiW-9b7JM95w5K2G03XLnSGqY7R9w0oG3EefR93IIuQ==
+      - key: SECRET_KEY
+        value: b4y60n_d3v_s3cr3t_k3y_2026_x9a8f7c6e5d4b3a2109876543210fedcba
