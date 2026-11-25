@@ -1,6 +1,11 @@
 import asyncio
 import os
 import sys
+
+# Corrige bug do ProactorEventLoop do Windows (WinError 87) com conexões SSL no Python 3.14
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 from logging.config import fileConfig
 
 from sqlalchemy import pool

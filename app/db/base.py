@@ -1,6 +1,11 @@
 import importlib
 import pathlib
 import pkgutil
+import sys
+import asyncio
+
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 from sqlalchemy.orm import declarative_base
 from sqlalchemy import DateTime, Column
 from sqlalchemy.sql import func

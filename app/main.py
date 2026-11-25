@@ -67,3 +67,13 @@ app.include_router(round_media.router, prefix="/api/v1")
 @app.get("/")
 async def root():
     return {"message": "Baygon API running 🚀"}
+
+
+@app.get("/api/v1")
+@app.get("/api/v1/")
+async def api_v1_root():
+    return {
+        "message": "Baygon API v1 running 🚀",
+        "docs": "/docs",
+        "status": "online",
+    }

@@ -27,7 +27,16 @@ if db_config:
         f"@{db_config.get('host')}:{db_config.get('port')}/{db_config.get('database')}"
     )
 else:
-    DATABASE_URL = os.getenv("DATABASE_URL")
+    db_host = os.getenv("DB_HOST")
+    if db_host and not os.getenv("DATABASE_URL"):
+        import urllib.parse
+        db_port = os.getenv("DB_PORT", "4000")
+        db_user = urllib.parse.quote_plus(os.getenv("DB_USERNAME", os.getenv("DB_USER", "")).strip("'\""))
+        db_pass = urllib.parse.quote_plus(os.getenv("DB_PASSWORD", "").strip("'\""))
+        db_name = os.getenv("DB_DATABASE", os.getenv("DB_NAME", "test")).strip("'\"")
+        DATABASE_URL = f"mysql+aiomysql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
+    else:
+        DATABASE_URL = os.getenv("DATABASE_URL")
 
 if DATABASE_URL:
     DATABASE_URL = DATABASE_URL.strip().strip("'\"")

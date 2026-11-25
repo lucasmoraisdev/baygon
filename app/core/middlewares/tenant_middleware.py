@@ -14,6 +14,8 @@ EXEMPT_PATHS = {
     "/docs",
     "/redoc",
     "/openapi.json",
+    "/api/v1",
+    "/api/v1/",
     "/api/v1/tenants/check-slug",
     "/api/v1/checkout/plans",
     "/api/v1/checkout/session",
@@ -56,6 +58,10 @@ class TenantResolutionMiddleware(BaseHTTPMiddleware):
                 repo = TenantRepository(session)
                 service = TenantService(repo)
                 tenant = await service.get_tenant_by_slug(slug)
+
+                # Fallback para o tenant padrão se o slug extraído do host (ex: nome do app no Render) não for um tenant específico
+                if not tenant and slug != DEFAULT_FALLBACK_TENANT_SLUG:
+                    tenant = await service.get_tenant_by_slug(DEFAULT_FALLBACK_TENANT_SLUG)
 
                 if not tenant:
                     return JSONResponse(
